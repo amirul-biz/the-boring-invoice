@@ -11,6 +11,7 @@
     "@nx/node": "22.3.1",
     "@nx/web": "22.3.1",
     "@nx/webpack": "22.3.1",
+    "@sparticuz/chromium": "^106.0.2",
     "@swc-node/register": "~1.9.1",
     "@swc/core": "~1.5.7",
     "@swc/helpers": "~0.5.11",
@@ -37,7 +38,7 @@
     "axios": "^1.6.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.3",
-    "puppeteer": "^24.33.1",
+    "puppeteer-core": "^18.0.5",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.8.0"
   }
