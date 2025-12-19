@@ -1,0 +1,10 @@
+# Dependencies
+node_modules/
+dist/
+.nx/cache
+.nx/workspace-data
+.nx/installation
+
+# IDEs and OS
+.vscode/
+.DS_Store
