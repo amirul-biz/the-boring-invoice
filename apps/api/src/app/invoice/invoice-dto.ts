@@ -1,47 +1,149 @@
-import { ApiProperty } from "@nestjs/swagger";
-import { Type } from "class-transformer";
-import { IsArray, IsInt, IsNotEmpty, IsNumber, IsString, ValidateNested } from "class-validator";
+import { ApiProperty } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
+import {
+  IsArray,
+  IsDateString,
+  IsEmail,
+  IsEnum,
+  IsInt,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  ValidateNested,
+} from 'class-validator';
 
-export class CreateInvoiceItemsInputDTO {
-    @ApiProperty({
-        example: '4 day class fee',
-        required: true
-    })
-    @IsNotEmpty()
-    @IsString()
-    itemName: string
+// 1. RECIPIENT (BUYER) DTO
+export class RecipientDTO {
+  @ApiProperty({ example: 'Amirul Irfan Bin Khairul Azreem' })
+  @IsNotEmpty() @IsString()
+  name: string;
 
-    @ApiProperty({
-        example: 1,
-        required: true
-    })
-    @IsNotEmpty()
-    @IsInt()
-    quantity: number
+  @ApiProperty({ example: 'amirul.irfan.1022000@gmail.com' })
+  @IsEmail() @IsOptional()
+  email: string;
 
-    @ApiProperty({
-        example: 20.40,
-        required: true
-    })
-    @IsNotEmpty()
-    @IsNumber()
-    unitPrice: number
+  @ApiProperty({ example: '60196643494', description: 'E.164 format: +60...' })
+  @IsNotEmpty() @IsString()
+  phone: string;
+
+  @ApiProperty({ example: 'E100000000010' })
+  @IsNotEmpty() @IsString()
+  tin: string;
+
+  @ApiProperty({ example: '900101015555', description: 'NRIC or BRN' })
+  @IsNotEmpty() @IsString()
+  registrationNumber: string;
+
+  @ApiProperty({ example: 'No 50 Jalan Seri Putra 3/9' })
+  @IsNotEmpty() @IsString()
+  addressLine1: string;
+
+  @ApiProperty({ example: '43000' })
+  @IsNotEmpty() @IsString()
+  postcode: string;
+
+  @ApiProperty({ example: 'Kajang' })
+  @IsNotEmpty() @IsString()
+  city: string;
+
+  @ApiProperty({ example: 'Selangor' })
+  @IsNotEmpty() @IsString()
+  state: string;
+
+  @ApiProperty({ example: 'MY' })
+  @IsNotEmpty() @IsString()
+  countryCode: string; // Mandatory ISO code
 }
 
-export class CreateInvoiceInputDTO {
-    @ApiProperty({
-        example: 'Recepient name',
-        required: true
-    })
-    @IsNotEmpty()
-    name: string
+// 2. SUPPLIER (YOUR SME) DTO
+export class SupplierDTO {
+  @ApiProperty({ example: 'Energizing Wellness Taekwondo' })
+  @IsNotEmpty() @IsString()
+  name: string;
 
-    @ApiProperty({
-        type: [CreateInvoiceItemsInputDTO],
-        description: 'List of invoice items'
-    })
-    @IsArray()
-    @ValidateNested({ each: true })
-    @Type(() => CreateInvoiceItemsInputDTO) 
-    items: CreateInvoiceItemsInputDTO[]
+  @ApiProperty({ example: 'C1234567890' })
+  @IsNotEmpty() @IsString()
+  tin: string; // Your business TIN
+
+  @ApiProperty({ example: '202401012345' })
+  @IsNotEmpty() @IsString()
+  registrationNumber: string; // Your SSM Number
+
+  @ApiProperty({ example: '85419', description: 'Sports and recreation education' })
+  @IsNotEmpty() @IsString()
+  msicCode: string; // Mandatory 5-digit code
+
+  @ApiProperty({ example: 'Taekwondo training and sports goods' })
+  @IsNotEmpty() @IsString()
+  businessActivityDescription: string;
+}
+
+// 3. ITEM DTO
+export class CreateInvoiceItemsInputDTO {
+  @ApiProperty({ example: 'Monthly Taekwondo Tuition (Junior Class)' })
+  @IsNotEmpty() @IsString()
+  itemName: string;
+
+  @ApiProperty({ example: 1 })
+  @IsInt() @IsNotEmpty()
+  quantity: number;
+
+  @ApiProperty({ example: 150.00 })
+  @IsNumber() @IsNotEmpty()
+  unitPrice: number;
+
+  @ApiProperty({ example: '010', description: 'LHDN Classification Code' })
+  @IsNotEmpty() @IsString()
+  classificationCode: string; // e.g., 010 for services
+}
+
+// 4. MAIN INPUT DTO
+export class CreateInvoiceInputDTO {
+  @ApiProperty({ enum: ['Invoice', 'Credit Note', 'Debit Note'] })
+  @IsEnum(['Invoice', 'Credit Note', 'Debit Note'])
+  invoiceType: string; // Mandatory for LHDN
+
+  @ApiProperty({ example: 'MYR' })
+  @IsString()
+  currency: string; // Mandatory ISO code
+
+  @ApiProperty({type: SupplierDTO})
+  @ValidateNested()
+  @Type(() => SupplierDTO)
+  supplier: SupplierDTO;
+
+  @ApiProperty({type: RecipientDTO})
+  @ValidateNested()
+  @Type(() => RecipientDTO)
+  recipient: RecipientDTO;
+
+  @ApiProperty({ example: 8.00 })
+  @IsNumber()
+  taxRate: number;
+
+  @ApiProperty({ example: '2026-01-18' })
+  @IsDateString()
+  dueDate: string;
+
+  @ApiProperty({type: CreateInvoiceItemsInputDTO})
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateInvoiceItemsInputDTO)
+  items: CreateInvoiceItemsInputDTO[];
+}
+
+// 5. OUTPUT DTO (Includes LHDN Validation Data)
+export class CreateInvoiceOutputDTO extends CreateInvoiceInputDTO { 
+  @ApiProperty({ example: 'year-date-month-time-stamp-email-7digituuid' })
+  invoiceNo: string;
+
+  @ApiProperty({ example: '2025-12-19T08:52:10Z' })
+  issuedDate: string;
+
+  @ApiProperty({ example: 445.00 })
+  totalExcludingTax: number;
+
+  @ApiProperty({ example: 453.00 })
+  totalIncludingTax: number;
 }
