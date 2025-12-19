@@ -8,3 +8,4 @@ dist/
 # IDEs and OS
 .vscode/
 .DS_Store
+.env

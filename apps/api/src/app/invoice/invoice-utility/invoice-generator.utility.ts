@@ -1,5 +1,43 @@
-import * as puppeteer from 'puppeteer';
+import puppeteer from 'puppeteer-core';
 import { CreateInvoiceOutputDTO } from '../invoice-dto';
+
+/**
+ * Get browser executable path based on environment
+ */
+async function getBrowser() {
+  // Check if running in serverless environment (Vercel, AWS Lambda)
+  const isServerless = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME;
+
+  if (isServerless) {
+    // Use @sparticuz/chromium for serverless
+    const chromium = await import('@sparticuz/chromium');
+    return puppeteer.launch({
+      args: chromium.default.args,
+      defaultViewport: chromium.default.defaultViewport,
+      executablePath: await chromium.default.executablePath,
+      headless: chromium.default.headless,
+    });
+  } else {
+    // Local development - use installed Chrome
+    const executablePath = 
+      process.platform === 'win32'
+        ? 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
+        : process.platform === 'darwin'
+        ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+        : '/usr/bin/google-chrome';
+
+    return puppeteer.launch({
+      headless: true,
+      executablePath,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+      ],
+    });
+  }
+}
 
 /**
  * Format number as currency
@@ -471,19 +509,11 @@ function generateInvoiceHTML(invoice: CreateInvoiceOutputDTO): string {
 export async function generateInvoice(
   invoiceData: CreateInvoiceOutputDTO,
 ): Promise<Buffer> {
-  let browser: puppeteer.Browser | null = null;
+  let browser = null;
 
   try {
-    // Launch Puppeteer browser
-    browser = await puppeteer.launch({
-      headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
-      ],
-    });
+    // Get browser instance (handles both local and serverless)
+    browser = await getBrowser();
 
     const page = await browser.newPage();
 
