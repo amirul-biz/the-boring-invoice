@@ -9,3 +9,6 @@ dist/
 .vscode/
 .DS_Store
 .env
+.angular
+
+__screenshots__/
