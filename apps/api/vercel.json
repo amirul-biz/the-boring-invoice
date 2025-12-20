@@ -1,8 +1,12 @@
 {
   "version": 2,
-  "public": true,
   "buildCommand": "npx nx build api --prod",
-  "outputDirectory": "dist/apps/api",
+  "outputDirectory": "../../dist/apps/api",
+  "functions": {
+    "src/main.ts": {
+      "runtime": "@vercel/node"
+    }
+  },
   "headers": [
     {
       "source": "/(.*)",
@@ -16,7 +20,7 @@
   ],
   "rewrites": [
     {
-      "source": "/api/(.*)",
+      "source": "/(.*)",
       "destination": "src/main.ts"
     }
   ]

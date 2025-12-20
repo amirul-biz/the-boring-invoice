@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "public": true,
+  "buildCommand": "npx nx build client --prod",
+  "outputDirectory": "../../dist/apps/client/browser",
+  "framework": null,
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
