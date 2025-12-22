@@ -94,6 +94,17 @@
               </div>
 
               <div class="mb-3">
+                <label for="supplierEmail" class="form-label">Email</label>
+                <input
+                  type="email"
+                  class="form-control"
+                  [ngClass]="{'is-invalid': isFieldInvalid(supplier.controls.email)}"
+                  id="supplierEmail"
+                  formControlName="email">
+                <div class="invalid-feedback">Valid email is required</div>
+              </div>
+
+              <div class="mb-3">
                 <label for="supplierTin" class="form-label">TIN</label>
                 <input
                   type="text"

@@ -21,6 +21,7 @@ export interface RecipientForm {
 
 export interface SupplierForm {
   name: FormControl<string>;
+  email: FormControl<string | null>;
   tin: FormControl<string>;
   registrationNumber: FormControl<string>;
   msicCode: FormControl<string>;
@@ -90,6 +91,7 @@ export function getInvoiceForm(): FormGroup<CreateInvoiceForm> {
         nonNullable: true,
         validators: [Validators.required],
       }),
+      email: new FormControl<string | null>(null, [Validators.email, Validators.required]),
       tin: new FormControl('', {
         nonNullable: true,
         validators: [Validators.required],
@@ -188,6 +190,7 @@ export function getInvoiceData(
     dueDate: dueDate,
     supplier: {
       name: formValue.supplier.name,
+      email: formValue.supplier.email ?? undefined,
       tin: formValue.supplier.tin,
       registrationNumber: formValue.supplier.registrationNumber,
       msicCode: formValue.supplier.msicCode,
