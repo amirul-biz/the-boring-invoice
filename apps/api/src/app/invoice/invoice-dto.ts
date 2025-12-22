@@ -62,6 +62,10 @@ export class SupplierDTO {
   @IsNotEmpty() @IsString()
   name: string;
 
+  @ApiProperty({ example: 'supplier@example.com' })
+  @IsEmail() @IsOptional()
+  email: string;
+
   @ApiProperty({ example: 'C1234567890' })
   @IsNotEmpty() @IsString()
   tin: string; // Your business TIN

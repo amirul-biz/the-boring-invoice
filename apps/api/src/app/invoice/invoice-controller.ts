@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Header,
+  InternalServerErrorException,
   Logger,
   Post,
   Res,
@@ -23,14 +24,28 @@ import {
 } from './invoice-dto';
 import { generateInvoice } from './invoice-utility/invoice-generator.utility';
 import { createToyyibPayUtil } from './invoice-utility/invoice-toyyibpay-bill-generator.utility';
+import { MailerService } from '@nestjs-modules/mailer';
+import { sendInvoiceEmail } from './invoice-utility/invoice-email-generator.utility';
 
 @ApiTags('invoice')
 @Controller('invoice')
 export class InvoiceController {
-  @Get()
-  getInvoices() {
-    return 'Invoices';
+  constructor(private readonly mailService: MailerService){}
+
+ @Get('test-email')
+ async getInvoices(): Promise<any> {
+  try {
+    await this.mailService.sendMail({
+      to: 'amirul.irfan.biz@gmail.com',
+      subject: 'Invoice Ready',
+      text: 'Your invoice has been processed.',
+    });
+    return { status: 'Success', message: 'Invoice email sent' };
+  } catch (error) {
+    Logger.log(error)
+    throw new InternalServerErrorException('Failed to send email',error);
   }
+}
 
   @Post('generate')
   @ApiOperation({ summary: 'Generate invoice PDF' })
@@ -54,10 +69,13 @@ export class InvoiceController {
 
     const pdfBuffer = await generateInvoice(processedInvoiceData);
 
+
     res.set({
       'Content-Disposition': `attachment; filename="invoice-${processedInvoiceData.invoiceNo}.pdf"`,
       'Content-Length': pdfBuffer.length.toString(),
     });
+
+    await sendInvoiceEmail(this.mailService, processedInvoiceData, pdfBuffer);
 
     // Return as StreamableFile
     return new StreamableFile(pdfBuffer);

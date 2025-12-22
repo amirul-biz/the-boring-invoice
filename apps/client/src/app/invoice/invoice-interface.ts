@@ -15,6 +15,7 @@ export interface IRecipient {
 // 2. SUPPLIER (YOUR SME) INTERFACE
 export interface ISupplier {
   name: string;
+  email?: string;
   tin: string;
   registrationNumber: string;
   msicCode: string;
