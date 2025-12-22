@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Header,
+  Logger,
   Post,
   Res,
   StreamableFile,
@@ -15,8 +16,13 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { CreateInvoiceInputDTO, CreateInvoiceOutputDTO } from './invoice-dto';
+import {
+  CreateInvoiceInputDTO,
+  CalculatedInvoiceDto,
+  ProcessedInvoiceDto,
+} from './invoice-dto';
 import { generateInvoice } from './invoice-utility/invoice-generator.utility';
+import { createToyyibPayUtil } from './invoice-utility/invoice-toyyibpay-bill-generator.utility';
 
 @ApiTags('invoice')
 @Controller('invoice')
@@ -40,15 +46,16 @@ export class InvoiceController {
     @Body() invoiceData: CreateInvoiceInputDTO,
     @Res({ passthrough: true }) res: Response,
   ): Promise<StreamableFile> {
-    // Business name - you can get this from config, database, or request body
-    const invoiceOutputData = this.getInvoiceOutputData(invoiceData);
+    const calculatedInvoiceData =
+      await this.getCalculatedInvoiceData(invoiceData);
+    const processedInvoiceData = await this.getProcessedIncvoiceData(
+      calculatedInvoiceData,
+    );
 
-    // Generate PDF buffer
-    const pdfBuffer = await generateInvoice(invoiceOutputData);
+    const pdfBuffer = await generateInvoice(processedInvoiceData);
 
-    // Set content disposition header for download
     res.set({
-      'Content-Disposition': `attachment; filename="invoice-${invoiceOutputData.invoiceNo}.pdf"`,
+      'Content-Disposition': `attachment; filename="invoice-${processedInvoiceData.invoiceNo}.pdf"`,
       'Content-Length': pdfBuffer.length.toString(),
     });
 
@@ -56,7 +63,25 @@ export class InvoiceController {
     return new StreamableFile(pdfBuffer);
   }
 
-  getInvoiceOutputData(input: CreateInvoiceInputDTO): CreateInvoiceOutputDTO {
+  async getProcessedIncvoiceData(
+    calculatedInvoiceData: CalculatedInvoiceDto,
+  ): Promise<ProcessedInvoiceDto> {
+    const toyyibPay = createToyyibPayUtil({
+      returnUrl: 'https://yoursite.com/payment/return',
+      callbackUrl: 'https://yoursite.com/api/payment/callback',
+    });
+
+    const paymentUrl = (
+      await toyyibPay.createBillFromCalculatedInvoiceData(calculatedInvoiceData)
+    ).paymentUrl;
+
+    return {
+      ...calculatedInvoiceData,
+      billUrl: paymentUrl,
+    };
+  }
+
+  getCalculatedInvoiceData(input: CreateInvoiceInputDTO): CalculatedInvoiceDto {
     // 1. Calculate and map items with LHDN mathematical accuracy
     const mappedItems = input.items.map((item) => {
       const subtotal = item.quantity * item.unitPrice;
@@ -93,7 +118,7 @@ export class InvoiceController {
     const internalRef = `INV-${timestamp}-${namePrefix}-${randomSuffix}`;
 
     // 3. Construct the Output DTO
-    const output = new CreateInvoiceOutputDTO();
+    const output = new CalculatedInvoiceDto();
     Object.assign(output, input);
 
     // System-Generated Fields
