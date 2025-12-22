@@ -1,5 +1,6 @@
 import PDFDocument from 'pdfkit';
-import { CreateInvoiceOutputDTO } from '../invoice-dto';
+import { ProcessedInvoiceDto } from '../invoice-dto';
+import { createQRCodeUtil, QRCodeUtil } from './utility-qr-code';
 
 /**
  * Format number as currency
@@ -12,7 +13,7 @@ function formatCurrency(amount: number | null | undefined, currency: string = 'R
 /**
  * Format address from recipient DTO
  */
-function formatAddress(recipient: CreateInvoiceOutputDTO['recipient']): string {
+function formatAddress(recipient: ProcessedInvoiceDto['recipient']): string {
   const parts = [
     recipient?.addressLine1,
     recipient?.postcode,
@@ -43,16 +44,24 @@ const COLORS = {
   textDark: '#2d3748',
   textMuted: '#718096',
   accent: '#3182ce',
+  success: '#38a169',
 };
 
 /**
- * Generate invoice PDF using PDFKit
- * @param invoiceData - The invoice data (CreateInvoiceOutputDTO)
+ * Generate invoice PDF using PDFKit with QR code and payment button
+ * @param invoiceData - The processed invoice data (ProcessedInvoiceDto)
  * @returns Promise<Buffer> containing the PDF data
  */
 export async function generateInvoice(
-  invoiceData: CreateInvoiceOutputDTO,
+  invoiceData: ProcessedInvoiceDto,
 ): Promise<Buffer> {
+  // Generate QR code if billUrl exists
+  let qrBuffer: Buffer | null = null;
+  if (invoiceData.billUrl) {
+    const qrCodeUtil = createQRCodeUtil();
+    qrBuffer = await qrCodeUtil.generatePaymentQR(invoiceData.billUrl, 100);
+  }
+
   return new Promise((resolve, reject) => {
     try {
       // Create PDF document (A4 size)
@@ -87,9 +96,10 @@ export async function generateInvoice(
       const currency = currencyCode === 'MYR' ? 'RM' : currencyCode;
       const businessName = supplier?.name || '';
       const invoiceNo = invoiceData.invoiceNo || '';
+      const billUrl = invoiceData.billUrl || '';
 
       // ============ HEADER SECTION ============
-      const headerHeight = 136; // ~48mm
+      const headerHeight = 136;
 
       // Header background
       doc.rect(0, 0, pageWidth, headerHeight).fill(COLORS.primary);
@@ -158,13 +168,25 @@ export async function generateInvoice(
 
       yPos += 18;
 
-      // Recipient address
-      const address = formatAddress(recipient);
-      if (address) {
-        doc.font('Helvetica')
-          .fontSize(10)
-          .fillColor(COLORS.textDark)
-          .text(address, margin, yPos, { width: 250 });
+      // Address - split into separate lines to avoid overlap
+      doc.font('Helvetica')
+        .fontSize(10)
+        .fillColor(COLORS.textDark);
+
+      if (recipient?.addressLine1) {
+        doc.text(recipient.addressLine1, margin, yPos);
+        yPos += 14;
+      }
+
+      // City, Postcode, State, Country on one line
+      const locationParts = [
+        recipient?.postcode,
+        recipient?.city,
+        recipient?.state,
+        recipient?.countryCode,
+      ].filter(Boolean);
+      if (locationParts.length > 0) {
+        doc.text(locationParts.join(', '), margin, yPos);
         yPos += 14;
       }
 
@@ -196,8 +218,8 @@ export async function generateInvoice(
       }
 
       // ============ INVOICE DETAILS BOX (Right Side) ============
-      const boxWidth = 198; // ~70mm
-      const boxHeight = 113; // ~40mm
+      const boxWidth = 198;
+      const boxHeight = 113;
       const boxX = pageWidth - margin - boxWidth;
       const boxY = headerHeight + 28;
 
@@ -363,8 +385,104 @@ export async function generateInvoice(
         .text('TOTAL:', totalsX, totalsY)
         .text(formatCurrency(totalIncludingTax, currency), totalsX + 80, totalsY, { width: 118, align: 'right' });
 
+      // ============ PAYMENT SECTION (QR Code + Pay Button) ============
+      if (billUrl) {
+        const paymentSectionY = totalsY + 50;
+        const paymentBoxWidth = pageWidth - 2 * margin;
+        const paymentBoxHeight = 130;
+
+        // Payment section background
+        doc.roundedRect(margin, paymentSectionY, paymentBoxWidth, paymentBoxHeight, 8)
+          .fill(COLORS.lightGray);
+
+        // Section title
+        doc.font('Helvetica-Bold')
+          .fontSize(10)
+          .fillColor(COLORS.primary)
+          .text('SCAN TO PAY', margin + 20, paymentSectionY + 15);
+
+        // QR Code
+        if (qrBuffer) {
+          const qrSize = 90;
+          const qrX = margin + 20;
+          const qrY = paymentSectionY + 32;
+
+          doc.image(qrBuffer, qrX, qrY, {
+            width: qrSize,
+            height: qrSize,
+          });
+
+          // QR code caption
+          doc.font('Helvetica')
+            .fontSize(7)
+            .fillColor(COLORS.textMuted)
+            .text('Point camera at QR code', qrX, qrY + qrSize + 4, {
+              width: qrSize,
+              align: 'center',
+            });
+        }
+
+        // Pay Now Button (clickable)
+        const buttonX = margin + 140;
+        const buttonY = paymentSectionY + 45;
+        const buttonWidth = 140;
+        const buttonHeight = 36;
+
+        // Button background
+        doc.roundedRect(buttonX, buttonY, buttonWidth, buttonHeight, 6)
+          .fill(COLORS.accent);
+
+        // Make button clickable
+        doc.link(buttonX, buttonY, buttonWidth, buttonHeight, billUrl);
+
+        // Button text
+        doc.font('Helvetica-Bold')
+          .fontSize(13)
+          .fillColor(COLORS.white)
+          .text('Pay Now', buttonX, buttonY + 11, {
+            width: buttonWidth,
+            align: 'center',
+          });
+
+        // Clickable link text below button
+        doc.font('Helvetica')
+          .fontSize(8)
+          .fillColor(COLORS.accent)
+          .text('Click here to pay online', buttonX, buttonY + buttonHeight + 8, {
+            width: buttonWidth,
+            align: 'center',
+            link: billUrl,
+            underline: true,
+          });
+
+        // Payment details on the right
+        const detailsX = buttonX + buttonWidth + 40;
+        const detailsY = paymentSectionY + 40;
+
+        doc.font('Helvetica')
+          .fontSize(9)
+          .fillColor(COLORS.textMuted)
+          .text('Amount Due', detailsX, detailsY);
+
+        doc.font('Helvetica-Bold')
+          .fontSize(16)
+          .fillColor(COLORS.primary)
+          .text(formatCurrency(totalIncludingTax, currency), detailsX, detailsY + 14);
+
+        doc.font('Helvetica')
+          .fontSize(9)
+          .fillColor(COLORS.textMuted)
+          .text('Due by ' + formatDate(invoiceData.dueDate), detailsX, detailsY + 38);
+
+        // Payment methods note
+        doc.font('Helvetica')
+          .fontSize(7)
+          .fillColor(COLORS.textMuted)
+          .text('Accepts FPX & Credit/Debit Cards', detailsX, detailsY + 55);
+      }
+
       // ============ FOOTER SECTION ============
-      const footerY = pageHeight - 100;
+      const footerY = pageHeight - 70;
 
       // Divider line
       doc.moveTo(margin, footerY)
@@ -373,33 +491,29 @@ export async function generateInvoice(
         .lineWidth(0.5)
         .stroke();
 
-      // Payment info title
-      doc.font('Helvetica-Bold')
-        .fontSize(9)
-        .fillColor(COLORS.textMuted)
-        .text('PAYMENT INFORMATION', margin, footerY + 12);
-
-      // Payment info text
+      // Payment info
       doc.font('Helvetica')
-        .fontSize(9)
+        .fontSize(8)
         .fillColor(COLORS.textDark)
-        .text(`Payment is due by ${formatDate(invoiceData.dueDate)}.`, margin, footerY + 27)
-        .text(`Please include invoice number (${invoiceNo}) in payment reference.`, margin, footerY + 41);
+        .text(`Payment is due by ${formatDate(invoiceData.dueDate)}. Please include invoice number (${invoiceNo}) in payment reference.`, margin, footerY + 10, {
+          width: pageWidth - 2 * margin,
+          align: 'center',
+        });
 
       // Thank you message
       doc.font('Helvetica-Oblique')
-        .fontSize(10)
+        .fontSize(9)
         .fillColor(COLORS.accent)
-        .text('Thank you for your business!', 0, footerY + 65, { width: pageWidth, align: 'center' });
+        .text('Thank you for your business!', 0, footerY + 28, { width: pageWidth, align: 'center' });
 
       // Generated timestamp
       doc.font('Helvetica')
         .fontSize(7)
         .fillColor(COLORS.textMuted)
         .text(
-          `Generated on ${new Date().toISOString().replace('T', ' ').substring(0, 19)}`,
+          `Generated on ${new Date().toISOString().replace('T', ' ').substring(0, 19)} | LHDN e-Invoice Compliant`,
           0,
-          footerY + 82,
+          footerY + 45,
           { width: pageWidth, align: 'center' }
         );
 
@@ -413,11 +527,11 @@ export async function generateInvoice(
 
 /**
  * Generate invoice PDF and save to file
- * @param invoiceData - The invoice data (CreateInvoiceOutputDTO)
+ * @param invoiceData - The processed invoice data (ProcessedInvoiceDto)
  * @param outputPath - Path to save the PDF file
  */
 export async function generateInvoiceToFile(
-  invoiceData: CreateInvoiceOutputDTO,
+  invoiceData: ProcessedInvoiceDto,
   outputPath: string,
 ): Promise<void> {
   const fs = await import('fs').then((m) => m.promises);

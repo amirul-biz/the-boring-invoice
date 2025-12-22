@@ -134,7 +134,7 @@ export class CreateInvoiceInputDTO {
 }
 
 // 5. OUTPUT DTO (Includes LHDN Validation Data)
-export class CreateInvoiceOutputDTO extends CreateInvoiceInputDTO { 
+export class CalculatedInvoiceDto extends CreateInvoiceInputDTO { 
   @ApiProperty({ example: 'year-date-month-time-stamp-email-7digituuid' })
   invoiceNo: string;
 
@@ -147,3 +147,9 @@ export class CreateInvoiceOutputDTO extends CreateInvoiceInputDTO {
   @ApiProperty({ example: 453.00 })
   totalIncludingTax: number;
 }
+
+export class ProcessedInvoiceDto extends CalculatedInvoiceDto {
+  @ApiProperty({example: `${process.env.PAYMENT_API_BASE_URL}/api url`})
+  billUrl: string
+}
+
