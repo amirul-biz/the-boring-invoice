@@ -5,10 +5,16 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // Enable parsing of URL-encoded bodies (for ToyyibPay callbacks)
+  app.use(require('express').urlencoded({ extended: true }));
+  app.use(require('express').json());
+
   app.enableCors({
     origin: [
       'https://the-boring-invoice-client.vercel.app',
       'http://localhost:4200',
+      /\.ngrok-free\.app$/,
+      /\.ngrok-free\.dev$/,
     ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],

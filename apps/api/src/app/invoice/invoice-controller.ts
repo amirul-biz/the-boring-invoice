@@ -3,12 +3,16 @@ import {
   Controller,
   Get,
   Header,
+  HttpStatus,
   InternalServerErrorException,
   Logger,
   Post,
+  Req,
   Res,
   StreamableFile,
+  UseInterceptors,
 } from '@nestjs/common';
+import { AnyFilesInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
 import {
   ApiBody,
@@ -21,31 +25,34 @@ import {
   CreateInvoiceInputDTO,
   CalculatedInvoiceDto,
   ProcessedInvoiceDto,
+  ReceiptDTO,
 } from './invoice-dto';
 import { generateInvoice } from './invoice-utility/invoice-generator.utility';
 import { createToyyibPayUtil } from './invoice-utility/invoice-toyyibpay-bill-generator.utility';
 import { MailerService } from '@nestjs-modules/mailer';
 import { sendInvoiceEmail } from './invoice-utility/invoice-email-generator.utility';
+import { generateReceipt } from './invoice-utility/utility-pdf-receipt-generator';
+import { sendReceiptEmail } from './invoice-utility/utility-email-receipt-generator';
 
 @ApiTags('invoice')
 @Controller('invoice')
 export class InvoiceController {
-  constructor(private readonly mailService: MailerService){}
+  constructor(private readonly mailService: MailerService) {}
 
- @Get('test-email')
- async getInvoices(): Promise<any> {
-  try {
-    await this.mailService.sendMail({
-      to: 'amirul.irfan.biz@gmail.com',
-      subject: 'Invoice Ready',
-      text: 'Your invoice has been processed.',
-    });
-    return { status: 'Success', message: 'Invoice email sent' };
-  } catch (error) {
-    Logger.log(error)
-    throw new InternalServerErrorException('Failed to send email',error);
+  @Get('test-email')
+  async getInvoices(): Promise<any> {
+    try {
+      await this.mailService.sendMail({
+        to: 'amirul.irfan.biz@gmail.com',
+        subject: 'Invoice Ready',
+        text: 'Your invoice has been processed.',
+      });
+      return { status: 'Success', message: 'Invoice email sent' };
+    } catch (error) {
+      Logger.log(error);
+      throw new InternalServerErrorException('Failed to send email', error);
+    }
   }
-}
 
   @Post('generate')
   @ApiOperation({ summary: 'Generate invoice PDF' })
@@ -69,7 +76,6 @@ export class InvoiceController {
 
     const pdfBuffer = await generateInvoice(processedInvoiceData);
 
-
     res.set({
       'Content-Disposition': `attachment; filename="invoice-${processedInvoiceData.invoiceNo}.pdf"`,
       'Content-Length': pdfBuffer.length.toString(),
@@ -77,16 +83,119 @@ export class InvoiceController {
 
     await sendInvoiceEmail(this.mailService, processedInvoiceData, pdfBuffer);
 
-    // Return as StreamableFile
     return new StreamableFile(pdfBuffer);
+  }
+
+  @Post('callback')
+  @UseInterceptors(AnyFilesInterceptor())
+  async handleToyyibPayCallback(
+    @Req() req: any,
+    @Body() callbackData: any,
+    @Res() res,
+  ) {
+    // ToyyibPay Callback Interface
+    interface ToyyibPayCallback {
+      refno: string;
+      status: string;
+      reason: string;
+      billcode: string;
+      order_id: string;
+      amount: string;
+      status_id: string;
+      msg: string;
+      transaction_id: string;
+      fpx_transaction_id: string;
+      hash: string;
+      transaction_time: string;
+    }
+
+    const  mockBillResponse: ProcessedInvoiceDto = {
+      invoiceType: 'Invoice',
+      currency: 'MYR',
+      supplier: {
+        name: 'Energizing Wellness Taekwondo',
+        email: 'amirul.irfan.biz@gmail.com',
+        tin: 'C25845632020',
+        registrationNumber: '202401012345',
+        msicCode: '85412',
+        businessActivityDescription:
+          'Martial arts instruction and sports goods',
+      },
+      recipient: {
+        name: 'Amirul Irfan Bin Khairul Azreem',
+        email: 'amirul.irfan.1022000@gmail.com',
+        phone: '+60196643494',
+        tin: 'EI00000000010',
+        registrationNumber: '900101015555',
+        addressLine1: 'No 50 Jalan Seri Putra 3/9',
+        postcode: '43000',
+        city: 'Kajang',
+        state: 'Selangor',
+        countryCode: 'MY',
+      },
+      taxRate: 8.0,
+      dueDate: '2026-01-18',
+      items: [
+        {
+          itemName: 'Monthly Taekwondo Tuition (Junior Class)',
+          quantity: 1,
+          unitPrice: 150.0,
+          classificationCode: '010',
+        },
+        {
+          itemName: 'Taekwondo Uniform (Dobok) - Size L',
+          quantity: 1,
+          unitPrice: 85.0,
+          classificationCode: '022',
+        },
+      ],
+      invoiceNo: '2025-12-23-1458-amirul-irfan-7a2b3c4',
+      issuedDate: '2025-12-23T14:58:10Z',
+      totalExcludingTax: 235.0,
+      totalIncludingTax: 253.8,
+      billUrl: 'https://toyyibpay.com/e87sh291ks',
+    };
+
+    const mockReceiptResponse: ReceiptDTO = {
+      ...mockBillResponse,
+      transactionId: callbackData.transaction_id,
+      transactionTime: callbackData.transactionTime
+    }
+
+    try {
+      Logger.log(JSON.stringify(callbackData, null, 2));
+
+      const data: ToyyibPayCallback = callbackData || req.body;
+
+      const isSuccess = data.status === '1'
+
+      if(!isSuccess) return
+
+      const pdfReceipt = await generateReceipt(mockReceiptResponse)
+
+      sendReceiptEmail(this.mailService, mockReceiptResponse, pdfReceipt)
+
+      return res.status(HttpStatus.OK).send('OK');
+    } catch (error) {
+      Logger.error('Callback processing error:', error);
+      return res.status(HttpStatus.OK).send('OK'); 
+    }
   }
 
   async getProcessedIncvoiceData(
     calculatedInvoiceData: CalculatedInvoiceDto,
   ): Promise<ProcessedInvoiceDto> {
+    const returnUrl = `${process.env.NG_APP_FRONTEND_URL}`;
+    const callbackUrl = `${process.env.NG_APP_API_URL}/invoice/callback`;
+
+    Logger.log('Creating ToyyibPay bill with URLs:', {
+      returnUrl,
+      callbackUrl,
+    });
+
     const toyyibPay = createToyyibPayUtil({
-      returnUrl: 'https://yoursite.com/payment/return',
-      callbackUrl: 'https://yoursite.com/api/payment/callback',
+      returnUrl,
+      callbackUrl,
     });
 
     const paymentUrl = (

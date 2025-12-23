@@ -157,3 +157,10 @@ export class ProcessedInvoiceDto extends CalculatedInvoiceDto {
   billUrl: string
 }
 
+export class ReceiptDTO extends ProcessedInvoiceDto {
+  @IsString()
+  transactionId: string
+  @IsString()
+  transactionTime: string
+}
+
