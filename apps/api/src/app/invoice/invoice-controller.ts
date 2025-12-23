@@ -94,6 +94,7 @@ export class InvoiceController {
     @Res() res,
   ) {
     // ToyyibPay Callback Interface
+
     interface ToyyibPayCallback {
       refno: string;
       status: string;
@@ -163,7 +164,7 @@ export class InvoiceController {
     }
 
     try {
-      Logger.log(JSON.stringify(callbackData, null, 2));
+      Logger.log('payment data',JSON.stringify(callbackData, null, 2));
 
       const data: ToyyibPayCallback = callbackData || req.body;
 
@@ -173,7 +174,7 @@ export class InvoiceController {
 
       const pdfReceipt = await generateReceipt(mockReceiptResponse)
 
-      sendReceiptEmail(this.mailService, mockReceiptResponse, pdfReceipt)
+      await sendReceiptEmail(this.mailService, mockReceiptResponse, pdfReceipt)
 
       return res.status(HttpStatus.OK).send('OK');
     } catch (error) {
