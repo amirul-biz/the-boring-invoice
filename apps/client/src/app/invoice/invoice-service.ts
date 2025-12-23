@@ -10,7 +10,7 @@ export class InvoiceService {
   http = inject(HttpClient);
 
   generateInvoicePdf(data: ICreateInvoice): Observable<Blob> {
-    return this.http.post(`https://the-boring-invoice-api.vercel.app/invoice/generate`, data, {
+    return this.http.post(`${process.env['NG_APP_API_URL']}/invoice/generate`, data, {
       responseType: 'blob',
     });
   }
