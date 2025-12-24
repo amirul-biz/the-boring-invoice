@@ -84,7 +84,7 @@ export class SupplierDTO {
 }
 
 // 3. ITEM DTO
-export class CreateInvoiceItemsInputDTO {
+export class InvoiceItemDTO {
   @ApiProperty({ example: 'Monthly Taekwondo Tuition (Junior Class)' })
   @IsNotEmpty() @IsString()
   itemName: string;
@@ -130,11 +130,11 @@ export class CreateInvoiceInputDTO {
   @IsDateString()
   dueDate: string;
 
-  @ApiProperty({type: CreateInvoiceItemsInputDTO})
+  @ApiProperty({type: InvoiceItemDTO})
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => CreateInvoiceItemsInputDTO)
-  items: CreateInvoiceItemsInputDTO[];
+  @Type(() => InvoiceItemDTO)
+  items: InvoiceItemDTO[];
 }
 
 // 5. OUTPUT DTO (Includes LHDN Validation Data)

@@ -74,8 +74,11 @@ export class QRCodeUtil {
   }
 }
 
-export function createQRCodeUtil(): QRCodeUtil {
+export function generateQrCode(): QRCodeUtil {
   return new QRCodeUtil();
 }
+
+// Alias for backward compatibility
+export const createQRCodeUtil = generateQrCode;
 
 export default QRCodeUtil;
