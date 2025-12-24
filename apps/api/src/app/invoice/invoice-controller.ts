@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Header,
+  HttpException,
   HttpStatus,
   InternalServerErrorException,
   Logger,
@@ -26,21 +27,26 @@ import {
   CalculatedInvoiceDto,
   ProcessedInvoiceDto,
   ReceiptDTO,
+  RecipientDTO,
+  SupplierDTO,
+  InvoiceItemDTO,
 } from './invoice-dto';
-import { generateInvoice } from './invoice-utility/invoice-generator.utility';
-import { createToyyibPayUtil } from './invoice-utility/invoice-toyyibpay-bill-generator.utility';
+import { generatePdfInvoiceTemplate } from './invoice-generator/invoice-generator-pdf-invoice-template';
+import { generateToyyibpayBill } from './invoice-generator/invoice-generator-toyyibpay-bill';
 import { MailerService } from '@nestjs-modules/mailer';
-import { sendInvoiceEmail } from './invoice-utility/invoice-email-generator.utility';
-import { generateReceipt } from './invoice-utility/utility-pdf-receipt-generator';
-import { sendReceiptEmail } from './invoice-utility/utility-email-receipt-generator';
+import { generateInvoiceEmailTemplate } from './invoice-generator/invoice-generator-invoice-email-template';
+import { generatePdfReceiptTemplate } from './invoice-generator/invoice-generator-pdf-receipt-template';
+import { generateReceiptEmailTemplate } from './invoice-generator/invoice-generator-receipt-email-template';
 import { PrismaService } from '@prismaService';
+import { InvoiceStatus, Prisma } from '@prisma/client';
+import { ExceptionsHandler } from '@nestjs/core/exceptions/exceptions-handler';
 
 @ApiTags('invoice')
 @Controller('invoice')
 export class InvoiceController {
   constructor(
     private readonly mailService: MailerService,
-    private readonly prisma: PrismaService
+    private readonly prisma: PrismaService,
   ) {}
 
   @Get('test-email')
@@ -78,14 +84,16 @@ export class InvoiceController {
       calculatedInvoiceData,
     );
 
-    const pdfBuffer = await generateInvoice(processedInvoiceData);
+    await this.createInvoice(processedInvoiceData)
+
+    const pdfBuffer = await generatePdfInvoiceTemplate(processedInvoiceData);
 
     res.set({
       'Content-Disposition': `attachment; filename="invoice-${processedInvoiceData.invoiceNo}.pdf"`,
       'Content-Length': pdfBuffer.length.toString(),
     });
 
-    await sendInvoiceEmail(this.mailService, processedInvoiceData, pdfBuffer);
+    await generateInvoiceEmailTemplate(this.mailService, processedInvoiceData, pdfBuffer);
 
     return new StreamableFile(pdfBuffer);
   }
@@ -97,7 +105,6 @@ export class InvoiceController {
     @Body() callbackData: any,
     @Res() res,
   ) {
-    // ToyyibPay Callback Interface
 
     interface ToyyibPayCallback {
       refno: string;
@@ -114,76 +121,37 @@ export class InvoiceController {
       transaction_time: string;
     }
 
-    const  mockBillResponse: ProcessedInvoiceDto = {
-      invoiceType: 'Invoice',
-      currency: 'MYR',
-      supplier: {
-        name: 'Energizing Wellness Taekwondo',
-        email: 'amirul.irfan.biz@gmail.com',
-        tin: 'C25845632020',
-        registrationNumber: '202401012345',
-        msicCode: '85412',
-        businessActivityDescription:
-          'Martial arts instruction and sports goods',
-      },
-      recipient: {
-        name: 'Amirul Irfan Bin Khairul Azreem',
-        email: 'amirul.irfan.1022000@gmail.com',
-        phone: '+60196643494',
-        tin: 'EI00000000010',
-        registrationNumber: '900101015555',
-        addressLine1: 'No 50 Jalan Seri Putra 3/9',
-        postcode: '43000',
-        city: 'Kajang',
-        state: 'Selangor',
-        countryCode: 'MY',
-      },
-      taxRate: 8.0,
-      dueDate: '2026-01-18',
-      items: [
-        {
-          itemName: 'Monthly Taekwondo Tuition (Junior Class)',
-          quantity: 1,
-          unitPrice: 150.0,
-          classificationCode: '010',
-        },
-        {
-          itemName: 'Taekwondo Uniform (Dobok) - Size L',
-          quantity: 1,
-          unitPrice: 85.0,
-          classificationCode: '022',
-        },
-      ],
-      invoiceNo: '2025-12-23-1458-amirul-irfan-7a2b3c4',
-      issuedDate: '2025-12-23T14:58:10Z',
-      totalExcludingTax: 235.0,
-      totalIncludingTax: 253.8,
-      billUrl: 'https://toyyibpay.com/e87sh291ks',
-    };
-
-    const mockReceiptResponse: ReceiptDTO = {
-      ...mockBillResponse,
-      transactionId: callbackData.transaction_id,
-      transactionTime: callbackData.transactionTime
-    }
-
     try {
-      Logger.log('payment data',JSON.stringify(callbackData, null, 2));
+     
+      Logger.log('payment data', JSON.stringify(callbackData, null, 2));
 
       const data: ToyyibPayCallback = callbackData || req.body;
 
-      const isSuccess = data.status === '1'
+      const invoiceNo = data.order_id
+      const paymentStatus = data.status === '1' ? InvoiceStatus.PAID : InvoiceStatus.CANCELLED
 
-      if(!isSuccess) return
+      const sanitizedTransactionTime = data.transaction_time
+        ? new Date(data.transaction_time.replace(' ', 'T')).toISOString()
+        : new Date().toISOString();
 
-      const pdfReceipt = await generateReceipt(mockReceiptResponse)
+       await this.updateInvoiceStatus({
+        status: paymentStatus, transactionTime: sanitizedTransactionTime, transactionId: data.transaction_id, invoiceNo: invoiceNo
+      })
 
-      await sendReceiptEmail(this.mailService, mockReceiptResponse, pdfReceipt)
+      const isSuccess = paymentStatus === InvoiceStatus.PAID;
+
+      if (!isSuccess) return;
+
+      const invoiceData = await this.getInvoiceData(invoiceNo)
+
+      const pdfReceipt = await generatePdfReceiptTemplate(invoiceData);
+
+      await generateReceiptEmailTemplate(this.mailService, invoiceData, pdfReceipt);
 
       return res.status(HttpStatus.OK).send('OK');
     } catch (error) {
       Logger.error('Callback processing error:', error);
-      return res.status(HttpStatus.OK).send('OK'); 
+      return res.status(HttpStatus.OK).send('OK');
     }
   }
 
@@ -198,7 +166,7 @@ export class InvoiceController {
       callbackUrl,
     });
 
-    const toyyibPay = createToyyibPayUtil({
+    const toyyibPay = generateToyyibpayBill({
       returnUrl,
       callbackUrl,
     });
@@ -274,5 +242,107 @@ export class InvoiceController {
     );
 
     return output;
+  }
+
+  async createInvoice(dto: ProcessedInvoiceDto): Promise<void> {
+    try {
+      await this.prisma.invoice.create({
+        data: {
+          invoiceNo: dto.invoiceNo,
+          invoiceType: dto.invoiceType,
+          currency: dto.currency,
+          status: (dto.status as InvoiceStatus) || 'PENDING',
+
+          issuedDate: new Date(dto.issuedDate),
+          dueDate: new Date(dto.dueDate),
+
+          recipientRegistrationNo: dto.recipient.registrationNumber,
+          recipient: dto.recipient as any as Prisma.JsonObject,
+
+          supplierRegistrationNo: dto.supplier.registrationNumber,
+          supplier: dto.supplier as any as Prisma.JsonObject,
+
+          items: dto.items as unknown as Prisma.JsonArray,
+
+          taxRate: dto.taxRate,
+          totalExcludingTax: dto.totalExcludingTax,
+          totalIncludingTax: dto.totalIncludingTax,
+
+          billUrl: dto.billUrl,
+        },
+      });
+    } catch (error) {
+      throw new HttpException('cannot save db', error);
+    }
+  }
+
+  async updateInvoiceStatus(data: {invoiceNo: string, transactionTime: string, transactionId: string, status: InvoiceStatus}): Promise<void> {
+    try {
+      await this.prisma.invoice.update({
+        where: { invoiceNo: data.invoiceNo },
+        data: { status: data.status, transactionTime: data.transactionTime, transactionId: data.transactionId },
+      });
+      Logger.log(`Invoice ${data.invoiceNo} status updated to ${data.status}`);
+    } catch (error) {
+      Logger.error(`Failed to update invoice ${data.invoiceNo} status:`, error);
+      throw new HttpException('Failed to update invoice status', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  async getInvoiceData(invoiceNo: string): Promise<ReceiptDTO> {
+    try {
+      const invoice = await this.prisma.invoice.findUnique({
+        where: { invoiceNo },
+      });
+
+      if (!invoice) {
+        throw new HttpException(
+          `Invoice ${invoiceNo} not found`,
+          HttpStatus.NOT_FOUND,
+        );
+      }
+
+      if (!invoice.transactionId || !invoice.transactionTime) {
+        throw new HttpException(
+          `Invoice ${invoiceNo} does not have transaction details`,
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      const receiptDto: ReceiptDTO = {
+        invoiceNo: invoice.invoiceNo,
+        invoiceType: invoice.invoiceType,
+        currency: invoice.currency,
+        status: invoice.status,
+
+        issuedDate: invoice.issuedDate.toISOString(),
+        dueDate: invoice.dueDate.toISOString(),
+
+        supplier: invoice.supplier as unknown as SupplierDTO,
+        recipient: invoice.recipient as unknown as RecipientDTO,
+
+        items: invoice.items as any as InvoiceItemDTO[],
+
+        taxRate: parseFloat(invoice.taxRate.toString()),
+        totalExcludingTax: parseFloat(invoice.totalExcludingTax.toString()),
+        totalIncludingTax: parseFloat(invoice.totalIncludingTax.toString()),
+
+        billUrl: invoice.billUrl || '',
+
+        transactionId: invoice.transactionId,
+        transactionTime: invoice.transactionTime.toISOString(),
+      };
+
+      return receiptDto;
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      Logger.error(`Failed to retrieve invoice ${invoiceNo}:`, error);
+      throw new HttpException(
+        'Failed to retrieve invoice',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 }

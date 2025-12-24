@@ -288,7 +288,7 @@ For questions, contact us at ${receipt.supplier.email}
 `.trim();
 }
 
-export async function sendReceiptEmail(
+export async function generateReceiptEmailTemplate(
   mailService: MailerService,
   receipt: ReceiptDTO,
   pdfBuffer: Buffer,

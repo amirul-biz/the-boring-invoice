@@ -238,7 +238,7 @@ For questions, contact us at ${invoice.supplier.email}
 `.trim();
 }
 
-export async function sendInvoiceEmail(
+export async function generateInvoiceEmailTemplate(
   mailService: MailerService,
   invoice: ProcessedInvoiceDto,
   pdfBuffer: Buffer,

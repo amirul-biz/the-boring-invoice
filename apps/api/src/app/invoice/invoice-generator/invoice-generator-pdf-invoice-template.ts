@@ -1,6 +1,6 @@
 import PDFDocument from 'pdfkit';
 import { ProcessedInvoiceDto } from '../invoice-dto';
-import { createQRCodeUtil, QRCodeUtil } from './utility-qr-code';
+import { createQRCodeUtil, QRCodeUtil } from './invoice-generator-qr-code';
 
 /**
  * Format number as currency
@@ -52,7 +52,7 @@ const COLORS = {
  * @param invoiceData - The processed invoice data (ProcessedInvoiceDto)
  * @returns Promise<Buffer> containing the PDF data
  */
-export async function generateInvoice(
+export async function generatePdfInvoiceTemplate(
   invoiceData: ProcessedInvoiceDto,
 ): Promise<Buffer> {
   // Generate QR code if billUrl exists
@@ -530,11 +530,11 @@ export async function generateInvoice(
  * @param invoiceData - The processed invoice data (ProcessedInvoiceDto)
  * @param outputPath - Path to save the PDF file
  */
-export async function generateInvoiceToFile(
+export async function generatePdfInvoiceTemplateToFile(
   invoiceData: ProcessedInvoiceDto,
   outputPath: string,
 ): Promise<void> {
   const fs = await import('fs').then((m) => m.promises);
-  const pdfBuffer = await generateInvoice(invoiceData);
+  const pdfBuffer = await generatePdfInvoiceTemplate(invoiceData);
   await fs.writeFile(outputPath, pdfBuffer);
 }

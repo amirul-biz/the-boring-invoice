@@ -4,7 +4,7 @@ import { HttpException, HttpStatus, Logger } from '@nestjs/common';
 // import { CalculatedInvoiceDto } from './dto/create-invoice.dto';
 
 // Re-declare for standalone use - replace with actual import
-interface CreateInvoiceItemsInputDTO {
+interface InvoiceItemDTO {
   itemName: string;
   quantity: number;
   unitPrice: number;
@@ -39,7 +39,7 @@ interface CalculatedInvoiceDto {
   recipient: RecipientDTO;
   taxRate: number;
   dueDate: string;
-  items: CreateInvoiceItemsInputDTO[];
+  items: InvoiceItemDTO[];
   invoiceNo: string;
   issuedDate: string;
   totalExcludingTax: number;
@@ -451,9 +451,12 @@ From: ${invoiceOutput.supplier.name}
 }
 
 // Factory function for easy instantiation
-export function createToyyibPayUtil(config?: Partial<ToyyibPayConfig>): ToyyibPayUtil {
+export function generateToyyibpayBill(config?: Partial<ToyyibPayConfig>): ToyyibPayUtil {
   return new ToyyibPayUtil(config);
 }
+
+// Alias for backward compatibility
+export const createToyyibPayUtil = generateToyyibpayBill;
 
 // Default export for convenience
 export default ToyyibPayUtil;
