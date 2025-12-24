@@ -14,7 +14,10 @@
     "skipLibCheck": true,
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
-    "paths": {}
+    "paths": {
+      "@prisma": ["./prisma/prisma.service"],
+      "@shared/*": ["./libs/shared/*"]
+    }
   },
   "exclude": ["node_modules", "tmp"]
 }

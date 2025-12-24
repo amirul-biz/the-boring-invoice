@@ -12,3 +12,5 @@ dist/
 .angular
 
 __screenshots__/
+
+/generated/prisma
