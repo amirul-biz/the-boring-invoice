@@ -4,7 +4,6 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { InvoiceModule } from './invoice/invoice-module';
 import { MailerModule } from '@nestjs-modules/mailer';
-import { PrismaService } from '@prismaService';
 
 @Module({
   imports: [
@@ -29,7 +28,6 @@ import { PrismaService } from '@prismaService';
     }),
   ],
   controllers: [AppController],
-  providers: [AppService, PrismaService],
-  exports: [PrismaService],
+  providers: [AppService],
 })
 export class AppModule {}

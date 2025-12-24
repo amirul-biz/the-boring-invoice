@@ -17,7 +17,7 @@
   },
   "include": [
     "src/**/*.ts",
-    "../../prisma/prisma.service.ts" 
+    "../../prisma/**/*.ts" 
    ],
   "exclude": [
     "jest.config.ts",
