@@ -15,7 +15,7 @@
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "@prisma": ["./prisma/prisma.service"],
+      "@prismaService": ["./prisma/prisma.service"],
       "@shared/*": ["./libs/shared/*"]
     }
   },
