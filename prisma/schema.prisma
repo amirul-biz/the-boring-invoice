@@ -1,0 +1,62 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+
+model Invoice {
+  id                      String        @id @default(cuid())
+
+  // === Core ===
+  invoiceNo               String        @unique
+  invoiceType             String        // 'Invoice' | 'Credit Note' | 'Debit Note'
+  currency                String        @default("MYR")
+  status                  InvoiceStatus @default(PENDING)
+
+  // === Dates ===
+  issuedDate              DateTime      @default(now())
+  dueDate                 DateTime
+
+  // === Recipient (snapshot + reference key) ===
+  recipientRegistrationNo String
+  recipient               Json          @db.JsonB
+
+  // === Supplier (snapshot + reference key) ===
+  supplierRegistrationNo  String
+  supplier                Json          @db.JsonB
+
+  // === Items ===
+  items                   Json          @db.JsonB
+
+  // === Totals ===
+  taxRate                 Decimal       @db.Decimal(5, 2)
+  totalExcludingTax       Decimal       @db.Decimal(18, 2)
+  totalIncludingTax       Decimal       @db.Decimal(18, 2)
+
+  // === Payment ===
+  billUrl                 String?
+  transactionId           String?
+  transactionTime         DateTime?
+
+  // === LHDN (future: UIN, validation, etc.) ===
+  lhdnMeta                Json?         @db.JsonB
+
+  createdAt               DateTime      @default(now())
+  updatedAt               DateTime      @updatedAt
+
+  @@index([invoiceNo])
+  @@index([recipientRegistrationNo])
+  @@index([supplierRegistrationNo])
+  @@index([status])
+  @@index([issuedDate])
+}
+
+enum InvoiceStatus {
+  DRAFT
+  PENDING
+  PAID
+  CANCELLED
+}

@@ -4,6 +4,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { InvoiceModule } from './invoice/invoice-module';
 import { MailerModule } from '@nestjs-modules/mailer';
+import { PrismaService } from '@prismaService';
 
 @Module({
   imports: [
@@ -17,7 +18,7 @@ import { MailerModule } from '@nestjs-modules/mailer';
       useFactory: (config: ConfigService) => ({
         transport: {
           host: config.get('SMTP_MAILER_HOST'),
-          port: 465, 
+          port: 465,
           secure: true,
           auth: {
             user: config.get('SMTP_MAILER_EMAIL'),
@@ -28,6 +29,7 @@ import { MailerModule } from '@nestjs-modules/mailer';
     }),
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, PrismaService],
+  exports: [PrismaService],
 })
 export class AppModule {}

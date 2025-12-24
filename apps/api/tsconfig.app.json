@@ -3,11 +3,17 @@
   "compilerOptions": {
     "outDir": "../../dist/out-tsc",
     "module": "commonjs",
-    "types": ["node"],
+    "types": ["node", "module"],
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "target": "es2021",
-    "moduleResolution": "node"
+    "moduleResolution": "node",
+    "baseUrl": ".",
+    "paths": {
+      "@prismaService": ["../../prisma/prisma.service"],
+      "@shared/*": ["../../libs/shared/*"],
+      "@prisma/client": ["../../node_modules/@prisma/client"]
+    }
   },
   "include": ["src/**/*.ts"],
   "exclude": [

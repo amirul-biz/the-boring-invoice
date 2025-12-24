@@ -33,11 +33,15 @@ import { MailerService } from '@nestjs-modules/mailer';
 import { sendInvoiceEmail } from './invoice-utility/invoice-email-generator.utility';
 import { generateReceipt } from './invoice-utility/utility-pdf-receipt-generator';
 import { sendReceiptEmail } from './invoice-utility/utility-email-receipt-generator';
+import { PrismaService } from '@prismaService';
 
 @ApiTags('invoice')
 @Controller('invoice')
 export class InvoiceController {
-  constructor(private readonly mailService: MailerService) {}
+  constructor(
+    private readonly mailService: MailerService,
+    private readonly prisma: PrismaService
+  ) {}
 
   @Get('test-email')
   async getInvoices(): Promise<any> {
