@@ -15,7 +15,10 @@
       "@prisma/client": ["../../node_modules/@prisma/client"]
     }
   },
-  "include": ["src/**/*.ts"],
+  "include": [
+    "src/**/*.ts",
+    "../../prisma/prisma.service.ts" 
+   ],
   "exclude": [
     "jest.config.ts",
     "jest.config.cts",
