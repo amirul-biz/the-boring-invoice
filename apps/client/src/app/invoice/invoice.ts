@@ -11,6 +11,7 @@ import {
 } from './invoice-form/invoice-form.config';
 import { InvoiceService } from './invoice-service';
 import { MALAYSIAN_STATES, CLASSIFICATION_CODES, INVOICE_TYPES } from './invoice-constants';
+import { tap } from 'rxjs';
 
 @Component({
   selector: 'app-invoice',
@@ -74,27 +75,12 @@ export class Invoice {
       return;
     }
 
-    const invoiceData = getInvoiceData(this.invoiceForm);
-
-    this.invoiceService.generateInvoicePdf(invoiceData).subscribe({
-      next: (blob: Blob) => {
-        const fileName = `invoice-${new Date().getTime()}.pdf`;
-        this.downloadFile(blob, fileName);
-      },
-      error: (error) => {
-        console.error('Error generating invoice:', error);
-      }
-    });
-  }
-
-  downloadFile(blob: Blob, fileName: string): void {
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', fileName);
-    document.body.appendChild(link);
-    link.click();
-    link.parentNode?.removeChild(link);
-    window.URL.revokeObjectURL(url);
+    const invoiceData = [getInvoiceData(this.invoiceForm)];
+    this.invoiceService.generateInvoicePdf(invoiceData).pipe(
+      tap(() => {
+        alert('Invoice created successfully')
+        this.invoiceForm.reset()
+      })
+    ).subscribe();
   }
 }

@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app/app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { rabbitMQOptionsConfig } from './app/rabbit-mq/rabbit-mq-options.config';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -9,15 +10,26 @@ async function bootstrap() {
   app.use(require('express').urlencoded({ extended: true }));
   app.use(require('express').json());
 
+  app.connectMicroservice(rabbitMQOptionsConfig());
+
+
   app.enableCors({
     origin: [
       'https://the-boring-invoice-client.vercel.app',
       'http://localhost:4200',
+      'https://resummonable-pearl-unfinanced.ngrok-free.dev',
       /\.ngrok-free\.app$/,
       /\.ngrok-free\.dev$/,
     ],
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'ngrok-skip-browser-warning',
+      'X-Requested-With',
+      'Accept',
+    ],
+    exposedHeaders: ['Content-Disposition'],
     credentials: true,
   });
 
@@ -39,6 +51,8 @@ async function bootstrap() {
     ],
   });
 
+
+  await app.startAllMicroservices()
   await app.listen(process.env.PORT ?? 3000);
 }
 bootstrap();
