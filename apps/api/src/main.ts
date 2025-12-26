@@ -6,13 +6,7 @@ import { rabbitMQOptionsConfig } from './app/rabbit-mq/rabbit-mq-options.config'
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Enable parsing of URL-encoded bodies (for ToyyibPay callbacks)
-  app.use(require('express').urlencoded({ extended: true }));
-  app.use(require('express').json());
-
-  app.connectMicroservice(rabbitMQOptionsConfig());
-
-
+  // Enable CORS first before other configurations
   app.enableCors({
     origin: [
       'https://the-boring-invoice-client.vercel.app',
@@ -32,6 +26,12 @@ async function bootstrap() {
     exposedHeaders: ['Content-Disposition'],
     credentials: true,
   });
+
+  // Enable parsing of URL-encoded bodies (for ToyyibPay callbacks)
+  app.use(require('express').urlencoded({ extended: true }));
+  app.use(require('express').json());
+
+  app.connectMicroservice(rabbitMQOptionsConfig());
 
   const config = new DocumentBuilder()
     .setTitle('The Boring Invoice API')

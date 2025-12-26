@@ -7,39 +7,39 @@ import {
 } from '../invoice-interface';
 
 export interface RecipientForm {
-  name: FormControl<string>;
+  name: FormControl<string | null>;
   email: FormControl<string | null>;
-  phone: FormControl<string>;
-  tin: FormControl<string>;
-  registrationNumber: FormControl<string>;
-  addressLine1: FormControl<string>;
-  postcode: FormControl<string>;
-  city: FormControl<string>;
-  state: FormControl<string>;
-  countryCode: FormControl<string>;
+  phone: FormControl<string | null>;
+  tin: FormControl<string | null>;
+  registrationNumber: FormControl<string | null>;
+  addressLine1: FormControl<string | null>;
+  postcode: FormControl<string | null>;
+  city: FormControl<string | null>;
+  state: FormControl<string | null>;
+  countryCode: FormControl<string | null>;
 }
 
 export interface SupplierForm {
-  name: FormControl<string>;
+  name: FormControl<string | null>;
   email: FormControl<string | null>;
-  tin: FormControl<string>;
-  registrationNumber: FormControl<string>;
-  msicCode: FormControl<string>;
-  businessActivityDescription: FormControl<string>;
+  tin: FormControl<string | null>;
+  registrationNumber: FormControl<string | null>;
+  msicCode: FormControl<string | null>;
+  businessActivityDescription: FormControl<string | null>;
 }
 
 export interface InvoiceItemForm {
-  itemName: FormControl<string>;
+  itemName: FormControl<string | null>;
   quantity: FormControl<number>;
   unitPrice: FormControl<number>;
-  classificationCode: FormControl<string>;
+  classificationCode: FormControl<string | null>;
 }
 
 export interface CreateInvoiceForm {
-  invoiceType: FormControl<string>;
-  currency: FormControl<string>;
+  invoiceType: FormControl<string | null>;
+  currency: FormControl<string | null>;
   taxRate: FormControl<number>;
-  dueDate: FormControl<string>;
+  dueDate: FormControl<string | null>;
   supplier: FormGroup<SupplierForm>;
   recipient: FormGroup<RecipientForm>;
   items: FormArray<FormGroup<InvoiceItemForm>>;
@@ -47,7 +47,7 @@ export interface CreateInvoiceForm {
 
 export function invoiceItemForm(): FormGroup<InvoiceItemForm> {
   return new FormGroup<InvoiceItemForm>({
-    itemName: new FormControl('', {
+    itemName: new FormControl(null, {
       nonNullable: true,
       validators: [Validators.required],
     }),
@@ -80,31 +80,31 @@ export function getInvoiceForm(): FormGroup<CreateInvoiceForm> {
       nonNullable: true,
       validators: [Validators.required],
     }),
-    dueDate: new FormControl('', {
+    dueDate: new FormControl(null, {
       nonNullable: true,
       validators: [Validators.required],
     }),
 
     // Nested Supplier Group
     supplier: new FormGroup<SupplierForm>({
-      name: new FormControl('', {
+      name: new FormControl(null, {
         nonNullable: true,
         validators: [Validators.required],
       }),
       email: new FormControl<string | null>(null, [Validators.email, Validators.required]),
-      tin: new FormControl('', {
+      tin: new FormControl(null, {
         nonNullable: true,
         validators: [Validators.required],
       }),
-      registrationNumber: new FormControl('', {
+      registrationNumber: new FormControl(null, {
         nonNullable: true,
         validators: [Validators.required],
       }),
-      msicCode: new FormControl('', {
+      msicCode: new FormControl(null, {
         nonNullable: true,
         validators: [Validators.required, Validators.pattern(/^\d{5}$/)],
       }),
-      businessActivityDescription: new FormControl('', {
+      businessActivityDescription: new FormControl(null, {
         nonNullable: true,
         validators: [Validators.required],
       }),
@@ -112,30 +112,31 @@ export function getInvoiceForm(): FormGroup<CreateInvoiceForm> {
 
     // Nested Recipient Group
     recipient: new FormGroup<RecipientForm>({
-      name: new FormControl('', {
+      name: new FormControl(null, {
         nonNullable: true,
         validators: [Validators.required],
       }),
       email: new FormControl<string | null>(null, [Validators.email]),
-      phone: new FormControl('', {
+      phone: new FormControl(null, {
         nonNullable: true,
         validators: [Validators.required],
       }),
-      tin: new FormControl('', {
+      tin: new FormControl(null, {
         nonNullable: true,
       }),
-      registrationNumber: new FormControl('', {
+      registrationNumber: new FormControl(null, {
         nonNullable: true,
+        validators: [Validators.required]
       }),
-      addressLine1: new FormControl('', {
-        nonNullable: true,
-        validators: [Validators.required],
-      }),
-      postcode: new FormControl('', {
+      addressLine1: new FormControl(null, {
         nonNullable: true,
         validators: [Validators.required],
       }),
-      city: new FormControl('', {
+      postcode: new FormControl(null, {
+        nonNullable: true,
+        validators: [Validators.required],
+      }),
+      city: new FormControl(null, {
         nonNullable: true,
         validators: [Validators.required],
       }),
@@ -185,7 +186,7 @@ export function getInvoiceData(
       | 'Invoice'
       | 'Credit Note'
       | 'Debit Note',
-    currency: formValue.currency,
+    currency: formValue.currency ?? 'MYR',
     taxRate: formValue.taxRate,
     dueDate: dueDate,
     supplier: {
