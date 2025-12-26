@@ -40,6 +40,8 @@ import { generateReceiptEmailTemplate } from './invoice-generator/invoice-genera
 import { PrismaService } from '@prismaService';
 import { InvoiceStatus, Prisma } from '@prisma/client';
 import { ExceptionsHandler } from '@nestjs/core/exceptions/exceptions-handler';
+import { RabbitMqProducerService } from '../rabbit-mq/rabbit-mq-producer.service.config';
+import { EventPattern } from '@nestjs/microservices';
 
 @ApiTags('invoice')
 @Controller('invoice')
@@ -47,55 +49,40 @@ export class InvoiceController {
   constructor(
     private readonly mailService: MailerService,
     private readonly prisma: PrismaService,
+    private readonly queService: RabbitMqProducerService,
   ) {}
-
-  @Get('test-email')
-  async getInvoices(): Promise<any> {
-    try {
-      await this.mailService.sendMail({
-        to: 'amirul.irfan.biz@gmail.com',
-        subject: 'Invoice Ready',
-        text: 'Your invoice has been processed.',
-      });
-      return { status: 'Success', message: 'Invoice email sent' };
-    } catch (error) {
-      Logger.log(error);
-      throw new InternalServerErrorException('Failed to send email', error);
-    }
-  }
 
   @Post('generate')
   @ApiOperation({ summary: 'Generate invoice PDF' })
-  @ApiProduces('application/pdf')
-  @ApiResponse({ status: 200, description: 'PDF streamed successfully' })
-  @ApiResponse({ status: 500, description: 'Failed to generate PDF' })
-  @Header('Content-Type', 'application/pdf')
-  @ApiBody({
-    type: CreateInvoiceInputDTO,
-    description: 'Json Structure',
-  })
+  @ApiResponse({ status: 202, description: 'Invoice processing started' }) // 202 is more accurate for queues
+  @ApiResponse({ status: 500, description: 'Failed to queue invoice' })
+  @ApiBody({ type: CreateInvoiceInputDTO })
   async generateInvoice(
-    @Body() invoiceData: CreateInvoiceInputDTO,
-    @Res({ passthrough: true }) res: Response,
-  ): Promise<StreamableFile> {
-    const calculatedInvoiceData =
-      await this.getCalculatedInvoiceData(invoiceData);
-    const processedInvoiceData = await this.getProcessedIncvoiceData(
-      calculatedInvoiceData,
-    );
+    @Body() invoiceData: CreateInvoiceInputDTO[],
+    @Res() res: Response,
+  ): Promise<void> {
+    try {
+      this.queService.sendMessageQue('receiver-create-invoice', invoiceData);
 
-    await this.createInvoice(processedInvoiceData)
+      res.status(HttpStatus.ACCEPTED).json({
+        message: 'Invoice generation has been queued successfully',
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      Logger.error(
+        `Queue Error: ${error.message}`,
+        error.stack,
+        'InvoiceController',
+      );
 
-    const pdfBuffer = await generatePdfInvoiceTemplate(processedInvoiceData);
-
-    res.set({
-      'Content-Disposition': `attachment; filename="invoice-${processedInvoiceData.invoiceNo}.pdf"`,
-      'Content-Length': pdfBuffer.length.toString(),
-    });
-
-    await generateInvoiceEmailTemplate(this.mailService, processedInvoiceData, pdfBuffer);
-
-    return new StreamableFile(pdfBuffer);
+      throw new HttpException(
+        {
+          status: HttpStatus.INTERNAL_SERVER_ERROR,
+          error: 'Failed to queue invoice processing',
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 
   @Post('callback')
@@ -105,7 +92,6 @@ export class InvoiceController {
     @Body() callbackData: any,
     @Res() res,
   ) {
-
     interface ToyyibPayCallback {
       refno: string;
       status: string;
@@ -122,31 +108,38 @@ export class InvoiceController {
     }
 
     try {
-     
       Logger.log('payment data', JSON.stringify(callbackData, null, 2));
 
       const data: ToyyibPayCallback = callbackData || req.body;
 
-      const invoiceNo = data.order_id
-      const paymentStatus = data.status === '1' ? InvoiceStatus.PAID : InvoiceStatus.CANCELLED
+      const invoiceNo = data.order_id;
+      const paymentStatus =
+        data.status === '1' ? InvoiceStatus.PAID : InvoiceStatus.CANCELLED;
 
       const sanitizedTransactionTime = data.transaction_time
         ? new Date(data.transaction_time.replace(' ', 'T')).toISOString()
         : new Date().toISOString();
 
-       await this.updateInvoiceStatus({
-        status: paymentStatus, transactionTime: sanitizedTransactionTime, transactionId: data.transaction_id, invoiceNo: invoiceNo
-      })
+      await this.updateInvoiceStatus({
+        status: paymentStatus,
+        transactionTime: sanitizedTransactionTime,
+        transactionId: data.transaction_id,
+        invoiceNo: invoiceNo,
+      });
 
       const isSuccess = paymentStatus === InvoiceStatus.PAID;
 
       if (!isSuccess) return;
 
-      const invoiceData = await this.getInvoiceData(invoiceNo)
+      const invoiceData = await this.getInvoiceData(invoiceNo);
 
       const pdfReceipt = await generatePdfReceiptTemplate(invoiceData);
 
-      await generateReceiptEmailTemplate(this.mailService, invoiceData, pdfReceipt);
+      await generateReceiptEmailTemplate(
+        this.mailService,
+        invoiceData,
+        pdfReceipt,
+      );
 
       return res.status(HttpStatus.OK).send('OK');
     } catch (error) {
@@ -276,16 +269,28 @@ export class InvoiceController {
     }
   }
 
-  async updateInvoiceStatus(data: {invoiceNo: string, transactionTime: string, transactionId: string, status: InvoiceStatus}): Promise<void> {
+  async updateInvoiceStatus(data: {
+    invoiceNo: string;
+    transactionTime: string;
+    transactionId: string;
+    status: InvoiceStatus;
+  }): Promise<void> {
     try {
       await this.prisma.invoice.update({
         where: { invoiceNo: data.invoiceNo },
-        data: { status: data.status, transactionTime: data.transactionTime, transactionId: data.transactionId },
+        data: {
+          status: data.status,
+          transactionTime: data.transactionTime,
+          transactionId: data.transactionId,
+        },
       });
       Logger.log(`Invoice ${data.invoiceNo} status updated to ${data.status}`);
     } catch (error) {
       Logger.error(`Failed to update invoice ${data.invoiceNo} status:`, error);
-      throw new HttpException('Failed to update invoice status', HttpStatus.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Failed to update invoice status',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -344,5 +349,33 @@ export class InvoiceController {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+  }
+
+  @EventPattern('receiver-create-invoice')
+  async receiverCreateInvoice(invoiceData: CreateInvoiceInputDTO[]) {
+    for (const data of invoiceData) {
+      try {
+        //CRITICAL
+        const calculated = await this.getCalculatedInvoiceData(data);
+        const processedInvoiceData =
+          await this.getProcessedIncvoiceData(calculated);
+        await this.createInvoice(processedInvoiceData);
+
+        //  LESS CRITICAL
+        this.sendInvoiceEmail(processedInvoiceData);
+      } catch (error) {
+        Logger.log(error);
+        continue;
+      }
+    }
+  }
+
+  private async sendInvoiceEmail(processedInvoiceData: ProcessedInvoiceDto) {
+    const pdfBuffer = await generatePdfInvoiceTemplate(processedInvoiceData);
+    await generateInvoiceEmailTemplate(
+      this.mailService,
+      processedInvoiceData,
+      pdfBuffer,
+    );
   }
 }

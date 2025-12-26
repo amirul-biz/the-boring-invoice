@@ -1,7 +1,7 @@
 {
   "scripts": {
-  "postinstall": "prisma generate",
-  "build": "prisma generate && npx nx build api --prod"
+    "postinstall": "prisma generate",
+    "build": "prisma generate && npx nx build api --prod"
   },
   "devDependencies": {
     "@angular-devkit/core": "~21.0.0",
@@ -66,6 +66,7 @@
     "@nestjs/common": "^11.0.0",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.0.0",
+    "@nestjs/microservices": "^11.1.10",
     "@nestjs/platform-express": "^11.0.0",
     "@nestjs/swagger": "^11.2.3",
     "@ng-bootstrap/ng-bootstrap": "^20.0.0",
@@ -73,6 +74,8 @@
     "@prisma/adapter-pg": "^7.2.0",
     "@prisma/client": "^7.2.0",
     "@types/pdfkit": "^0.17.4",
+    "amqp-connection-manager": "^5.0.0",
+    "amqplib": "^0.10.9",
     "axios": "^1.6.0",
     "bootstrap": "^5.3.8",
     "class-transformer": "^0.5.1",
