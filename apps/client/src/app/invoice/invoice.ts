@@ -64,6 +64,7 @@ export class Invoice {
       console.log('Form submitted:', this.invoiceForm.value);
       this.generateInvoice()
     } else {
+      alert('Please fill up all required fields')
       this.invoiceForm.markAllAsTouched();
     }
   }

@@ -12,7 +12,7 @@ export const rabbitMQOptionsConfig = (): RmqOptions => ({
       heartbeatIntervalInSeconds: 30,
       reconnectTimeInSeconds: 5,
     },
-    noAck: false,
+    noAck: true,
     prefetchCount: 1,
   },
 });
