@@ -41,8 +41,49 @@ export interface CreateInvoiceForm {
   taxRate: FormControl<number>;
   dueDate: FormControl<string | null>;
   supplier: FormGroup<SupplierForm>;
-  recipient: FormGroup<RecipientForm>;
+  recipients: FormArray<FormGroup<RecipientForm>>;
   items: FormArray<FormGroup<InvoiceItemForm>>;
+}
+
+export function recipientForm(): FormGroup<RecipientForm> {
+  return new FormGroup<RecipientForm>({
+    name: new FormControl(null, {
+      nonNullable: true,
+      validators: [Validators.required],
+    }),
+    email: new FormControl<string | null>(null, [Validators.email]),
+    phone: new FormControl(null, {
+      nonNullable: true,
+      validators: [Validators.required],
+    }),
+    tin: new FormControl(null, {
+      nonNullable: true,
+    }),
+    registrationNumber: new FormControl(null, {
+      nonNullable: true,
+      validators: [Validators.required]
+    }),
+    addressLine1: new FormControl(null, {
+      nonNullable: true,
+      validators: [Validators.required],
+    }),
+    postcode: new FormControl(null, {
+      nonNullable: true,
+      validators: [Validators.required],
+    }),
+    city: new FormControl(null, {
+      nonNullable: true,
+      validators: [Validators.required],
+    }),
+    state: new FormControl('10', {
+      nonNullable: true,
+      validators: [Validators.required],
+    }),
+    countryCode: new FormControl('MY', {
+      nonNullable: true,
+      validators: [Validators.required],
+    }),
+  });
 }
 
 export function invoiceItemForm(): FormGroup<InvoiceItemForm> {
@@ -110,45 +151,8 @@ export function getInvoiceForm(): FormGroup<CreateInvoiceForm> {
       }),
     }),
 
-    // Nested Recipient Group
-    recipient: new FormGroup<RecipientForm>({
-      name: new FormControl(null, {
-        nonNullable: true,
-        validators: [Validators.required],
-      }),
-      email: new FormControl<string | null>(null, [Validators.email]),
-      phone: new FormControl(null, {
-        nonNullable: true,
-        validators: [Validators.required],
-      }),
-      tin: new FormControl(null, {
-        nonNullable: true,
-      }),
-      registrationNumber: new FormControl(null, {
-        nonNullable: true,
-        validators: [Validators.required]
-      }),
-      addressLine1: new FormControl(null, {
-        nonNullable: true,
-        validators: [Validators.required],
-      }),
-      postcode: new FormControl(null, {
-        nonNullable: true,
-        validators: [Validators.required],
-      }),
-      city: new FormControl(null, {
-        nonNullable: true,
-        validators: [Validators.required],
-      }),
-      state: new FormControl('10', {
-        nonNullable: true,
-        validators: [Validators.required],
-      }),
-      countryCode: new FormControl('MY', {
-        nonNullable: true,
-        validators: [Validators.required],
-      }),
-    }),
+    // Nested Recipients Array
+    recipients: new FormArray([recipientForm()]),
 
     items: new FormArray([invoiceItemForm()]),
   });
@@ -169,9 +173,24 @@ export function removeInvoiceItemForm(
   items.removeAt(invoiceItemFormIndex);
 }
 
-export function getInvoiceData(
+export function addRecipientForm(invoiceForm: FormGroup<CreateInvoiceForm>) {
+  const recipients = invoiceForm.controls.recipients as FormArray;
+  recipients.push(recipientForm());
+}
+
+export function removeRecipientForm(
   invoiceForm: FormGroup<CreateInvoiceForm>,
-): ICreateInvoice {
+  recipientFormIndex: number,
+) {
+  const recipients = invoiceForm.controls.recipients as FormArray;
+  const isSingleRecord = recipients.length === 1;
+  if (isSingleRecord) return;
+  recipients.removeAt(recipientFormIndex);
+}
+
+export function getInvoicesData(
+  invoiceForm: FormGroup<CreateInvoiceForm>,
+): ICreateInvoice[] {
   const formValue = invoiceForm.getRawValue();
 
   // Convert NgbDateStruct to ISO date string (YYYY-MM-DD)
@@ -181,7 +200,29 @@ export function getInvoiceData(
       ? dueDateValue
       : `${dueDateValue.year}-${String(dueDateValue.month).padStart(2, '0')}-${String(dueDateValue.day).padStart(2, '0')}`;
 
-  return {
+  // Transform shared data once
+  const items = formValue.items.map(
+    (item) =>
+      ({
+        itemName: item.itemName,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        classificationCode: item.classificationCode,
+      }) as ICreateInvoiceItem,
+  );
+
+  const supplier = {
+    name: formValue.supplier.name,
+    email: formValue.supplier.email ?? undefined,
+    tin: formValue.supplier.tin,
+    registrationNumber: formValue.supplier.registrationNumber,
+    msicCode: formValue.supplier.msicCode,
+    businessActivityDescription:
+      formValue.supplier.businessActivityDescription,
+  } as ISupplier;
+
+  // Base invoice data (shared across all recipients)
+  const baseInvoiceData = {
     invoiceType: formValue.invoiceType as
       | 'Invoice'
       | 'Credit Note'
@@ -189,35 +230,24 @@ export function getInvoiceData(
     currency: formValue.currency ?? 'MYR',
     taxRate: formValue.taxRate,
     dueDate: dueDate,
-    supplier: {
-      name: formValue.supplier.name,
-      email: formValue.supplier.email ?? undefined,
-      tin: formValue.supplier.tin,
-      registrationNumber: formValue.supplier.registrationNumber,
-      msicCode: formValue.supplier.msicCode,
-      businessActivityDescription:
-        formValue.supplier.businessActivityDescription,
-    } as ISupplier,
-    recipient: {
-      name: formValue.recipient.name,
-      email: formValue.recipient.email ?? undefined,
-      phone: formValue.recipient.phone,
-      tin: formValue.recipient.tin,
-      registrationNumber: formValue.recipient.registrationNumber,
-      addressLine1: formValue.recipient.addressLine1,
-      postcode: formValue.recipient.postcode,
-      city: formValue.recipient.city,
-      state: formValue.recipient.state,
-      countryCode: formValue.recipient.countryCode,
-    } as IRecipient,
-    items: formValue.items.map(
-      (item) =>
-        ({
-          itemName: item.itemName,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          classificationCode: item.classificationCode,
-        }) as ICreateInvoiceItem,
-    ),
+    supplier: supplier,
+    items: items,
   };
+
+  // Create one invoice per recipient
+  return formValue.recipients.map((recipientValue) => ({
+    ...baseInvoiceData,
+    recipient: {
+      name: recipientValue.name,
+      email: recipientValue.email ?? undefined,
+      phone: recipientValue.phone,
+      tin: recipientValue.tin,
+      registrationNumber: recipientValue.registrationNumber,
+      addressLine1: recipientValue.addressLine1,
+      postcode: recipientValue.postcode,
+      city: recipientValue.city,
+      state: recipientValue.state,
+      countryCode: recipientValue.countryCode,
+    } as IRecipient,
+  }));
 }

@@ -7,7 +7,10 @@ import {
   CreateInvoiceForm,
   addInvoiceItemForm,
   removeInvoiceItemForm,
-  getInvoiceData,
+  addRecipientForm,
+  removeRecipientForm,
+  recipientForm,
+  getInvoicesData,
 } from './invoice-form/invoice-form.config';
 import { InvoiceService } from './invoice-service';
 import { MALAYSIAN_STATES, CLASSIFICATION_CODES, INVOICE_TYPES } from './invoice-constants';
@@ -39,8 +42,8 @@ export class Invoice {
     return this.invoiceForm.controls.supplier;
   }
 
-  get recipient() {
-    return this.invoiceForm.controls.recipient;
+  get recipients() {
+    return this.invoiceForm.controls.recipients;
   }
 
   addItem() {
@@ -53,6 +56,18 @@ export class Invoice {
 
   canRemoveItem(): boolean {
     return this.items.length > 1;
+  }
+
+  addRecipient() {
+    addRecipientForm(this.invoiceForm);
+  }
+
+  removeRecipient(index: number) {
+    removeRecipientForm(this.invoiceForm, index);
+  }
+
+  canRemoveRecipient(): boolean {
+    return this.recipients.length > 1;
   }
 
   isFieldInvalid(control: any): boolean {
@@ -76,11 +91,20 @@ export class Invoice {
       return;
     }
 
-    const invoiceData = [getInvoiceData(this.invoiceForm)];
-    this.invoiceService.generateInvoicePdf(invoiceData).pipe(
+    const invoicesData = getInvoicesData(this.invoiceForm);
+    this.invoiceService.generateInvoicePdf(invoicesData).pipe(
       tap(() => {
-        alert('Invoice created successfully')
-        this.invoiceForm.reset()
+        const count = invoicesData.length;
+        const message = count === 1
+          ? 'Invoice created successfully'
+          : `${count} invoices created successfully`;
+        alert(message);
+        this.invoiceForm.reset();
+
+        // Reinitialize recipients array
+        const recipients = this.invoiceForm.controls.recipients;
+        recipients.clear();
+        recipients.push(recipientForm());
       })
     ).subscribe();
   }
