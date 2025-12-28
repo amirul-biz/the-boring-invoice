@@ -1,16 +1,6 @@
 {
-  "version": 2,
-  "buildCommand": "npx nx build api --prod",
-  "outputDirectory": "../../dist/apps/api",
-  "functions": {
-    "src/main.ts": {
-      "runtime": "@vercel/node"
-    }
-  },
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "src/main.ts"
-    }
-  ]
+  "installCommand": "npm install",
+  "buildCommand": "npm run build",
+  "framework": null,
+  "outputDirectory": "../../dist/api"
 }
