@@ -151,7 +151,7 @@ export class InvoiceController {
   async getProcessedIncvoiceData(
     calculatedInvoiceData: CalculatedInvoiceDto,
   ): Promise<ProcessedInvoiceDto> {
-    const returnUrl = `${process.env.NG_APP_FRONTEND_URL}`;
+    const returnUrl = `${process.env.PAYMENT_RETURN_URL}`;
     const callbackUrl = `${process.env.NG_APP_API_URL}/invoice/callback`;
 
     Logger.log('Creating ToyyibPay bill with URLs:', {
