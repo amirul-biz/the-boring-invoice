@@ -1,8 +1,6 @@
 <div class="container py-4">
   <h2 class="mb-4">Create Invoice</h2>
 
-  @let form = invoiceForm.controls;
-
   <form [formGroup]="invoiceForm">
     <!-- Invoice Basic Info -->
     <div class="card mb-3">
@@ -72,218 +70,231 @@
       </div>
     </div>
 
-    <!-- Supplier and Recipient Row -->
-    <div class="row g-3 mb-3">
-      <!-- Supplier Card -->
-      <div class="col-12 col-md-6">
-        <div class="card h-100">
-          <div class="card-header">
-            <h5 class="mb-0">Supplier Information</h5>
-          </div>
-          <div class="card-body">
-            <div formGroupName="supplier">
-              <div class="mb-3">
-                <label for="supplierName" class="form-label">Name</label>
-                <input
-                  type="text"
-                  class="form-control"
-                  [ngClass]="{'is-invalid': isFieldInvalid(supplier.controls.name)}"
-                  id="supplierName"
-                  formControlName="name">
-                <div class="invalid-feedback">Supplier name is required</div>
-              </div>
+    <!-- Supplier Card (Full Width) -->
+    <div class="card mb-3">
+      <div class="card-header">
+        <h5 class="mb-0">Supplier Information</h5>
+      </div>
+      <div class="card-body">
+        <div formGroupName="supplier">
+          <div class="row g-3">
+            <div class="col-12 col-md-6">
+              <label for="supplierName" class="form-label">Name</label>
+              <input
+                type="text"
+                class="form-control"
+                [ngClass]="{'is-invalid': isFieldInvalid(supplier.controls.name)}"
+                id="supplierName"
+                formControlName="name">
+              <div class="invalid-feedback">Supplier name is required</div>
+            </div>
 
-              <div class="mb-3">
-                <label for="supplierEmail" class="form-label">Email</label>
-                <input
-                  type="email"
-                  class="form-control"
-                  [ngClass]="{'is-invalid': isFieldInvalid(supplier.controls.email)}"
-                  id="supplierEmail"
-                  formControlName="email">
-                <div class="invalid-feedback">Valid email is required</div>
-              </div>
+            <div class="col-12 col-md-6">
+              <label for="supplierEmail" class="form-label">Email</label>
+              <input
+                type="email"
+                class="form-control"
+                [ngClass]="{'is-invalid': isFieldInvalid(supplier.controls.email)}"
+                id="supplierEmail"
+                formControlName="email">
+              <div class="invalid-feedback">Valid email is required</div>
+            </div>
 
-              <div class="mb-3">
-                <label for="supplierTin" class="form-label">TIN</label>
-                <input
-                  type="text"
-                  class="form-control"
-                  [ngClass]="{'is-invalid': isFieldInvalid(supplier.controls.tin)}"
-                  id="supplierTin"
-                  formControlName="tin">
-                <div class="invalid-feedback">TIN is required</div>
-              </div>
+            <div class="col-12 col-md-4">
+              <label for="supplierTin" class="form-label">TIN</label>
+              <input
+                type="text"
+                class="form-control"
+                [ngClass]="{'is-invalid': isFieldInvalid(supplier.controls.tin)}"
+                id="supplierTin"
+                formControlName="tin">
+              <div class="invalid-feedback">TIN is required</div>
+            </div>
 
-              <div class="mb-3">
-                <label for="supplierRegNum" class="form-label">Registration Number</label>
-                <input
-                  type="text"
-                  class="form-control"
-                  [ngClass]="{'is-invalid': isFieldInvalid(supplier.controls.registrationNumber)}"
-                  id="supplierRegNum"
-                  formControlName="registrationNumber">
-                <div class="invalid-feedback">Registration number is required</div>
-              </div>
+            <div class="col-12 col-md-4">
+              <label for="supplierRegNum" class="form-label">Registration Number</label>
+              <input
+                type="text"
+                class="form-control"
+                [ngClass]="{'is-invalid': isFieldInvalid(supplier.controls.registrationNumber)}"
+                id="supplierRegNum"
+                formControlName="registrationNumber">
+              <div class="invalid-feedback">Registration number is required</div>
+            </div>
 
-              <div class="mb-3">
-                <label for="supplierMsic" class="form-label">MSIC Code</label>
-                <input
-                  type="text"
-                  class="form-control"
-                  [ngClass]="{'is-invalid': isFieldInvalid(supplier.controls.msicCode)}"
-                  id="supplierMsic"
-                  formControlName="msicCode"
-                  placeholder="85419"
-                  maxlength="5">
-                <div class="invalid-feedback">MSIC code must be exactly 5 digits</div>
-              </div>
+            <div class="col-12 col-md-4">
+              <label for="supplierMsic" class="form-label">MSIC Code</label>
+              <input
+                type="text"
+                class="form-control"
+                [ngClass]="{'is-invalid': isFieldInvalid(supplier.controls.msicCode)}"
+                id="supplierMsic"
+                formControlName="msicCode"
+                placeholder="85419"
+                maxlength="5">
+              <div class="invalid-feedback">MSIC code must be exactly 5 digits</div>
+            </div>
 
-              <div class="mb-3">
-                <label for="supplierActivity" class="form-label">Business Activity Description</label>
-                <textarea
-                  class="form-control"
-                  [ngClass]="{'is-invalid': isFieldInvalid(supplier.controls.businessActivityDescription)}"
-                  id="supplierActivity"
-                  formControlName="businessActivityDescription"
-                  rows="2"></textarea>
-                <div class="invalid-feedback">Business activity description is required</div>
-              </div>
+            <div class="col-12">
+              <label for="supplierActivity" class="form-label">Business Activity Description</label>
+              <textarea
+                class="form-control"
+                [ngClass]="{'is-invalid': isFieldInvalid(supplier.controls.businessActivityDescription)}"
+                id="supplierActivity"
+                formControlName="businessActivityDescription"
+                rows="2"></textarea>
+              <div class="invalid-feedback">Business activity description is required</div>
             </div>
           </div>
         </div>
       </div>
+    </div>
 
-      <!-- Recipient Card -->
-      <div class="col-12 col-md-6">
-        <div class="card h-100">
-          <div class="card-header">
-            <h5 class="mb-0">Recipient Information</h5>
-          </div>
-          <div class="card-body">
-            <div formGroupName="recipient">
-              <div class="mb-3">
-                <label for="recipientName" class="form-label">Name</label>
-                <input
-                  type="text"
-                  class="form-control"
-                  [ngClass]="{'is-invalid': isFieldInvalid(recipient.controls.name)}"
-                  id="recipientName"
-                  formControlName="name">
-                <div class="invalid-feedback">Recipient name is required</div>
-              </div>
-
-              <div class="mb-3">
-                <label for="recipientEmail" class="form-label">Email</label>
-                <input
-                  type="email"
-                  class="form-control"
-                  [ngClass]="{'is-invalid': isFieldInvalid(recipient.controls.email)}"
-                  id="recipientEmail"
-                  formControlName="email">
-                <div class="invalid-feedback">Valid email is required</div>
-              </div>
-
-              <div class="mb-3">
-                <label for="recipientPhone" class="form-label">Phone</label>
-                <input
-                  type="text"
-                  class="form-control"
-                  [ngClass]="{'is-invalid': isFieldInvalid(recipient.controls.phone)}"
-                  id="recipientPhone"
-                  formControlName="phone">
-                <div class="invalid-feedback">Phone is required</div>
-              </div>
-
-              <div class="mb-3">
-                <label for="recipientTin" class="form-label">
-                  TIN{{ !form.recipient.controls.tin.hasValidator(Validators.required) ? ' (required for B2B)' : '' }}
-                </label>
-                <input
-                  type="text"
-                  class="form-control"
-                  [ngClass]="{'is-invalid': isFieldInvalid(recipient.controls.tin)}"
-                  id="recipientTin"
-                  formControlName="tin">
-                <div class="invalid-feedback">TIN is required</div>
-              </div>
-
-              <div class="mb-3">
-                <label for="recipientRegNum" class="form-label">
-                  Registration Number{{ !form.recipient.controls.registrationNumber.hasValidator(Validators.required) ? ' (required for B2B)' : '' }}
-                </label>
-                <input
-                  type="text"
-                  class="form-control"
-                  [ngClass]="{'is-invalid': isFieldInvalid(recipient.controls.registrationNumber)}"
-                  id="recipientRegNum"
-                  formControlName="registrationNumber">
-                <div class="invalid-feedback">Registration number is required</div>
-              </div>
-
-              <div class="mb-3">
-                <label for="recipientAddress" class="form-label">Address Line 1</label>
-                <input
-                  type="text"
-                  class="form-control"
-                  [ngClass]="{'is-invalid': isFieldInvalid(recipient.controls.addressLine1)}"
-                  id="recipientAddress"
-                  formControlName="addressLine1">
-                <div class="invalid-feedback">Address is required</div>
-              </div>
-
-              <div class="row g-2">
-                <div class="col-6">
-                  <label for="recipientPostcode" class="form-label">Postcode</label>
-                  <input
-                    type="text"
-                    class="form-control"
-                    [ngClass]="{'is-invalid': isFieldInvalid(recipient.controls.postcode)}"
-                    id="recipientPostcode"
-                    formControlName="postcode">
-                  <div class="invalid-feedback">Postcode is required</div>
+    <!-- Recipients Card (Full Width with FormArray) -->
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Recipient Information</h5>
+        <button type="button" class="btn btn-primary btn-sm" (click)="addRecipient()">
+          Add Recipient
+        </button>
+      </div>
+      <div class="card-body">
+        <div formArrayName="recipients">
+          @for (recipient of recipients.controls; track $index) {
+            <div class="mb-3">
+              <div [formGroupName]="$index" class="border rounded p-3">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                  <h6 class="mb-0">Recipient #{{ $index + 1 }}</h6>
+                  <button
+                    type="button"
+                    class="btn btn-danger btn-sm"
+                    (click)="removeRecipient($index)"
+                    [disabled]="!canRemoveRecipient()">
+                    Remove
+                  </button>
                 </div>
 
-                <div class="col-6">
-                  <label for="recipientCity" class="form-label">City</label>
-                  <input
-                    type="text"
-                    class="form-control"
-                    [ngClass]="{'is-invalid': isFieldInvalid(recipient.controls.city)}"
-                    id="recipientCity"
-                    formControlName="city">
-                  <div class="invalid-feedback">City is required</div>
-                </div>
-              </div>
+                <div class="row g-3">
+                  <div class="col-12 col-md-6">
+                    <label [for]="'recipientName' + $index" class="form-label">Name</label>
+                    <input
+                      type="text"
+                      class="form-control"
+                      [ngClass]="{'is-invalid': isFieldInvalid(recipient.get('name'))}"
+                      [id]="'recipientName' + $index"
+                      formControlName="name">
+                    <div class="invalid-feedback">Recipient name is required</div>
+                  </div>
 
-              <div class="row g-2 mt-2">
-                <div class="col-6">
-                  <label for="recipientState" class="form-label">State</label>
-                  <select
-                    class="form-select"
-                    [ngClass]="{'is-invalid': isFieldInvalid(recipient.controls.state)}"
-                    id="recipientState"
-                    formControlName="state">
-                    @for (state of malaysianStates; track state.code) {
-                      <option [value]="state.code">{{ state.name }}</option>
-                    }
-                  </select>
-                  <div class="invalid-feedback">State is required</div>
-                </div>
+                  <div class="col-12 col-md-6">
+                    <label [for]="'recipientEmail' + $index" class="form-label">Email</label>
+                    <input
+                      type="email"
+                      class="form-control"
+                      [ngClass]="{'is-invalid': isFieldInvalid(recipient.get('email'))}"
+                      [id]="'recipientEmail' + $index"
+                      formControlName="email">
+                    <div class="invalid-feedback">Valid email is required</div>
+                  </div>
 
-                <div class="col-6">
-                  <label for="recipientCountry" class="form-label">Country Code</label>
-                  <input
-                    type="text"
-                    class="form-control"
-                    [ngClass]="{'is-invalid': isFieldInvalid(recipient.controls.countryCode)}"
-                    id="recipientCountry"
-                    formControlName="countryCode">
-                  <div class="invalid-feedback">Country code is required</div>
+                  <div class="col-12 col-md-4">
+                    <label [for]="'recipientPhone' + $index" class="form-label">Phone</label>
+                    <input
+                      type="text"
+                      class="form-control"
+                      [ngClass]="{'is-invalid': isFieldInvalid(recipient.get('phone'))}"
+                      [id]="'recipientPhone' + $index"
+                      formControlName="phone">
+                    <div class="invalid-feedback">Phone is required</div>
+                  </div>
+
+                  <div class="col-12 col-md-4">
+                    <label [for]="'recipientTin' + $index" class="form-label">
+                      TIN{{ !recipient.get('tin')?.hasValidator(Validators.required) ? ' (required for B2B)' : '' }}
+                    </label>
+                    <input
+                      type="text"
+                      class="form-control"
+                      [ngClass]="{'is-invalid': isFieldInvalid(recipient.get('tin'))}"
+                      [id]="'recipientTin' + $index"
+                      formControlName="tin">
+                    <div class="invalid-feedback">TIN is required</div>
+                  </div>
+
+                  <div class="col-12 col-md-4">
+                    <label [for]="'recipientRegNum' + $index" class="form-label">
+                      Registration Number{{ !recipient.get('registrationNumber')?.hasValidator(Validators.required) ? ' (required for B2B)' : '' }}
+                    </label>
+                    <input
+                      type="text"
+                      class="form-control"
+                      [ngClass]="{'is-invalid': isFieldInvalid(recipient.get('registrationNumber'))}"
+                      [id]="'recipientRegNum' + $index"
+                      formControlName="registrationNumber">
+                    <div class="invalid-feedback">Registration number is required</div>
+                  </div>
+
+                  <div class="col-12">
+                    <label [for]="'recipientAddress' + $index" class="form-label">Address Line 1</label>
+                    <input
+                      type="text"
+                      class="form-control"
+                      [ngClass]="{'is-invalid': isFieldInvalid(recipient.get('addressLine1'))}"
+                      [id]="'recipientAddress' + $index"
+                      formControlName="addressLine1">
+                    <div class="invalid-feedback">Address is required</div>
+                  </div>
+
+                  <div class="col-12 col-md-3">
+                    <label [for]="'recipientPostcode' + $index" class="form-label">Postcode</label>
+                    <input
+                      type="text"
+                      class="form-control"
+                      [ngClass]="{'is-invalid': isFieldInvalid(recipient.get('postcode'))}"
+                      [id]="'recipientPostcode' + $index"
+                      formControlName="postcode">
+                    <div class="invalid-feedback">Postcode is required</div>
+                  </div>
+
+                  <div class="col-12 col-md-3">
+                    <label [for]="'recipientCity' + $index" class="form-label">City</label>
+                    <input
+                      type="text"
+                      class="form-control"
+                      [ngClass]="{'is-invalid': isFieldInvalid(recipient.get('city'))}"
+                      [id]="'recipientCity' + $index"
+                      formControlName="city">
+                    <div class="invalid-feedback">City is required</div>
+                  </div>
+
+                  <div class="col-12 col-md-3">
+                    <label [for]="'recipientState' + $index" class="form-label">State</label>
+                    <select
+                      class="form-select"
+                      [ngClass]="{'is-invalid': isFieldInvalid(recipient.get('state'))}"
+                      [id]="'recipientState' + $index"
+                      formControlName="state">
+                      @for (state of malaysianStates; track state.code) {
+                        <option [value]="state.code">{{ state.name }}</option>
+                      }
+                    </select>
+                    <div class="invalid-feedback">State is required</div>
+                  </div>
+
+                  <div class="col-12 col-md-3">
+                    <label [for]="'recipientCountry' + $index" class="form-label">Country Code</label>
+                    <input
+                      type="text"
+                      class="form-control"
+                      [ngClass]="{'is-invalid': isFieldInvalid(recipient.get('countryCode'))}"
+                      [id]="'recipientCountry' + $index"
+                      formControlName="countryCode">
+                    <div class="invalid-feedback">Country code is required</div>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          }
         </div>
       </div>
     </div>

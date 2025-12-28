@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { NxWelcome } from './nx-welcome';
 
@@ -8,6 +8,9 @@ import { NxWelcome } from './nx-welcome';
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })
-export class App {
+export class App implements OnInit{
+  ngOnInit(): void {
+    console.error('Api endpoint is running on', process.env['NG_APP_API_URL'])
+  }
   protected title = 'client';
 }

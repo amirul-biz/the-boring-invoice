@@ -8,13 +8,25 @@ async function bootstrap() {
 
   // Enable CORS first before other configurations
   app.enableCors({
-    origin: [
-      'https://the-boring-invoice-client.vercel.app',
-      'http://localhost:4200',
-      'https://resummonable-pearl-unfinanced.ngrok-free.dev',
-      /\.ngrok-free\.app$/,
-      /\.ngrok-free\.dev$/,
-    ],
+    origin: (origin, callback) => {
+      const allowedOrigins = [
+        'https://the-boring-invoice-client.vercel.app',
+        'http://localhost:4200',
+        'https://resummonable-pearl-unfinanced.ngrok-free.dev',
+      ];
+
+      const allowedPatterns = [
+        /\.ngrok-free\.app$/,
+        /\.ngrok-free\.dev$/,
+        /\.vercel\.app$/,
+      ];
+
+      if (!origin || allowedOrigins.includes(origin) || allowedPatterns.some(pattern => pattern.test(origin))) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
     allowedHeaders: [
       'Content-Type',
@@ -31,7 +43,12 @@ async function bootstrap() {
   app.use(require('express').urlencoded({ extended: true }));
   app.use(require('express').json());
 
-  app.connectMicroservice(rabbitMQOptionsConfig());
+  // Connect microservice but don't let it block startup
+  try {
+    app.connectMicroservice(rabbitMQOptionsConfig());
+  } catch (err) {
+    console.error('Failed to connect microservice:', err.message);
+  }
 
   const config = new DocumentBuilder()
     .setTitle('The Boring Invoice API')
@@ -51,8 +68,12 @@ async function bootstrap() {
     ],
   });
 
+  // Start microservices in background (non-blocking)
+  app.startAllMicroservices().catch(err => {
+    console.error('Failed to start microservices:', err.message);
+    console.log('API will continue to run without RabbitMQ');
+  });
 
-  await app.startAllMicroservices()
   await app.listen(process.env.PORT ?? 3000);
 }
 bootstrap();
