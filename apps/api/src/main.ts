@@ -21,9 +21,16 @@ async function bootstrap() {
         /\.vercel\.app$/,
       ];
 
-      if (!origin || allowedOrigins.includes(origin) || allowedPatterns.some(pattern => pattern.test(origin))) {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+
+      if (allowedOrigins.includes(origin) || allowedPatterns.some(pattern => pattern.test(origin))) {
         callback(null, true);
       } else {
+        console.warn('CORS blocked origin:', origin);
         callback(new Error('Not allowed by CORS'));
       }
     },
@@ -37,6 +44,8 @@ async function bootstrap() {
     ],
     exposedHeaders: ['Content-Disposition'],
     credentials: true,
+    preflightContinue: false,
+    optionsSuccessStatus: 204,
   });
 
   // Enable parsing of URL-encoded bodies (for ToyyibPay callbacks)
