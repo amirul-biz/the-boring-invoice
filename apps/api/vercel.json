@@ -1,6 +1,6 @@
 {
-  "installCommand": "npm install",
-  "buildCommand": "npm run build",
+  "installCommand": "cd ../.. && npm install",
+  "buildCommand": "cd ../.. && npm run build",
   "framework": null,
   "outputDirectory": "../../dist/api"
 }
