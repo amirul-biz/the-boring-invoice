@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { ReactiveFormsModule, FormGroup, Validators } from '@angular/forms';
 import { NgbDatepickerModule } from '@ng-bootstrap/ng-bootstrap';
+import { NgxSpinnerModule, NgxSpinnerService } from 'ngx-spinner';
 import {
   getInvoiceForm,
   CreateInvoiceForm,
@@ -14,17 +15,18 @@ import {
 } from './invoice-form/invoice-form.config';
 import { InvoiceService } from './invoice-service';
 import { MALAYSIAN_STATES, CLASSIFICATION_CODES, INVOICE_TYPES } from './invoice-constants';
-import { tap } from 'rxjs';
+import { tap, finalize } from 'rxjs';
 
 @Component({
   selector: 'app-invoice',
-  imports: [CommonModule, ReactiveFormsModule, NgbDatepickerModule],
+  imports: [CommonModule, ReactiveFormsModule, NgbDatepickerModule, NgxSpinnerModule],
   templateUrl: './invoice.html',
   styleUrl: './invoice.scss',
 })
 export class Invoice {
   invoiceForm: FormGroup<CreateInvoiceForm>;
   invoiceService = inject(InvoiceService);
+  spinner = inject(NgxSpinnerService);
   invoiceTypes = INVOICE_TYPES;
   malaysianStates = MALAYSIAN_STATES;
   classificationCodes = CLASSIFICATION_CODES;
@@ -76,7 +78,7 @@ export class Invoice {
 
   onSubmit() {
     if (this.invoiceForm.valid) {
-      console.log('Form submitted:', this.invoiceForm.value);
+      console.log('Form submitted:', this.invoiceForm.getRawValue());
       this.generateInvoice()
     } else {
       alert('Please fill up all required fields')
@@ -91,6 +93,8 @@ export class Invoice {
       return;
     }
 
+    this.spinner.show();
+
     const invoicesData = getInvoicesData(this.invoiceForm);
     this.invoiceService.generateInvoicePdf(invoicesData).pipe(
       tap(() => {
@@ -99,13 +103,17 @@ export class Invoice {
           ? 'Invoice created successfully'
           : `${count} invoices created successfully`;
         alert(message);
-        this.invoiceForm.reset();
-
-        // Reinitialize recipients array
+      }),
+      finalize(() => {
+        this.spinner.hide();
+      })
+    ).subscribe({
+      next: () => {
         const recipients = this.invoiceForm.controls.recipients;
+        recipients.controls.forEach(control => control.reset());
         recipients.clear();
         recipients.push(recipientForm());
-      })
-    ).subscribe();
+      }
+    });
   }
 }
