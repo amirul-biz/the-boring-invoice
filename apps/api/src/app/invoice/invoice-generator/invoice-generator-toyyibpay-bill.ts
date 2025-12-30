@@ -347,7 +347,21 @@ From: ${invoiceOutput.supplier.name}
         );
       }
 
-      const data = await response.json();
+      // Get response as text first to handle non-JSON errors
+      const responseText = await response.text();
+
+      // Try to parse as JSON
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        // If parsing fails, the response is likely an error message
+        this.logger.error(`ToyyibPay API returned non-JSON response: ${responseText}`);
+        throw new HttpException(
+          `ToyyibPay API error: ${responseText}`,
+          HttpStatus.BAD_REQUEST,
+        );
+      }
 
       // ToyyibPay returns array with single object
       if (Array.isArray(data) && data.length > 0) {
@@ -398,7 +412,22 @@ From: ${invoiceOutput.supplier.name}
         );
       }
 
-      const data = await response.json();
+      // Get response as text first to handle non-JSON errors
+      const responseText = await response.text();
+
+      // Try to parse as JSON
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        // If parsing fails, the response is likely an error message
+        this.logger.error(`ToyyibPay API returned non-JSON response: ${responseText}`);
+        throw new HttpException(
+          `ToyyibPay API error: ${responseText}`,
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
       return data as ToyyibPayTransaction[];
     } catch (error) {
       this.logger.error(`Failed to get bill transactions: ${error.message}`);
