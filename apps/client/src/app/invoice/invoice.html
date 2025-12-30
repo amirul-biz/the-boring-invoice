@@ -1,6 +1,10 @@
 <div class="container py-4">
   <h2 class="mb-4">Create Invoice</h2>
 
+  <ngx-spinner bdColor="rgba(0, 0, 0, 0.8)" size="large" color="#fff" type="ball-scale-multiple" [fullScreen]="true">
+    <p style="color: white">Generating Invoice...</p>
+  </ngx-spinner>
+
   <form [formGroup]="invoiceForm">
     <!-- Invoice Basic Info -->
     <div class="card mb-3">
@@ -152,27 +156,25 @@
 
     <!-- Recipients Card (Full Width with FormArray) -->
     <div class="card mb-3">
-      <div class="card-header d-flex justify-content-between align-items-center">
+      <div class="card-header">
         <h5 class="mb-0">Recipient Information</h5>
-        <button type="button" class="btn btn-primary btn-sm" (click)="addRecipient()">
-          Add Recipient
-        </button>
       </div>
       <div class="card-body">
         <div formArrayName="recipients">
           @for (recipient of recipients.controls; track $index) {
-            <div class="mb-3">
-              <div [formGroupName]="$index" class="border rounded p-3">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                  <h6 class="mb-0">Recipient #{{ $index + 1 }}</h6>
-                  <button
-                    type="button"
-                    class="btn btn-danger btn-sm"
-                    (click)="removeRecipient($index)"
-                    [disabled]="!canRemoveRecipient()">
-                    Remove
-                  </button>
-                </div>
+            <div class="card mb-3">
+              <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">Recipient #{{ $index + 1 }}</h6>
+                <button
+                  type="button"
+                  class="btn btn-danger btn-sm"
+                  (click)="removeRecipient($index)"
+                  [disabled]="!canRemoveRecipient()">
+                  Remove
+                </button>
+              </div>
+              <div class="card-body">
+                <div [formGroupName]="$index">
 
                 <div class="row g-3">
                   <div class="col-12 col-md-6">
@@ -182,7 +184,8 @@
                       class="form-control"
                       [ngClass]="{'is-invalid': isFieldInvalid(recipient.get('name'))}"
                       [id]="'recipientName' + $index"
-                      formControlName="name">
+                      formControlName="name"
+                      autocomplete="off">
                     <div class="invalid-feedback">Recipient name is required</div>
                   </div>
 
@@ -193,7 +196,8 @@
                       class="form-control"
                       [ngClass]="{'is-invalid': isFieldInvalid(recipient.get('email'))}"
                       [id]="'recipientEmail' + $index"
-                      formControlName="email">
+                      formControlName="email"
+                      autocomplete="off">
                     <div class="invalid-feedback">Valid email is required</div>
                   </div>
 
@@ -204,7 +208,8 @@
                       class="form-control"
                       [ngClass]="{'is-invalid': isFieldInvalid(recipient.get('phone'))}"
                       [id]="'recipientPhone' + $index"
-                      formControlName="phone">
+                      formControlName="phone"
+                      autocomplete="off">
                     <div class="invalid-feedback">Phone is required</div>
                   </div>
 
@@ -217,7 +222,8 @@
                       class="form-control"
                       [ngClass]="{'is-invalid': isFieldInvalid(recipient.get('tin'))}"
                       [id]="'recipientTin' + $index"
-                      formControlName="tin">
+                      formControlName="tin"
+                      autocomplete="off">
                     <div class="invalid-feedback">TIN is required</div>
                   </div>
 
@@ -230,7 +236,8 @@
                       class="form-control"
                       [ngClass]="{'is-invalid': isFieldInvalid(recipient.get('registrationNumber'))}"
                       [id]="'recipientRegNum' + $index"
-                      formControlName="registrationNumber">
+                      formControlName="registrationNumber"
+                      autocomplete="off">
                     <div class="invalid-feedback">Registration number is required</div>
                   </div>
 
@@ -241,7 +248,8 @@
                       class="form-control"
                       [ngClass]="{'is-invalid': isFieldInvalid(recipient.get('addressLine1'))}"
                       [id]="'recipientAddress' + $index"
-                      formControlName="addressLine1">
+                      formControlName="addressLine1"
+                      autocomplete="off">
                     <div class="invalid-feedback">Address is required</div>
                   </div>
 
@@ -252,7 +260,8 @@
                       class="form-control"
                       [ngClass]="{'is-invalid': isFieldInvalid(recipient.get('postcode'))}"
                       [id]="'recipientPostcode' + $index"
-                      formControlName="postcode">
+                      formControlName="postcode"
+                      autocomplete="off">
                     <div class="invalid-feedback">Postcode is required</div>
                   </div>
 
@@ -263,7 +272,8 @@
                       class="form-control"
                       [ngClass]="{'is-invalid': isFieldInvalid(recipient.get('city'))}"
                       [id]="'recipientCity' + $index"
-                      formControlName="city">
+                      formControlName="city"
+                      autocomplete="off">
                     <div class="invalid-feedback">City is required</div>
                   </div>
 
@@ -288,40 +298,43 @@
                       class="form-control"
                       [ngClass]="{'is-invalid': isFieldInvalid(recipient.get('countryCode'))}"
                       [id]="'recipientCountry' + $index"
-                      formControlName="countryCode">
+                      formControlName="countryCode"
+                      autocomplete="off">
                     <div class="invalid-feedback">Country code is required</div>
                   </div>
+                </div>
                 </div>
               </div>
             </div>
           }
+          <button type="button" class="btn btn-primary" (click)="addRecipient()">
+            Add Recipient
+          </button>
         </div>
       </div>
     </div>
 
     <!-- Items Card -->
     <div class="card mb-3">
-      <div class="card-header d-flex justify-content-between align-items-center">
+      <div class="card-header">
         <h5 class="mb-0">Invoice Items</h5>
-        <button type="button" class="btn btn-primary btn-sm" (click)="addItem()">
-          Add Item
-        </button>
       </div>
       <div class="card-body">
         <div formArrayName="items">
           @for (item of items.controls; track $index) {
-            <div class="mb-3">
-              <div [formGroupName]="$index" class="border rounded p-3">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                  <h6 class="mb-0">Item #{{ $index + 1 }}</h6>
-                  <button
-                    type="button"
-                    class="btn btn-danger btn-sm"
-                    (click)="removeItem($index)"
-                    [disabled]="!canRemoveItem()">
-                    Remove
-                  </button>
-                </div>
+            <div class="card mb-3">
+              <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">Item #{{ $index + 1 }}</h6>
+                <button
+                  type="button"
+                  class="btn btn-danger btn-sm"
+                  (click)="removeItem($index)"
+                  [disabled]="!canRemoveItem()">
+                  Remove
+                </button>
+              </div>
+              <div class="card-body">
+                <div [formGroupName]="$index">
 
                 <div class="row g-3">
                   <div class="col-12 col-md-4">
@@ -373,9 +386,13 @@
                     <div class="invalid-feedback">Classification code is required</div>
                   </div>
                 </div>
+                </div>
               </div>
             </div>
           }
+          <button type="button" class="btn btn-primary" (click)="addItem()">
+            Add Item
+          </button>
         </div>
       </div>
     </div>
