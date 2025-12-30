@@ -83,6 +83,11 @@ async function bootstrap() {
     console.log('API will continue to run without RabbitMQ');
   });
 
-  await app.listen(process.env.PORT ?? 3000);
+  const port = process.env.PORT ?? 3000;
+
+  // Log database connection info for debugging
+  console.log('Starting server with database pooling enabled');
+
+  await app.listen(port);
 }
 bootstrap();
