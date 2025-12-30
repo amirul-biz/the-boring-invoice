@@ -9,8 +9,12 @@ dist/
 .vscode/
 .DS_Store
 .env
+.env.development
+.env.production
+.env.local
 .angular
 
 __screenshots__/
 
 /generated/prisma
+.env.example
