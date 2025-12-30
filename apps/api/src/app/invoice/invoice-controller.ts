@@ -82,6 +82,7 @@ export class InvoiceController {
 
   /**
    * Handle payment callback from ToyyibPay
+   * Queue for async processing to avoid serverless timeout
    * Always returns 200 OK to ToyyibPay regardless of processing result
    */
   @Post('callback')
@@ -92,19 +93,19 @@ export class InvoiceController {
     @Res() res: Response,
   ): Promise<void> {
     try {
-      this.logger.log(
-        'Payment callback received',
-        JSON.stringify(callbackData, null, 2),
-      );
+      this.logger.log('Payment callback received');
 
       const data: ToyyibPayCallback = callbackData || req.body;
 
-      await this.invoiceService.handlePaymentCallback(data);
+      // Queue the callback for async processing
+      await this.invoiceService.queuePaymentCallback(data);
 
-      // Always return 200 OK to ToyyibPay
+      this.logger.log(`Payment callback queued: ${data.order_id}`);
+
+      // Always return 200 OK to ToyyibPay immediately
       res.status(HttpStatus.OK).send('OK');
     } catch (error) {
-      this.logger.error('Callback processing error:', error);
+      this.logger.error('Callback queueing error:', error);
       // Still return 200 OK to prevent ToyyibPay retries
       res.status(HttpStatus.OK).send('OK');
     }
@@ -119,5 +120,17 @@ export class InvoiceController {
     invoiceData: CreateInvoiceInputDTO[],
   ): Promise<void> {
     await this.invoiceService.processInvoiceBatch(invoiceData);
+  }
+
+  /**
+   * Event consumer for queued payment callback updates
+   * Processes payment callbacks from RabbitMQ queue
+   * This avoids timeout issues in serverless environments
+   */
+  @EventPattern('receiver-update-invoice')
+  async receiverUpdateInvoice(
+    callbackData: ToyyibPayCallback,
+  ): Promise<void> {
+    await this.invoiceService.processPaymentCallbackFromQueue(callbackData);
   }
 }

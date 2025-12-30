@@ -153,13 +153,13 @@ export class InvoiceService {
   }
 
   /**
-   * Handle payment callback from ToyyibPay
-   * Update invoice status and send receipt email if paid
+   * Queue payment callback for asynchronous processing
+   * This avoids timeout issues in serverless environments
    *
    * @param callbackData - Payment callback data from ToyyibPay
-   * @returns Success status
+   * @returns Success confirmation
    */
-  async handlePaymentCallback(callbackData: {
+  async queuePaymentCallback(callbackData: {
     refno: string;
     status: string;
     reason: string;
@@ -172,7 +172,49 @@ export class InvoiceService {
     fpx_transaction_id: string;
     hash: string;
     transaction_time: string;
-  }): Promise<{ success: boolean }> {
+  }): Promise<{ message: string }> {
+    try {
+      this.logger.log(
+        `Queueing payment callback for invoice: ${callbackData.order_id}`,
+      );
+
+      this.queueService.sendMessageQue(
+        'receiver-update-invoice',
+        callbackData,
+      );
+
+      return {
+        message: 'Payment callback queued successfully',
+      };
+    } catch (error) {
+      this.logger.error(
+        `Failed to queue payment callback: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Process payment callback from RabbitMQ queue
+   * Update invoice status and send receipt email if paid
+   *
+   * @param callbackData - Payment callback data from ToyyibPay
+   */
+  async processPaymentCallbackFromQueue(callbackData: {
+    refno: string;
+    status: string;
+    reason: string;
+    billcode: string;
+    order_id: string;
+    amount: string;
+    status_id: string;
+    msg: string;
+    transaction_id: string;
+    fpx_transaction_id: string;
+    hash: string;
+    transaction_time: string;
+  }): Promise<void> {
     try {
       this.logger.log(
         `Processing payment callback for invoice: ${callbackData.order_id}`,
@@ -221,16 +263,14 @@ export class InvoiceService {
         );
       }
 
-      this.logger.log(`Payment callback processed successfully`);
-
-      return { success: true };
+      this.logger.log(`Payment callback processed successfully from queue`);
     } catch (error) {
       this.logger.error(
         `Payment callback processing failed: ${error.message}`,
         error.stack,
       );
-      // Don't throw - ToyyibPay expects 200 OK response
-      return { success: false };
+      // Re-throw to let RabbitMQ handle retry logic
+      throw error;
     }
   }
 }
