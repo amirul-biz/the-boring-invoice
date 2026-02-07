@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+      - PAYMENT_API_SECRET_URL=${PAYMENT_API_SECRET_URL}
+      - PAYMENT_API_CATEGORY_CODE=${PAYMENT_API_CATEGORY_CODE}
+      - PAYMENT_API_BASE_URL=${PAYMENT_API_BASE_URL}
+      - SMTP_MAILER_EMAIL=${SMTP_MAILER_EMAIL}
+      - SMTP_MAILER_SERVER_PASSWORD=${SMTP_MAILER_SERVER_PASSWORD}
+      - SMTP_MAILER_HOST=${SMTP_MAILER_HOST}
+      - RBBIT_MQ_QUE_URL=${RBBIT_MQ_QUE_URL}
+      - NG_APP_API_URL=${NG_APP_API_URL}
+      - PAYMENT_RETURN_URL=${PAYMENT_RETURN_URL}
+    depends_on:
+      - rabbitmq
+    networks:
+      - app-network
+
+  client:
+    build:
+      context: .
+      dockerfile: apps/client/Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+    networks:
+      - app-network
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
