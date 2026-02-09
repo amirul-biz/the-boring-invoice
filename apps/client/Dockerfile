@@ -12,6 +12,10 @@ RUN npm ci
 # Copy source code
 COPY . .
 
+# Accept API URL as build argument
+ARG NG_APP_API_URL
+ENV NG_APP_API_URL=$NG_APP_API_URL
+
 # Build the Angular app
 RUN npx nx build client --prod
 

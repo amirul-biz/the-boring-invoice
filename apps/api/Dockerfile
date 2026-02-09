@@ -25,7 +25,7 @@ FROM node:20-alpine AS production
 WORKDIR /app
 
 # Copy built application
-COPY --from=builder /app/dist/apps/api ./dist
+COPY --from=builder /app/dist/api ./dist
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/prisma ./prisma
 
