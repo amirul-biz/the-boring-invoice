@@ -6,13 +6,11 @@ import pg from 'pg';
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
   constructor() {
-    // Optimized pool settings for serverless (Vercel)
     const pool = new pg.Pool({
       connectionString: process.env.DATABASE_URL,
-      max: 1, // Maximum connections per serverless function instance
-      idleTimeoutMillis: 10000, // Close idle connections after 10 seconds
-      connectionTimeoutMillis: 5000, // Timeout if connection takes longer than 5 seconds
-      allowExitOnIdle: true, // Allow process to exit when pool is idle
+      max: 5,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 10000,
     });
 
     const adapter = new PrismaPg(pool);
