@@ -1,0 +1,12 @@
+<div class="container py-4">
+  <h2 class="mb-4">{{ mode === 'edit' ? 'Edit' : 'Create' }} Business Information</h2>
+
+  <ngx-spinner bdColor="rgba(0, 0, 0, 0.8)" size="large" color="#fff" type="ball-scale-multiple" [fullScreen]="true">
+    <p style="color: white">{{ mode === 'edit' ? 'Loading...' : 'Saving...' }}</p>
+  </ngx-spinner>
+
+  <app-business-info-form
+    [form]="form"
+    [mode]="mode"
+    (save)="onSave()" />
+</div>

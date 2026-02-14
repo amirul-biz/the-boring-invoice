@@ -1,0 +1,71 @@
+<form [formGroup]="form">
+  <div class="card mb-3">
+    <div class="card-header">
+      <h5 class="mb-0">Business Information</h5>
+    </div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-12 col-md-6">
+          <label for="businessName" class="form-label">Business Name</label>
+          <input
+            type="text"
+            class="form-control"
+            [ngClass]="{'is-invalid': isFieldInvalid(form.controls.businessName)}"
+            id="businessName"
+            formControlName="businessName">
+          <div class="invalid-feedback">Business name is required</div>
+        </div>
+
+        <div class="col-12 col-md-6">
+          <label for="businessEmail" class="form-label">Business Email</label>
+          <input
+            type="email"
+            class="form-control"
+            [ngClass]="{'is-invalid': isFieldInvalid(form.controls.businessEmail)}"
+            id="businessEmail"
+            formControlName="businessEmail">
+          <div class="invalid-feedback">Valid email is required</div>
+        </div>
+
+        <div class="col-12 col-md-6">
+          <label for="taxIdentificationNumber" class="form-label">Tax Identification Number (TIN)</label>
+          <input
+            type="text"
+            class="form-control"
+            [ngClass]="{'is-invalid': isFieldInvalid(form.controls.taxIdentificationNumber)}"
+            id="taxIdentificationNumber"
+            formControlName="taxIdentificationNumber">
+          <div class="invalid-feedback">TIN is required</div>
+        </div>
+
+        <div class="col-12 col-md-6">
+          <label for="businessRegistrationNumber" class="form-label">Business Registration Number</label>
+          <input
+            type="text"
+            class="form-control"
+            [ngClass]="{'is-invalid': isFieldInvalid(form.controls.businessRegistrationNumber)}"
+            id="businessRegistrationNumber"
+            formControlName="businessRegistrationNumber">
+          <div class="invalid-feedback">Registration number is required</div>
+        </div>
+
+        <div class="col-12">
+          <label for="businessActivityDescription" class="form-label">Business Activity Description</label>
+          <textarea
+            class="form-control"
+            [ngClass]="{'is-invalid': isFieldInvalid(form.controls.businessActivityDescription)}"
+            id="businessActivityDescription"
+            formControlName="businessActivityDescription"
+            rows="2"></textarea>
+          <div class="invalid-feedback">Business activity description is required</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="d-flex justify-content-end">
+    <button type="submit" class="btn btn-success btn-lg" (click)="onSubmit()">
+      {{ mode === 'edit' ? 'Update Business Info' : 'Create Business Info' }}
+    </button>
+  </div>
+</form>

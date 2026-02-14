@@ -4,12 +4,14 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { InvoiceModule } from './invoice/invoice-module';
+import { BusinessInfoModule } from './business-info/business-info.module';
 import { MailerModule } from '@nestjs-modules/mailer';
 
 @Module({
   imports: [
     InvoiceModule,
     AuthModule,
+    BusinessInfoModule,
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
