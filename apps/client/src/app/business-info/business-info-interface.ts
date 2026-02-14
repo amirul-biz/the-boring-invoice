@@ -5,4 +5,6 @@ export interface IBusinessInfo {
   taxIdentificationNumber: string;
   businessRegistrationNumber: string;
   businessActivityDescription: string;
+  categoryCode: string;
+  userSecretKey: string;
 }

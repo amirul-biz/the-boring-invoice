@@ -41,6 +41,8 @@ export class BusinessInfo implements OnInit {
           taxIdentificationNumber: data.taxIdentificationNumber,
           businessRegistrationNumber: data.businessRegistrationNumber,
           businessActivityDescription: data.businessActivityDescription,
+          categoryCode: data.categoryCode,
+          userSecretKey: data.userSecretKey,
         });
       }),
       finalize(() => this.spinner.hide()),
@@ -62,6 +64,8 @@ export class BusinessInfo implements OnInit {
       taxIdentificationNumber: formValue.taxIdentificationNumber!,
       businessRegistrationNumber: formValue.businessRegistrationNumber!,
       businessActivityDescription: formValue.businessActivityDescription!,
+      categoryCode: formValue.categoryCode!,
+      userSecretKey: formValue.userSecretKey!,
     };
 
     const request$ = this.mode === 'edit'

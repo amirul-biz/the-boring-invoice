@@ -6,6 +6,8 @@ export interface BusinessInfoForm {
   taxIdentificationNumber: FormControl<string | null>;
   businessRegistrationNumber: FormControl<string | null>;
   businessActivityDescription: FormControl<string | null>;
+  categoryCode: FormControl<string | null>;
+  userSecretKey: FormControl<string | null>;
 }
 
 export function getBusinessInfoForm(): FormGroup<BusinessInfoForm> {
@@ -27,6 +29,14 @@ export function getBusinessInfoForm(): FormGroup<BusinessInfoForm> {
       validators: [Validators.required],
     }),
     businessActivityDescription: new FormControl(null, {
+      nonNullable: true,
+      validators: [Validators.required],
+    }),
+    categoryCode: new FormControl(null, {
+      nonNullable: true,
+      validators: [Validators.required],
+    }),
+    userSecretKey: new FormControl(null, {
       nonNullable: true,
       validators: [Validators.required],
     }),

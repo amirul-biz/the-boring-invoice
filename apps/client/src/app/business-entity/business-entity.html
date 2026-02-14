@@ -1,0 +1,23 @@
+<div class="container py-4">
+  <ngx-spinner bdColor="rgba(0, 0, 0, 0.8)" size="large" color="#fff" type="ball-scale-multiple" [fullScreen]="true">
+    <p style="color: white">Loading...</p>
+  </ngx-spinner>
+
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="mb-0">Business Entities</h2>
+    <button type="button" class="btn btn-primary" (click)="onCreateNew()">
+      Create New Business Entity
+    </button>
+  </div>
+
+  <div class="row">
+    @for (business of businesses; track business.id) {
+      <div class="col-12 col-lg-4 my-4">
+        <app-business-entity-card
+          [business]="business"
+          (edit)="onEdit($event)"
+          (createInvoice)="onCreateInvoice($event)" />
+      </div>
+    }
+  </div>
+</div>
