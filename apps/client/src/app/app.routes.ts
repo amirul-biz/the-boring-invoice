@@ -6,6 +6,10 @@ export const appRoutes: Route[] = [
         loadComponent: () => import('./login/login').then(m => m.Login)
     },
     {
+        path: 'business-entity',
+        loadComponent: () => import('./business-entity/business-entity').then(m => m.BusinessEntity)
+    },
+    {
         path: 'invoice',
         loadComponent: () => import('./invoice/invoice').then(m => m.Invoice)
     },

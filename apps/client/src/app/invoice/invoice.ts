@@ -1,6 +1,5 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject } from '@angular/core';
-import { Router } from '@angular/router';
 import { ReactiveFormsModule, FormGroup, Validators } from '@angular/forms';
 import { NgbDatepickerModule } from '@ng-bootstrap/ng-bootstrap';
 import { NgxSpinnerModule, NgxSpinnerService } from 'ngx-spinner';
@@ -28,7 +27,6 @@ export class Invoice {
   invoiceForm: FormGroup<CreateInvoiceForm>;
   invoiceService = inject(InvoiceService);
   spinner = inject(NgxSpinnerService);
-  router = inject(Router);
   invoiceTypes = INVOICE_TYPES;
   malaysianStates = MALAYSIAN_STATES;
   classificationCodes = CLASSIFICATION_CODES;
@@ -88,10 +86,6 @@ export class Invoice {
     }
   }
 
-
-  navigateToBusinessInfo(mode: string): void {
-    this.router.navigate(['/business-info', mode]);
-  }
 
   generateInvoice(): void {
     if (this.invoiceForm.invalid) {

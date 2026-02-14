@@ -5,6 +5,8 @@ export interface CreateBusinessInfoData {
   taxIdentificationNumber: string;
   businessRegistrationNumber: string;
   businessActivityDescription: string;
+  categoryCode: string;
+  userSecretKey: string;
 }
 
 export interface UpdateBusinessInfoData {
@@ -13,4 +15,6 @@ export interface UpdateBusinessInfoData {
   taxIdentificationNumber?: string;
   businessRegistrationNumber?: string;
   businessActivityDescription?: string;
+  categoryCode?: string;
+  userSecretKey?: string;
 }

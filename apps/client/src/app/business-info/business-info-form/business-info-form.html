@@ -49,6 +49,28 @@
           <div class="invalid-feedback">Registration number is required</div>
         </div>
 
+        <div class="col-12 col-md-6">
+          <label for="categoryCode" class="form-label">Category Code</label>
+          <input
+            type="text"
+            class="form-control"
+            [ngClass]="{'is-invalid': isFieldInvalid(form.controls.categoryCode)}"
+            id="categoryCode"
+            formControlName="categoryCode">
+          <div class="invalid-feedback">Category code is required</div>
+        </div>
+
+        <div class="col-12 col-md-6">
+          <label for="userSecretKey" class="form-label">User Secret Key</label>
+          <input
+            type="text"
+            class="form-control"
+            [ngClass]="{'is-invalid': isFieldInvalid(form.controls.userSecretKey)}"
+            id="userSecretKey"
+            formControlName="userSecretKey">
+          <div class="invalid-feedback">User secret key is required</div>
+        </div>
+
         <div class="col-12">
           <label for="businessActivityDescription" class="form-label">Business Activity Description</label>
           <textarea
