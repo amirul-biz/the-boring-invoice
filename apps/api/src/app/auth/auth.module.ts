@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { PrismaService } from '@prismaService';
 import { OAUTH_GOOGLE_CONFIG, OAuthGoogleConfig } from './auth.constants';
 import { AuthController } from './auth-controller';
+import { AuthService } from './auth-service';
 import { GoogleOauthGuard } from './auth-google-auth-guard';
 import { GoogleStrategy } from './auth-google.strategy';
 
@@ -17,6 +19,8 @@ import { GoogleStrategy } from './auth-google.strategy';
         callbackURL: configService.get<string>('OAUTH_CALLBACK_URL'),
       }),
     },
+    AuthService,
+    PrismaService,
     GoogleStrategy,
     GoogleOauthGuard,
   ],
