@@ -20,6 +20,6 @@ export class AuthController {
   @ApiOperation({ summary: 'Google OAuth callback' })
   async googleCallback(@Req() req, @Res() res) {
     await this.authService.validateOrCreateUser(req.user);
-    return res.redirect('http://localhost:4200');
+    return res.redirect('http://localhost:4200/invoice');
   }
 }
