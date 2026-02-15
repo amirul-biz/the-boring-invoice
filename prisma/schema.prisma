@@ -25,6 +25,7 @@ model BusinessInformation {
   taxIdentificationNumber         String
   businessRegistrationNumber      String
   businessActivityDescription     String
+  msicCode                        String
   categoryCode                    String
   userSecretKey                   String
   createdAt                       DateTime @default(now())

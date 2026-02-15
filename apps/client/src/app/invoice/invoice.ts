@@ -59,7 +59,7 @@ export class Invoice implements OnInit {
           email: data.businessEmail,
           tin: data.taxIdentificationNumber,
           registrationNumber: data.businessRegistrationNumber,
-          msicCode: data.categoryCode,
+          msicCode: data.msicCode,
           businessActivityDescription: data.businessActivityDescription,
         });
       }),

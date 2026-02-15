@@ -5,6 +5,7 @@ export interface IBusinessInfo {
   taxIdentificationNumber: string;
   businessRegistrationNumber: string;
   businessActivityDescription: string;
+  msicCode: string;
   categoryCode: string;
   userSecretKey: string;
 }
@@ -16,5 +17,6 @@ export interface IBusinessInfoPublic {
   taxIdentificationNumber: string;
   businessRegistrationNumber: string;
   businessActivityDescription: string;
+  msicCode: string;
   categoryCode: string;
 }
