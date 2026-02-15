@@ -1,11 +1,12 @@
 import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
 import { PrismaService } from '@prismaService';
 import { BusinessInformation } from '@prisma/client';
-import { CreateBusinessInfoBody, UpdateBusinessInfoData } from './business-info-interface';
+import { BusinessInfoPublicData, CreateBusinessInfoBody, UpdateBusinessInfoData } from './business-info-interface';
 import {
   createBusinessInfo,
   findBusinessInfoByUserId,
   findBusinessInfoById,
+  findBusinessInfoPublicById,
   updateBusinessInfo,
   hasRelatedInvoices,
   deleteBusinessInfo,
@@ -35,6 +36,10 @@ export class BusinessInfoService {
 
   async findById(id: string): Promise<BusinessInformation | null> {
     return await findBusinessInfoById(this.prisma, id, this.logger);
+  }
+
+  async findPublicById(id: string): Promise<BusinessInfoPublicData | null> {
+    return await findBusinessInfoPublicById(this.prisma, id, this.logger);
   }
 
   async update(id: string, data: UpdateBusinessInfoData): Promise<BusinessInformation> {

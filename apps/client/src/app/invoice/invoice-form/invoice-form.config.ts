@@ -7,19 +7,6 @@ import {
 } from '../invoice-interface';
 
 
-interface IDefaultBusinessInfo {
-  name: string;
-  email: string;
-  tinNo: string;
-  registrationNo: string;
-  msicCode: string;
-  businessActivityDescription: string;
-}
-
-export const defaultBusinessInfo: IDefaultBusinessInfo = JSON.parse(
-  process.env['NG_APP_DEFAULT_BUSINESS_INFO'] || '{}'
-)
-
 export interface RecipientForm {
   name: FormControl<string | null>;
   email: FormControl<string | null>;
@@ -142,24 +129,24 @@ export function getInvoiceForm(): FormGroup<CreateInvoiceForm> {
 
     // Nested Supplier Group
     supplier: new FormGroup<SupplierForm>({
-      name: new FormControl({ value: defaultBusinessInfo.name || null, disabled: true }, {
+      name: new FormControl({ value: null, disabled: true }, {
         nonNullable: true,
         validators: [Validators.required],
       }),
-      email: new FormControl<string | null>({ value: defaultBusinessInfo.email || null, disabled: true }, [Validators.email, Validators.required]),
-      tin: new FormControl({ value: defaultBusinessInfo.tinNo || null, disabled: true }, {
+      email: new FormControl<string | null>({ value: null, disabled: true }, [Validators.email, Validators.required]),
+      tin: new FormControl({ value: null, disabled: true }, {
         nonNullable: true,
         validators: [Validators.required],
       }),
-      registrationNumber: new FormControl({ value: defaultBusinessInfo.registrationNo || null, disabled: true }, {
+      registrationNumber: new FormControl({ value: null, disabled: true }, {
         nonNullable: true,
         validators: [Validators.required],
       }),
-      msicCode: new FormControl({ value: defaultBusinessInfo.msicCode || null, disabled: true }, {
+      msicCode: new FormControl({ value: null, disabled: true }, {
         nonNullable: true,
         validators: [Validators.required, Validators.pattern(/^\d{5}$/)],
       }),
-      businessActivityDescription: new FormControl({ value: defaultBusinessInfo.businessActivityDescription || null, disabled: true }, {
+      businessActivityDescription: new FormControl({ value: null, disabled: true }, {
         nonNullable: true,
         validators: [Validators.required],
       }),

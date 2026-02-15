@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { IBusinessInfo } from './business-info-interface';
+import { IBusinessInfo, IBusinessInfoPublic } from './business-info-interface';
 
 @Injectable({
   providedIn: 'root',
@@ -16,6 +16,10 @@ export class BusinessInfoService {
 
   getById(id: string): Observable<IBusinessInfo> {
     return this.http.get<IBusinessInfo>(`${this.apiUrl}/business-info/${id}`);
+  }
+
+  getPublicById(id: string): Observable<IBusinessInfoPublic> {
+    return this.http.get<IBusinessInfoPublic>(`${this.apiUrl}/business-info/${id}/public`);
   }
 
   create(data: IBusinessInfo): Observable<IBusinessInfo> {
