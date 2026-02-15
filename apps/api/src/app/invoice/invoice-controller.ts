@@ -4,6 +4,7 @@ import {
   HttpException,
   HttpStatus,
   Logger,
+  Param,
   Post,
   Req,
   Res,
@@ -49,18 +50,20 @@ export class InvoiceController {
   /**
    * Queue invoice generation for asynchronous processing
    */
-  @Post('generate')
+  @Post('generate/:businessId')
   @ApiOperation({ summary: 'Generate invoice PDF' })
   @ApiResponse({ status: 202, description: 'Invoice processing started' })
   @ApiResponse({ status: 500, description: 'Failed to queue invoice' })
   @ApiBody({ type: CreateInvoiceInputDTO })
   async generateInvoice(
+    @Param('businessId') businessId: string,
     @Body() invoiceData: CreateInvoiceInputDTO[],
     @Res() res: Response,
   ): Promise<void> {
     try {
       const result = await this.invoiceService.queueInvoiceGeneration(
         invoiceData,
+        businessId,
       );
 
       res.status(HttpStatus.ACCEPTED).json(result);
@@ -117,9 +120,9 @@ export class InvoiceController {
    */
   @EventPattern('receiver-create-invoice')
   async receiverCreateInvoice(
-    invoiceData: CreateInvoiceInputDTO[],
+    data: { businessId: string; invoiceDataList: CreateInvoiceInputDTO[] },
   ): Promise<void> {
-    await this.invoiceService.processInvoiceBatch(invoiceData);
+    await this.invoiceService.processInvoiceBatch(data.businessId, data.invoiceDataList);
   }
 
   /**

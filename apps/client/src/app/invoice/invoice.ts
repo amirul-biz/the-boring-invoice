@@ -36,18 +36,20 @@ export class Invoice implements OnInit {
   classificationCodes = CLASSIFICATION_CODES;
   Validators = Validators;
 
+  private businessId = '';
+
   constructor() {
     this.invoiceForm = getInvoiceForm();
   }
 
   ngOnInit(): void {
-    const businessId = this.route.snapshot.paramMap.get('businessId');
-    if (businessId) {
-      this.loadSupplierInfo(businessId);
+    this.businessId = this.route.snapshot.paramMap.get('businessId') || '';
+    if (this.businessId) {
+      this.getSupplierInfo(this.businessId);
     }
   }
 
-  private loadSupplierInfo(businessId: string): void {
+  private getSupplierInfo(businessId: string): void {
     this.spinner.show();
 
     this.businessInfoService.getPublicById(businessId).pipe(
@@ -125,7 +127,7 @@ export class Invoice implements OnInit {
     this.spinner.show();
 
     const invoicesData = getInvoicesData(this.invoiceForm);
-    this.invoiceService.generateInvoicePdf(invoicesData).pipe(
+    this.invoiceService.generateInvoicePdf(invoicesData, this.businessId).pipe(
       tap(() => {
         const count = invoicesData.length;
         const message = count === 1

@@ -7,6 +7,8 @@ import {
   CreateInvoiceInputDTO,
   ProcessedInvoiceDto,
 } from './invoice-dto';
+import { BusinessInfoService } from '../business-info/business-info-service';
+import { PaymentIntegrationCredential } from '../business-info/business-info-interface';
 
 // Utilities
 import { calculateInvoiceData } from './invoice-utility/invoice-utility-calculation';
@@ -29,6 +31,7 @@ export class InvoiceService {
     private readonly prisma: PrismaService,
     private readonly mailService: MailerService,
     private readonly queueService: RabbitMqProducerService,
+    private readonly businessInfoService: BusinessInfoService,
   ) {}
 
   /**
@@ -39,6 +42,7 @@ export class InvoiceService {
    */
   async queueInvoiceGeneration(
     invoiceDataList: CreateInvoiceInputDTO[],
+    businessId: string,
   ): Promise<{ message: string; timestamp: string }> {
     try {
       this.logger.log(
@@ -47,7 +51,7 @@ export class InvoiceService {
 
       this.queueService.sendMessageQue(
         'receiver-create-invoice',
-        invoiceDataList,
+        { businessId, invoiceDataList },
       );
 
       this.logger.log('Invoice generation queued successfully');
@@ -74,6 +78,7 @@ export class InvoiceService {
    */
   async processInvoiceCreation(
     inputData: CreateInvoiceInputDTO,
+    paymentIntegrationCredential: PaymentIntegrationCredential,
   ): Promise<ProcessedInvoiceDto> {
     try {
       this.logger.log(
@@ -89,6 +94,7 @@ export class InvoiceService {
       // Step 2: Integrate with payment gateway
       const processedInvoice = await processPaymentIntegration(
         calculatedInvoice,
+        paymentIntegrationCredential,
         this.logger,
       );
 
@@ -125,20 +131,24 @@ export class InvoiceService {
 
   /**
    * Process multiple invoices (from queue consumer)
-   * Processes each invoice individually with error isolation
+   * Fetches payment credential once, then processes each invoice with error isolation
    *
+   * @param businessId - Business ID to fetch payment credentials
    * @param invoiceDataList - Array of invoice data to process
    */
   async processInvoiceBatch(
+    businessId: string,
     invoiceDataList: CreateInvoiceInputDTO[],
   ): Promise<void> {
     this.logger.log(
       `Processing batch of ${invoiceDataList.length} invoice(s)`,
     );
 
+    const paymentIntegrationCredential = await this.businessInfoService.getPaymentIntegrationCredential(businessId);
+
     for (const invoiceData of invoiceDataList) {
       try {
-        await this.processInvoiceCreation(invoiceData);
+        await this.processInvoiceCreation(invoiceData, paymentIntegrationCredential);
       } catch (error) {
         // Log error but continue processing other invoices
         this.logger.error(

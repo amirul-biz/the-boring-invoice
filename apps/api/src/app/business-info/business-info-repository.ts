@@ -1,7 +1,7 @@
 import { Logger, HttpException, HttpStatus } from '@nestjs/common';
 import { PrismaService } from '@prismaService';
 import { BusinessInformation } from '@prisma/client';
-import { BusinessInfoPublicData, CreateBusinessInfoData, UpdateBusinessInfoData } from './business-info-interface';
+import { BusinessInfoPublicData, CreateBusinessInfoData, PaymentIntegrationCredential, UpdateBusinessInfoData } from './business-info-interface';
 
 export async function createBusinessInfo(
   prisma: PrismaService,
@@ -79,6 +79,29 @@ export async function findBusinessInfoPublicById(
     logger.error(`Failed to find public business info by ID: ${error.message}`, error.stack);
     throw new HttpException(
       'Failed to look up business info',
+      HttpStatus.INTERNAL_SERVER_ERROR,
+    );
+  }
+}
+
+export async function getPaymentIntegrationCredential(
+  prisma: PrismaService,
+  id: string,
+  logger: Logger,
+): Promise<PaymentIntegrationCredential | null> {
+  try {
+    logger.log(`Looking up payment integration credential for business: ${id}`);
+    return await prisma.businessInformation.findUnique({
+      where: { id },
+      select: {
+        categoryCode: true,
+        userSecretKey: true,
+      },
+    });
+  } catch (error) {
+    logger.error(`Failed to find payment integration credential: ${error.message}`, error.stack);
+    throw new HttpException(
+      'Failed to look up payment integration credential',
       HttpStatus.INTERNAL_SERVER_ERROR,
     );
   }

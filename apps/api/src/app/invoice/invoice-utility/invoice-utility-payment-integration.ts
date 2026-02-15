@@ -1,17 +1,20 @@
 import { Logger, HttpException, HttpStatus } from '@nestjs/common';
 import { CalculatedInvoiceDto, ProcessedInvoiceDto } from '../invoice-dto';
 import { generateToyyibpayBill } from '../invoice-generator/invoice-generator-toyyibpay-bill';
+import { PaymentIntegrationCredential } from '../../business-info/business-info-interface';
 
 /**
  * Process invoice data by integrating with ToyyibPay payment gateway
  * Creates payment bill and returns invoice with payment URL
  *
  * @param calculatedInvoice - Invoice with calculated totals
+ * @param paymentIntegrationCredential - Business payment credentials (secretKey, categoryCode)
  * @param logger - NestJS Logger instance for logging
  * @returns ProcessedInvoiceDto with billUrl included
  */
 export async function processPaymentIntegration(
   calculatedInvoice: CalculatedInvoiceDto,
+  paymentIntegrationCredential: PaymentIntegrationCredential,
   logger: Logger,
 ): Promise<ProcessedInvoiceDto> {
   try {
@@ -35,8 +38,10 @@ export async function processPaymentIntegration(
       callbackUrl,
     });
 
-    // Initialize ToyyibPay client
+    // Initialize ToyyibPay client with business-specific credentials
     const toyyibPay = generateToyyibpayBill({
+      secretKey: paymentIntegrationCredential.userSecretKey,
+      categoryCode: paymentIntegrationCredential.categoryCode,
       returnUrl,
       callbackUrl,
     });
