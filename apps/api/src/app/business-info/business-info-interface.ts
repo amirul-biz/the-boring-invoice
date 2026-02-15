@@ -22,6 +22,11 @@ export interface BusinessInfoPublicData {
   categoryCode: string;
 }
 
+export interface PaymentIntegrationCredential {
+  categoryCode: string;
+  userSecretKey: string;
+}
+
 export interface UpdateBusinessInfoData {
   businessName?: string;
   businessEmail?: string;

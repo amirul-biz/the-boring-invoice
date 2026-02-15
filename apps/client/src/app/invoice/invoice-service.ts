@@ -9,7 +9,7 @@ import { ICreateInvoice } from './invoice-interface';
 export class InvoiceService {
   http = inject(HttpClient);
 
-  generateInvoicePdf(data: ICreateInvoice[]): Observable<any> {
-    return this.http.post(`${process.env['NG_APP_API_URL']}/invoice/generate`, data);
+  generateInvoicePdf(data: ICreateInvoice[], businessId: string): Observable<any> {
+    return this.http.post(`${process.env['NG_APP_API_URL']}/invoice/generate/${businessId}`, data);
   }
 }

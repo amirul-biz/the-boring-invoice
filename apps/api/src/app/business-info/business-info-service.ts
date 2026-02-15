@@ -1,12 +1,13 @@
 import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
 import { PrismaService } from '@prismaService';
 import { BusinessInformation } from '@prisma/client';
-import { BusinessInfoPublicData, CreateBusinessInfoBody, UpdateBusinessInfoData } from './business-info-interface';
+import { BusinessInfoPublicData, CreateBusinessInfoBody, PaymentIntegrationCredential, UpdateBusinessInfoData } from './business-info-interface';
 import {
   createBusinessInfo,
   findBusinessInfoByUserId,
   findBusinessInfoById,
   findBusinessInfoPublicById,
+  getPaymentIntegrationCredential,
   updateBusinessInfo,
   hasRelatedInvoices,
   deleteBusinessInfo,
@@ -40,6 +41,25 @@ export class BusinessInfoService {
 
   async findPublicById(id: string): Promise<BusinessInfoPublicData | null> {
     return await findBusinessInfoPublicById(this.prisma, id, this.logger);
+  }
+
+  async getPaymentIntegrationCredential(id: string): Promise<PaymentIntegrationCredential> {
+    try {
+      this.logger.log(`Getting payment integration credential for business: ${id}`);
+      const credential = await getPaymentIntegrationCredential(this.prisma, id, this.logger);
+
+      if (!credential) {
+        throw new HttpException(
+          'Business info not found for payment integration',
+          HttpStatus.NOT_FOUND,
+        );
+      }
+
+      return credential;
+    } catch (error) {
+      this.logger.error(`Failed to get payment integration credential: ${error.message}`, error.stack);
+      throw error;
+    }
   }
 
   async update(id: string, data: UpdateBusinessInfoData): Promise<BusinessInformation> {
