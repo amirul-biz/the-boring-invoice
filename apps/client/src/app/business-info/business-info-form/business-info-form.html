@@ -50,6 +50,17 @@
         </div>
 
         <div class="col-12 col-md-6">
+          <label for="msicCode" class="form-label">MSIC Code</label>
+          <input
+            type="text"
+            class="form-control"
+            [ngClass]="{'is-invalid': isFieldInvalid(form.controls.msicCode)}"
+            id="msicCode"
+            formControlName="msicCode">
+          <div class="invalid-feedback">Valid 5-digit MSIC code is required</div>
+        </div>
+
+        <div class="col-12 col-md-6">
           <label for="categoryCode" class="form-label">Category Code</label>
           <input
             type="text"

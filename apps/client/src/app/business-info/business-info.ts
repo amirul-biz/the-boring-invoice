@@ -42,6 +42,7 @@ export class BusinessInfo implements OnInit {
           taxIdentificationNumber: data.taxIdentificationNumber,
           businessRegistrationNumber: data.businessRegistrationNumber,
           businessActivityDescription: data.businessActivityDescription,
+          msicCode: data.msicCode,
           categoryCode: data.categoryCode,
           userSecretKey: data.userSecretKey,
         });
@@ -65,6 +66,7 @@ export class BusinessInfo implements OnInit {
       taxIdentificationNumber: formValue.taxIdentificationNumber!,
       businessRegistrationNumber: formValue.businessRegistrationNumber!,
       businessActivityDescription: formValue.businessActivityDescription!,
+      msicCode: formValue.msicCode!,
       categoryCode: formValue.categoryCode!,
       userSecretKey: formValue.userSecretKey!,
     };

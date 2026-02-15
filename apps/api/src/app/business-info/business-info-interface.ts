@@ -4,6 +4,7 @@ export interface CreateBusinessInfoBody {
   taxIdentificationNumber: string;
   businessRegistrationNumber: string;
   businessActivityDescription: string;
+  msicCode: string;
   categoryCode: string;
   userSecretKey: string;
 }
@@ -19,6 +20,7 @@ export interface BusinessInfoPublicData {
   taxIdentificationNumber: string;
   businessRegistrationNumber: string;
   businessActivityDescription: string;
+  msicCode: string;
   categoryCode: string;
 }
 
@@ -33,6 +35,7 @@ export interface UpdateBusinessInfoData {
   taxIdentificationNumber?: string;
   businessRegistrationNumber?: string;
   businessActivityDescription?: string;
+  msicCode?: string;
   categoryCode?: string;
   userSecretKey?: string;
 }

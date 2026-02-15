@@ -72,6 +72,7 @@ export async function findBusinessInfoPublicById(
         taxIdentificationNumber: true,
         businessRegistrationNumber: true,
         businessActivityDescription: true,
+        msicCode: true,
         categoryCode: true,
       },
     });
