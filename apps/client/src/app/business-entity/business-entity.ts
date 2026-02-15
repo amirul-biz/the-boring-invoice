@@ -42,6 +42,6 @@ export class BusinessEntity implements OnInit {
   }
 
   onCreateInvoice(business: IBusinessInfo): void {
-    this.router.navigate(['/invoice']);
+    this.router.navigate(['/invoice', business.id]);
   }
 }

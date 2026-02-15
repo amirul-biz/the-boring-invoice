@@ -1,7 +1,7 @@
 import { Logger, HttpException, HttpStatus } from '@nestjs/common';
 import { PrismaService } from '@prismaService';
 import { BusinessInformation } from '@prisma/client';
-import { CreateBusinessInfoData, UpdateBusinessInfoData } from './business-info-interface';
+import { BusinessInfoPublicData, CreateBusinessInfoData, UpdateBusinessInfoData } from './business-info-interface';
 
 export async function createBusinessInfo(
   prisma: PrismaService,
@@ -49,6 +49,34 @@ export async function findBusinessInfoById(
     return await prisma.businessInformation.findUnique({ where: { id } });
   } catch (error) {
     logger.error(`Failed to find business info by ID: ${error.message}`, error.stack);
+    throw new HttpException(
+      'Failed to look up business info',
+      HttpStatus.INTERNAL_SERVER_ERROR,
+    );
+  }
+}
+
+export async function findBusinessInfoPublicById(
+  prisma: PrismaService,
+  id: string,
+  logger: Logger,
+): Promise<BusinessInfoPublicData | null> {
+  try {
+    logger.log(`Looking up public business info by ID: ${id}`);
+    return await prisma.businessInformation.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        businessName: true,
+        businessEmail: true,
+        taxIdentificationNumber: true,
+        businessRegistrationNumber: true,
+        businessActivityDescription: true,
+        categoryCode: true,
+      },
+    });
+  } catch (error) {
+    logger.error(`Failed to find public business info by ID: ${error.message}`, error.stack);
     throw new HttpException(
       'Failed to look up business info',
       HttpStatus.INTERNAL_SERVER_ERROR,

@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { ReactiveFormsModule, FormGroup, Validators } from '@angular/forms';
 import { NgbDatepickerModule } from '@ng-bootstrap/ng-bootstrap';
 import { NgxSpinnerModule, NgxSpinnerService } from 'ngx-spinner';
@@ -14,6 +15,7 @@ import {
   getInvoicesData,
 } from './invoice-form/invoice-form.config';
 import { InvoiceService } from './invoice-service';
+import { BusinessInfoService } from '../business-info/business-info-service';
 import { MALAYSIAN_STATES, CLASSIFICATION_CODES, INVOICE_TYPES } from './invoice-constants';
 import { tap, finalize } from 'rxjs';
 
@@ -23,10 +25,12 @@ import { tap, finalize } from 'rxjs';
   templateUrl: './invoice.html',
   styleUrl: './invoice.scss',
 })
-export class Invoice {
+export class Invoice implements OnInit {
   invoiceForm: FormGroup<CreateInvoiceForm>;
   invoiceService = inject(InvoiceService);
+  businessInfoService = inject(BusinessInfoService);
   spinner = inject(NgxSpinnerService);
+  private route = inject(ActivatedRoute);
   invoiceTypes = INVOICE_TYPES;
   malaysianStates = MALAYSIAN_STATES;
   classificationCodes = CLASSIFICATION_CODES;
@@ -34,6 +38,31 @@ export class Invoice {
 
   constructor() {
     this.invoiceForm = getInvoiceForm();
+  }
+
+  ngOnInit(): void {
+    const businessId = this.route.snapshot.paramMap.get('businessId');
+    if (businessId) {
+      this.loadSupplierInfo(businessId);
+    }
+  }
+
+  private loadSupplierInfo(businessId: string): void {
+    this.spinner.show();
+
+    this.businessInfoService.getPublicById(businessId).pipe(
+      tap((data) => {
+        this.invoiceForm.controls.supplier.patchValue({
+          name: data.businessName,
+          email: data.businessEmail,
+          tin: data.taxIdentificationNumber,
+          registrationNumber: data.businessRegistrationNumber,
+          msicCode: data.categoryCode,
+          businessActivityDescription: data.businessActivityDescription,
+        });
+      }),
+      finalize(() => this.spinner.hide()),
+    ).subscribe();
   }
 
   get items() {

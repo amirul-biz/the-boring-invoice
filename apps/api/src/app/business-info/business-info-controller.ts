@@ -34,6 +34,12 @@ export class BusinessInfoController {
     return this.businessInfoService.findByUserId(userId);
   }
 
+  @Get(':id/public')
+  @ApiOperation({ summary: 'Get business information by ID without sensitive data' })
+  async findPublicById(@Param('id') id: string) {
+    return this.businessInfoService.findPublicById(id);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get business information by ID' })
   async findById(@Param('id') id: string) {
