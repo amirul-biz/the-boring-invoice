@@ -22,19 +22,20 @@ export class BusinessInfo implements OnInit {
   private editId = '';
 
   ngOnInit(): void {
-    this.mode = this.route.snapshot.paramMap.get('mode') || 'create';
+    const id = this.route.snapshot.paramMap.get('id');
 
-    if (this.mode === 'edit') {
-      this.loadMockData();
+    if (id) {
+      this.mode = 'edit';
+      this.editId = id;
+      this.loadBusinessInfo(id);
     }
   }
 
-  private loadMockData(): void {
+  private loadBusinessInfo(id: string): void {
     this.spinner.show();
 
-    this.businessInfoService.getMockBusiness().pipe(
+    this.businessInfoService.getById(id).pipe(
       tap((data) => {
-        this.editId = data.id || '';
         this.form.patchValue({
           businessName: data.businessName,
           businessEmail: data.businessEmail,

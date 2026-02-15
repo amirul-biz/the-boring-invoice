@@ -25,7 +25,7 @@ export class BusinessEntity implements OnInit {
   private loadBusinesses(): void {
     this.spinner.show();
 
-    this.businessInfoService.getMockBusinessList().pipe(
+    this.businessInfoService.getAll().pipe(
       tap((data) => {
         this.businesses = data;
       }),
@@ -38,7 +38,7 @@ export class BusinessEntity implements OnInit {
   }
 
   onEdit(business: IBusinessInfo): void {
-    this.router.navigate(['/business-info', 'edit']);
+    this.router.navigate(['/business-info', 'edit', business.id]);
   }
 
   onCreateInvoice(business: IBusinessInfo): void {

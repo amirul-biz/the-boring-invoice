@@ -1,7 +1,7 @@
 import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
 import { PrismaService } from '@prismaService';
 import { BusinessInformation } from '@prisma/client';
-import { CreateBusinessInfoData, UpdateBusinessInfoData } from './business-info-interface';
+import { CreateBusinessInfoBody, UpdateBusinessInfoData } from './business-info-interface';
 import {
   createBusinessInfo,
   findBusinessInfoByUserId,
@@ -15,10 +15,18 @@ import {
 export class BusinessInfoService {
   private readonly logger = new Logger(BusinessInfoService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+  ) {}
 
-  async create(data: CreateBusinessInfoData): Promise<BusinessInformation> {
-    return await createBusinessInfo(this.prisma, data, this.logger);
+  async create(data: CreateBusinessInfoBody): Promise<BusinessInformation> {
+    const userId = process.env['TEMP_USER_ID'];
+    return await createBusinessInfo(this.prisma, { ...data, userId }, this.logger);
+  }
+
+  async findAll(): Promise<BusinessInformation[]> {
+    const userId = process.env['TEMP_USER_ID'];
+    return await findBusinessInfoByUserId(this.prisma, userId, this.logger);
   }
 
   async findByUserId(userId: string): Promise<BusinessInformation[]> {
