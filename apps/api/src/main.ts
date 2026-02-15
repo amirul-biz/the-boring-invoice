@@ -13,6 +13,7 @@ async function bootstrap() {
         'https://the-boring-invoice-client.vercel.app',
         'http://localhost:4200',
         'https://resummonable-pearl-unfinanced.ngrok-free.dev',
+        'http://localhost:3000'
       ];
 
       const allowedPatterns = [

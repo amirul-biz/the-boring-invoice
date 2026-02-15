@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { BusinessInfoService } from './business-info-service';
-import { CreateBusinessInfoData, UpdateBusinessInfoData } from './business-info-interface';
+import { CreateBusinessInfoBody, UpdateBusinessInfoData } from './business-info-interface';
 
 @ApiTags('BusinessInfo')
 @Controller('business-info')
@@ -18,8 +18,14 @@ export class BusinessInfoController {
 
   @Post()
   @ApiOperation({ summary: 'Create business information' })
-  async create(@Body() data: CreateBusinessInfoData) {
+  async create(@Body() data: CreateBusinessInfoBody) {
     return this.businessInfoService.create(data);
+  }
+
+  @Get()
+  @ApiOperation({ summary: 'Get all business information for current user' })
+  async findAll() {
+    return this.businessInfoService.findAll();
   }
 
   @Get('user/:userId')

@@ -1,5 +1,4 @@
-export interface CreateBusinessInfoData {
-  userId: string;
+export interface CreateBusinessInfoBody {
   businessName: string;
   businessEmail: string;
   taxIdentificationNumber: string;
@@ -7,6 +6,10 @@ export interface CreateBusinessInfoData {
   businessActivityDescription: string;
   categoryCode: string;
   userSecretKey: string;
+}
+
+export interface CreateBusinessInfoData extends CreateBusinessInfoBody {
+  userId: string;
 }
 
 export interface UpdateBusinessInfoData {
