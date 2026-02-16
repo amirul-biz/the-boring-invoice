@@ -21,14 +21,8 @@ export class BusinessInfoService {
     private readonly prisma: PrismaService,
   ) {}
 
-  async create(data: CreateBusinessInfoBody): Promise<BusinessInformation> {
-    const userId = process.env['TEMP_USER_ID'];
+  async create(userId: string, data: CreateBusinessInfoBody): Promise<BusinessInformation> {
     return await createBusinessInfo(this.prisma, { ...data, userId }, this.logger);
-  }
-
-  async findAll(): Promise<BusinessInformation[]> {
-    const userId = process.env['TEMP_USER_ID'];
-    return await findBusinessInfoByUserId(this.prisma, userId, this.logger);
   }
 
   async findByUserId(userId: string): Promise<BusinessInformation[]> {
