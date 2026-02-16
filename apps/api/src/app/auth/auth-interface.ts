@@ -10,3 +10,10 @@ export interface CreateUserData {
   name: string;
   email: string;
 }
+
+export interface JwtPayload {
+  id: string;
+  sub: string;
+  name: string;
+  email: string;
+}

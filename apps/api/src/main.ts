@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app/app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { rabbitMQOptionsConfig } from './app/rabbit-mq/rabbit-mq-options.config';
+import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -48,6 +49,9 @@ async function bootstrap() {
     preflightContinue: false,
     optionsSuccessStatus: 204,
   });
+
+  // Enable cookie parsing
+  app.use(cookieParser());
 
   // Enable parsing of URL-encoded bodies (for ToyyibPay callbacks)
   app.use(require('express').urlencoded({ extended: true }));
