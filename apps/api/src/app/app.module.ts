@@ -1,8 +1,9 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
+import { AuthMiddleware } from './auth/auth.middleware';
 import { InvoiceModule } from './invoice/invoice-module';
 import { BusinessInfoModule } from './business-info/business-info.module';
 import { MailerModule } from '@nestjs-modules/mailer';
@@ -34,4 +35,10 @@ import { MailerModule } from '@nestjs-modules/mailer';
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(AuthMiddleware)
+      .forRoutes('invoice', 'business-info');
+  }
+}

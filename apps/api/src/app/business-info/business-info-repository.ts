@@ -43,11 +43,18 @@ export async function findBusinessInfoById(
   prisma: PrismaService,
   id: string,
   logger: Logger,
-): Promise<BusinessInformation | null> {
+): Promise<BusinessInformation> {
   try {
     logger.log(`Looking up business info by ID: ${id}`);
-    return await prisma.businessInformation.findUnique({ where: { id } });
+    const business = await prisma.businessInformation.findUnique({ where: { id } });
+
+    if (!business) {
+      throw new HttpException('Business info not found', HttpStatus.NOT_FOUND);
+    }
+
+    return business;
   } catch (error) {
+    if (error instanceof HttpException) throw error;
     logger.error(`Failed to find business info by ID: ${error.message}`, error.stack);
     throw new HttpException(
       'Failed to look up business info',
@@ -60,10 +67,10 @@ export async function findBusinessInfoPublicById(
   prisma: PrismaService,
   id: string,
   logger: Logger,
-): Promise<BusinessInfoPublicData | null> {
+): Promise<BusinessInfoPublicData> {
   try {
     logger.log(`Looking up public business info by ID: ${id}`);
-    return await prisma.businessInformation.findUnique({
+    const business = await prisma.businessInformation.findUnique({
       where: { id },
       select: {
         id: true,
@@ -76,7 +83,14 @@ export async function findBusinessInfoPublicById(
         categoryCode: true,
       },
     });
+
+    if (!business) {
+      throw new HttpException('Business info not found', HttpStatus.NOT_FOUND);
+    }
+
+    return business;
   } catch (error) {
+    if (error instanceof HttpException) throw error;
     logger.error(`Failed to find public business info by ID: ${error.message}`, error.stack);
     throw new HttpException(
       'Failed to look up business info',

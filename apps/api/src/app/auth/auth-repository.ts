@@ -1,7 +1,7 @@
 import { Logger, HttpException, HttpStatus } from '@nestjs/common';
 import { PrismaService } from '@prismaService';
 import { User } from '@prisma/client';
-import { CreateUserData } from './auth-interface';
+import { CreateUserData, JwtPayload } from './auth-interface';
 
 export async function findUserByEmail(
   prisma: PrismaService,
@@ -47,6 +47,35 @@ export async function createUser(
 
     throw new HttpException(
       'Failed to create user',
+      HttpStatus.INTERNAL_SERVER_ERROR,
+    );
+  }
+}
+
+export async function getUserJwtPayload(
+  prisma: PrismaService,
+  email: string,
+  logger: Logger,
+): Promise<JwtPayload> {
+  try {
+    logger.log(`Fetching user JWT payload for: ${email}`);
+    const user = await prisma.user.findUnique({ where: { email } });
+
+    if (!user) {
+      throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+    }
+
+    return {
+      id: user.id,
+      sub: user.id,
+      name: user.name,
+      email: user.email,
+    };
+  } catch (error) {
+    if (error instanceof HttpException) throw error;
+    logger.error(`Failed to get user JWT payload: ${error.message}`, error.stack);
+    throw new HttpException(
+      'Failed to get user data',
       HttpStatus.INTERNAL_SERVER_ERROR,
     );
   }

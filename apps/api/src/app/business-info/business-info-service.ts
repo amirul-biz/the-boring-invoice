@@ -35,11 +35,11 @@ export class BusinessInfoService {
     return await findBusinessInfoByUserId(this.prisma, userId, this.logger);
   }
 
-  async findById(id: string): Promise<BusinessInformation | null> {
+  async findById(id: string): Promise<BusinessInformation> {
     return await findBusinessInfoById(this.prisma, id, this.logger);
   }
 
-  async findPublicById(id: string): Promise<BusinessInfoPublicData | null> {
+  async findPublicById(id: string): Promise<BusinessInfoPublicData> {
     return await findBusinessInfoPublicById(this.prisma, id, this.logger);
   }
 
