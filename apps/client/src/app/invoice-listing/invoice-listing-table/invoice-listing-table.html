@@ -1,0 +1,66 @@
+<div class="table-responsive">
+  <table class="table table-bordered table-hover align-middle">
+    <thead class="table-light">
+      <tr>
+        <th>No</th>
+        <th>Invoice ID</th>
+        <th>Invoice type</th>
+        <th>Name</th>
+        <th>Amount</th>
+        <th>Status</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (invoice of invoices; track invoice.id; let i = $index) {
+        <tr>
+          <td>{{ getRowNumber(i) }}</td>
+          <td>{{ invoice.invoiceNo }}</td>
+          <td>{{ invoice.invoiceType }}</td>
+          <td>{{ invoice.recipientName }}</td>
+          <td>{{ invoice.currency }} {{ invoice.totalIncludingTax | number:'1.2-2' }}</td>
+          <td>
+            <span class="badge" [ngClass]="getStatusBadgeClass(invoice.status)">
+              {{ invoice.status }}
+            </span>
+          </td>
+          <td>
+            <div class="d-flex gap-1 flex-wrap">
+              <button type="button" class="btn btn-sm btn-outline-primary" (click)="onAction('notify', invoice)">
+                Notify again
+              </button>
+              @if (invoice.billUrl) {
+                <a [href]="invoice.billUrl" target="_blank" class="btn btn-sm btn-outline-info">
+                  View
+                </a>
+              }
+              <button type="button" class="btn btn-sm btn-outline-danger" (click)="onAction('deactivate', invoice)">
+                Deactivate
+              </button>
+              <button type="button" class="btn btn-sm btn-outline-secondary" (click)="onAction('download', invoice)">
+                Download
+              </button>
+            </div>
+          </td>
+        </tr>
+      } @empty {
+        <tr>
+          <td colspan="7" class="text-center text-muted py-4">No invoices found</td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>
+
+@if (totalItems > pageSize) {
+  <div class="d-flex justify-content-end mt-3">
+    <ngb-pagination
+      [collectionSize]="totalItems"
+      [(page)]="page"
+      [pageSize]="pageSize"
+      [maxSize]="5"
+      [rotate]="true"
+      [boundaryLinks]="true"
+      (pageChange)="onPageChange($event)" />
+  </div>
+}
