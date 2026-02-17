@@ -9,4 +9,5 @@ export class BusinessEntityCardComponent {
   @Input({ required: true }) business!: IBusinessInfo;
   @Output() edit = new EventEmitter<IBusinessInfo>();
   @Output() createInvoice = new EventEmitter<IBusinessInfo>();
+  @Output() viewInvoices = new EventEmitter<IBusinessInfo>();
 }

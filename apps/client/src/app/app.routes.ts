@@ -14,6 +14,10 @@ export const appRoutes: Route[] = [
         loadComponent: () => import('./invoice/invoice').then(m => m.Invoice)
     },
     {
+        path: 'invoice-listing/:businessId',
+        loadComponent: () => import('./invoice-listing/invoice-listing').then(m => m.InvoiceListing)
+    },
+    {
         path: 'business-info/create',
         loadComponent: () => import('./business-info/business-info').then(m => m.BusinessInfo)
     },

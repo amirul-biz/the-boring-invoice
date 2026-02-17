@@ -31,9 +31,12 @@
       <small class="ms-1">{{ business.categoryCode }}</small>
     </div>
 
-    <div class="mt-auto">
+    <div class="mt-auto d-flex flex-column gap-2">
       <button type="button" class="btn btn-primary w-100" (click)="createInvoice.emit(business)">
         Create New Invoice
+      </button>
+      <button type="button" class="btn btn-outline-primary w-100" (click)="viewInvoices.emit(business)">
+        View Invoices
       </button>
     </div>
   </div>

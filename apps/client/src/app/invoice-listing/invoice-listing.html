@@ -1,0 +1,47 @@
+<div class="container py-4">
+  <ngx-spinner bdColor="rgba(0, 0, 0, 0.8)" size="large" color="#fff" type="ball-scale-multiple" [fullScreen]="true">
+    <p style="color: white">Loading...</p>
+  </ngx-spinner>
+
+  <h2 class="mb-4">Invoice Listing</h2>
+
+  <div class="row mb-4">
+    <div class="col-12 col-md-3">
+      <div class="card">
+        <div class="card-body">
+          <h6 class="card-subtitle mb-2 text-muted">Pending Amount</h6>
+          <h3 class="card-title mb-1">MYR {{ summary.pendingAmount | number:'1.2-2' }}</h3>
+          <small class="text-muted">{{ summary.pendingCount }} invoice(s)</small>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-md-3 mt-3 mt-md-0">
+      <div class="card">
+        <div class="card-body">
+          <h6 class="card-subtitle mb-2 text-muted">Total Paid</h6>
+          <h3 class="card-title mb-1 text-success">MYR {{ summary.totalPaid | number:'1.2-2' }}</h3>
+          <small class="text-muted">{{ summary.paidCount }} invoice(s)</small>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-md-3 mt-3 mt-md-0">
+      <div class="card">
+        <div class="card-body">
+          <h6 class="card-subtitle mb-2 text-muted">Total Invoices</h6>
+          <h3 class="card-title mb-1">{{ totalItems }}</h3>
+          <small class="text-muted">All statuses</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <app-invoice-listing-table
+    [invoices]="invoices"
+    [page]="page"
+    [pageSize]="pageSize"
+    [totalItems]="totalItems"
+    (pageChange)="onPageChange($event)"
+    (action)="onAction($event)" />
+</div>
