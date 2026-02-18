@@ -1,4 +1,5 @@
 import { NestFactory } from '@nestjs/core';
+import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app/app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { rabbitMQOptionsConfig } from './app/rabbit-mq/rabbit-mq-options.config';
@@ -49,6 +50,9 @@ async function bootstrap() {
     preflightContinue: false,
     optionsSuccessStatus: 204,
   });
+
+  // Enable global validation and transformation
+  app.useGlobalPipes(new ValidationPipe({ transform: true }));
 
   // Enable cookie parsing
   app.use(cookieParser());

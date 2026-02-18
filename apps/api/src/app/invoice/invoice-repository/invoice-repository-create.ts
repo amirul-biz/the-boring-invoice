@@ -14,6 +14,7 @@ import { InvoiceStatus, Prisma, Invoice } from '@prisma/client';
 export async function createInvoice(
   prisma: PrismaService,
   invoiceData: ProcessedInvoiceDto,
+  businessId: string,
   logger: Logger,
 ): Promise<Invoice> {
   try {
@@ -21,6 +22,7 @@ export async function createInvoice(
 
     const invoice = await prisma.invoice.create({
       data: {
+        businessId,
         invoiceNo: invoiceData.invoiceNo,
         invoiceType: invoiceData.invoiceType,
         currency: invoiceData.currency,

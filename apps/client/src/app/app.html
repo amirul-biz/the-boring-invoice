@@ -1,1 +1,12 @@
+@if (!isLoginPage) {
+  <nav class="navbar navbar-light bg-white border-bottom px-3">
+    <button type="button" class="btn btn-outline-secondary btn-sm" (click)="onBack()">
+      &larr; Back
+    </button>
+    <button type="button" class="btn btn-outline-danger btn-sm" (click)="onLogout()">
+      Logout
+    </button>
+  </nav>
+}
+
 <router-outlet></router-outlet>

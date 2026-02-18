@@ -37,10 +37,62 @@
     </div>
   </div>
 
+  <div class="card mb-4">
+    <div class="card-body">
+      <div class="row g-3 align-items-end" [formGroup]="filterForm">
+        <div class="col-6 col-md-2">
+          <label class="form-label">Page Size</label>
+          <select class="form-select" formControlName="pageSize">
+            @for (size of pageSizes; track size) {
+              <option [ngValue]="size">{{ size }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="col-6 col-md-2">
+          <label class="form-label">Date From</label>
+          <input type="date" class="form-control" formControlName="dateFrom">
+        </div>
+
+        <div class="col-6 col-md-2">
+          <label class="form-label">Date To</label>
+          <input type="date" class="form-control" formControlName="dateTo">
+        </div>
+
+        <div class="col-6 col-md-2">
+          <label class="form-label">Invoice Type</label>
+          <select class="form-select" formControlName="invoiceType">
+            <option [ngValue]="null">All</option>
+            @for (type of invoiceTypes; track type.value) {
+              <option [ngValue]="type.value">{{ type.label }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="col-6 col-md-2">
+          <label class="form-label">Status</label>
+          <select class="form-select" formControlName="status">
+            <option [ngValue]="null">All</option>
+            @for (s of invoiceStatuses; track s.value) {
+              <option [ngValue]="s.value">{{ s.label }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="col-6 col-md-1">
+          <button type="button" class="btn btn-primary w-100" (click)="onSearch()">Search</button>
+        </div>
+        <div class="col-6 col-md-1">
+          <button type="button" class="btn btn-outline-secondary w-100" (click)="onReset()">Reset</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <app-invoice-listing-table
     [invoices]="invoices"
     [page]="page"
-    [pageSize]="pageSize"
+    [pageSize]="filterForm.controls.pageSize.value"
     [totalItems]="totalItems"
     (pageChange)="onPageChange($event)"
     (action)="onAction($event)" />

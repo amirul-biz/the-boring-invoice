@@ -17,6 +17,7 @@ export interface IGetPaginatedInvoiceList {
   totalItemCount: number;
   pageNumber: number;
   pageSize: number;
+  invoiceSummary: IInvoiceSummary;
 }
 
 export interface IInvoiceSummary {

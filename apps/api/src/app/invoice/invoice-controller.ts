@@ -1,11 +1,13 @@
 import {
   Body,
   Controller,
+  Get,
   HttpException,
   HttpStatus,
   Logger,
   Param,
   Post,
+  Query,
   Req,
   Res,
   UseInterceptors,
@@ -18,7 +20,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { CreateInvoiceInputDTO } from './invoice-dto';
+import { CreateInvoiceInputDTO, InvoiceListQueryDTO } from './invoice-dto';
 import { InvoiceService } from './invoice-service';
 import { EventPattern } from '@nestjs/microservices';
 
@@ -46,6 +48,15 @@ export class InvoiceController {
   private readonly logger = new Logger(InvoiceController.name);
 
   constructor(private readonly invoiceService: InvoiceService) {}
+
+  @Get('list/:businessId')
+  @ApiOperation({ summary: 'Get paginated invoice list' })
+  async getInvoiceList(
+    @Param('businessId') businessId: string,
+    @Query() query: InvoiceListQueryDTO,
+  ) {
+    return this.invoiceService.getInvoiceList(businessId, query);
+  }
 
   /**
    * Queue invoice generation for asynchronous processing

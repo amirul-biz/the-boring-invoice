@@ -22,6 +22,7 @@ import {
   UpdateInvoiceStatusData,
 } from './invoice-repository/invoice-repository-update-status';
 import { getInvoiceAsReceipt } from './invoice-repository/invoice-repository-get';
+import { getInvoiceList, InvoiceListQuery, PaginatedInvoiceList } from './invoice-repository/invoice-repository-list';
 
 @Injectable()
 export class InvoiceService {
@@ -79,6 +80,7 @@ export class InvoiceService {
   async processInvoiceCreation(
     inputData: CreateInvoiceInputDTO,
     paymentIntegrationCredential: PaymentIntegrationCredential,
+    businessId: string,
   ): Promise<ProcessedInvoiceDto> {
     try {
       this.logger.log(
@@ -102,6 +104,7 @@ export class InvoiceService {
       await createInvoice(
         this.prisma,
         processedInvoice,
+        businessId,
         this.logger,
       );
 
@@ -148,7 +151,7 @@ export class InvoiceService {
 
     for (const invoiceData of invoiceDataList) {
       try {
-        await this.processInvoiceCreation(invoiceData, paymentIntegrationCredential);
+        await this.processInvoiceCreation(invoiceData, paymentIntegrationCredential, businessId);
       } catch (error) {
         // Log error but continue processing other invoices
         this.logger.error(
@@ -282,5 +285,9 @@ export class InvoiceService {
       // Re-throw to let RabbitMQ handle retry logic
       throw error;
     }
+  }
+
+  async getInvoiceList(businessId: string, query: InvoiceListQuery): Promise<PaginatedInvoiceList> {
+    return getInvoiceList(this.prisma, { ...query, businessId }, this.logger);
   }
 }

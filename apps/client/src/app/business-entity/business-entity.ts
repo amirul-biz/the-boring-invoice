@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, ChangeDetectorRef } from '@angular/core';
 import { Router } from '@angular/router';
 import { NgxSpinnerModule, NgxSpinnerService } from 'ngx-spinner';
 import { tap, finalize } from 'rxjs';
@@ -15,6 +15,7 @@ export class BusinessEntity implements OnInit {
   private businessInfoService = inject(BusinessInfoService);
   private spinner = inject(NgxSpinnerService);
   private router = inject(Router);
+  private cdr = inject(ChangeDetectorRef);
 
   businesses: IBusinessInfo[] = [];
 
@@ -28,6 +29,7 @@ export class BusinessEntity implements OnInit {
     this.businessInfoService.getAll().pipe(
       tap((data) => {
         this.businesses = data;
+        this.cdr.markForCheck();
       }),
       finalize(() => this.spinner.hide()),
     ).subscribe();

@@ -7,6 +7,8 @@
         <th>Invoice type</th>
         <th>Name</th>
         <th>Amount</th>
+        <th>Issued Date</th>
+        <th>Due Date</th>
         <th>Status</th>
         <th>Action</th>
       </tr>
@@ -19,6 +21,8 @@
           <td>{{ invoice.invoiceType }}</td>
           <td>{{ invoice.recipientName }}</td>
           <td>{{ invoice.currency }} {{ invoice.totalIncludingTax | number:'1.2-2' }}</td>
+          <td>{{ invoice.issuedDate | date:'dd/MM/yyyy' }}</td>
+          <td>{{ invoice.dueDate | date:'dd/MM/yyyy' }}</td>
           <td>
             <span class="badge" [ngClass]="getStatusBadgeClass(invoice.status)">
               {{ invoice.status }}
@@ -45,7 +49,7 @@
         </tr>
       } @empty {
         <tr>
-          <td colspan="7" class="text-center text-muted py-4">No invoices found</td>
+          <td colspan="9" class="text-center text-muted py-4">No invoices found</td>
         </tr>
       }
     </tbody>

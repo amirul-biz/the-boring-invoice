@@ -5,11 +5,13 @@ import {
   IsDateString,
   IsEmail,
   IsEnum,
+  IsIn,
   IsInt,
   IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
+  Min,
   ValidateNested,
 } from 'class-validator';
 
@@ -167,5 +169,40 @@ export class ReceiptDTO extends ProcessedInvoiceDto {
   transactionId: string
   @IsString()
   transactionTime: string
+}
+
+// 7. INVOICE LIST QUERY DTO
+export class InvoiceListQueryDTO {
+  @ApiProperty({ example: 1 })
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  pageIndex: number;
+
+  @ApiProperty({ example: 10, enum: [10, 50, 100] })
+  @Type(() => Number)
+  @IsInt()
+  @IsIn([10, 50, 100])
+  pageSize: number;
+
+  @ApiProperty({ required: false, enum: ['Invoice', 'Credit Note', 'Debit Note'] })
+  @IsOptional()
+  @IsString()
+  invoiceType?: string;
+
+  @ApiProperty({ required: false, enum: ['DRAFT', 'PENDING', 'PAID', 'CANCELLED'] })
+  @IsOptional()
+  @IsString()
+  status?: string;
+
+  @ApiProperty({ required: false, example: '2025-01-01' })
+  @IsOptional()
+  @IsString()
+  dateFrom?: string;
+
+  @ApiProperty({ required: false, example: '2025-12-31' })
+  @IsOptional()
+  @IsString()
+  dateTo?: string;
 }
 
