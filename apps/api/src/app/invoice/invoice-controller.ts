@@ -23,6 +23,7 @@ import {
 import { CreateInvoiceInputDTO, InvoiceListQueryDTO } from './invoice-dto';
 import { InvoiceService } from './invoice-service';
 import { EventPattern } from '@nestjs/microservices';
+import { generateInvoiceTemplate } from './invoice-template-generator';
 
 /**
  * ToyyibPay callback data interface
@@ -48,6 +49,17 @@ export class InvoiceController {
   private readonly logger = new Logger(InvoiceController.name);
 
   constructor(private readonly invoiceService: InvoiceService) {}
+
+  @Get('template')
+  @ApiOperation({ summary: 'Download invoice Excel template' })
+  async downloadTemplate(@Res() res: Response): Promise<void> {
+    const buffer = await generateInvoiceTemplate();
+    res.set({
+      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Disposition': 'attachment; filename="invoice-template.xlsx"',
+    });
+    res.send(buffer);
+  }
 
   @Get('list/:businessId')
   @ApiOperation({ summary: 'Get paginated invoice list' })
