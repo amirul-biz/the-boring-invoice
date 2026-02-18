@@ -111,3 +111,14 @@ export const CLASSIFICATION_CODES = [
   { code: '83101500', description: 'Banking and investment services' },
   { code: '83111500', description: 'Insurance services' },
 ] as const;
+
+// Page size options for paginated lists
+export const PAGE_SIZES = [10, 50, 100] as const;
+
+// Invoice status options
+export const INVOICE_STATUSES = [
+  { value: 'PENDING', label: 'Pending' },
+  { value: 'PAID', label: 'Paid' },
+  { value: 'CANCELLED', label: 'Cancelled' },
+  { value: 'DRAFT', label: 'Draft' },
+] as const;
