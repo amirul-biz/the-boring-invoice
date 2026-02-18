@@ -37,19 +37,19 @@ export class BusinessInfoController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Get business information by ID' })
-  async findById(@Param('id') id: string) {
-    return this.businessInfoService.findById(id);
+  async findById(@Param('id') id: string, @UserById() userId: string) {
+    return this.businessInfoService.findById(id, userId);
   }
 
   @Put(':id')
   @ApiOperation({ summary: 'Update business information' })
-  async update(@Param('id') id: string, @Body() data: UpdateBusinessInfoData) {
-    return this.businessInfoService.update(id, data);
+  async update(@Param('id') id: string, @UserById() userId: string, @Body() data: UpdateBusinessInfoData) {
+    return this.businessInfoService.update(id, userId, data);
   }
 
   @Delete(':id')
   @ApiOperation({ summary: 'Delete business information' })
-  async delete(@Param('id') id: string) {
-    return this.businessInfoService.delete(id);
+  async delete(@Param('id') id: string, @UserById() userId: string) {
+    return this.businessInfoService.delete(id, userId);
   }
 }
