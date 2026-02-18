@@ -124,6 +124,8 @@ export class InvoiceController {
   ): Promise<void> {
     try {
       this.logger.log('Payment callback received');
+      this.logger.log(`[Callback] raw body: ${JSON.stringify(callbackData)}`);
+      this.logger.log(`[Callback] req.body: ${JSON.stringify(req.body)}`);
 
       const data: ToyyibPayCallback = callbackData || req.body;
 
