@@ -20,7 +20,8 @@
             "input": "apps/client/public"
           }
         ],
-        "styles": ["apps/client/src/styles.scss"]
+        "styles": ["apps/client/src/styles.scss"],
+        "allowedCommonJsDependencies": ["file-saver", "xlsx"]
       },
       "configurations": {
         "production": {

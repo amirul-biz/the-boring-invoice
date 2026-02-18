@@ -12,6 +12,7 @@ import {
   hasRelatedInvoices,
   deleteBusinessInfo,
 } from './business-info-repository';
+import { CryptoService } from '../crypto/crypto.service';
 
 @Injectable()
 export class BusinessInfoService {
@@ -19,28 +20,55 @@ export class BusinessInfoService {
 
   constructor(
     private readonly prisma: PrismaService,
+    private readonly cryptoService: CryptoService,
   ) {}
 
   async create(userId: string, data: CreateBusinessInfoBody): Promise<BusinessInformation> {
-    return await createBusinessInfo(this.prisma, { ...data, userId }, this.logger);
+    const payload = {
+      ...data,
+      userId,
+      userSecretKey: this.cryptoService.encrypt(data.userSecretKey),
+    };
+    const result = await createBusinessInfo(this.prisma, payload, this.logger);
+    return { ...result, id: this.cryptoService.encodeId(result.id), userSecretKey: '***' };
   }
 
   async findByUserId(userId: string): Promise<BusinessInformation[]> {
-    return await findBusinessInfoByUserId(this.prisma, userId, this.logger);
+    const results = await findBusinessInfoByUserId(this.prisma, userId, this.logger);
+    return results.map((b) => ({ ...b, id: this.cryptoService.encodeId(b.id), userSecretKey: '***' }));
   }
 
-  async findById(id: string): Promise<BusinessInformation> {
-    return await findBusinessInfoById(this.prisma, id, this.logger);
+  async verifyOwnership(encodedId: string, userId: string): Promise<void> {
+    const rawId = this.cryptoService.decodeId(encodedId);
+    const business = await findBusinessInfoById(this.prisma, rawId, this.logger);
+    if (business.userId !== userId) {
+      throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
+    }
   }
 
-  async findPublicById(id: string): Promise<BusinessInfoPublicData> {
-    return await findBusinessInfoPublicById(this.prisma, id, this.logger);
+  async findById(encodedId: string, userId: string): Promise<BusinessInformation> {
+    const rawId = this.cryptoService.decodeId(encodedId);
+    const result = await findBusinessInfoById(this.prisma, rawId, this.logger);
+    if (result.userId !== userId) {
+      throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
+    }
+    return { ...result, id: this.cryptoService.encodeId(result.id), userSecretKey: '***' };
   }
 
-  async getPaymentIntegrationCredential(id: string): Promise<PaymentIntegrationCredential> {
+  async findPublicById(encodedId: string): Promise<BusinessInfoPublicData> {
+    const rawId = this.cryptoService.decodeId(encodedId);
+    const result = await findBusinessInfoPublicById(this.prisma, rawId, this.logger);
+    return { ...result, id: this.cryptoService.encodeId(result.id) };
+  }
+
+  /**
+   * Internal use only — accepts raw UUID from RabbitMQ queue consumer.
+   * Do NOT call this with an encoded ID.
+   */
+  async getPaymentIntegrationCredential(rawId: string): Promise<PaymentIntegrationCredential> {
     try {
-      this.logger.log(`Getting payment integration credential for business: ${id}`);
-      const credential = await getPaymentIntegrationCredential(this.prisma, id, this.logger);
+      this.logger.log(`Getting payment integration credential for business: ${rawId}`);
+      const credential = await getPaymentIntegrationCredential(this.prisma, rawId, this.logger);
 
       if (!credential) {
         throw new HttpException(
@@ -49,19 +77,31 @@ export class BusinessInfoService {
         );
       }
 
-      return credential;
+      return {
+        ...credential,
+        userSecretKey: this.cryptoService.decrypt(credential.userSecretKey),
+      };
     } catch (error) {
       this.logger.error(`Failed to get payment integration credential: ${error.message}`, error.stack);
       throw error;
     }
   }
 
-  async update(id: string, data: UpdateBusinessInfoData): Promise<BusinessInformation> {
-    return await updateBusinessInfo(this.prisma, id, data, this.logger);
+  async update(encodedId: string, userId: string, data: UpdateBusinessInfoData): Promise<BusinessInformation> {
+    await this.verifyOwnership(encodedId, userId);
+    const rawId = this.cryptoService.decodeId(encodedId);
+    const payload: UpdateBusinessInfoData = { ...data };
+    if (data.userSecretKey) {
+      payload.userSecretKey = this.cryptoService.encrypt(data.userSecretKey);
+    }
+    const result = await updateBusinessInfo(this.prisma, rawId, payload, this.logger);
+    return { ...result, id: this.cryptoService.encodeId(result.id), userSecretKey: '***' };
   }
 
-  async delete(id: string): Promise<BusinessInformation> {
-    const hasInvoices = await hasRelatedInvoices(this.prisma, id, this.logger);
+  async delete(encodedId: string, userId: string): Promise<BusinessInformation> {
+    await this.verifyOwnership(encodedId, userId);
+    const rawId = this.cryptoService.decodeId(encodedId);
+    const hasInvoices = await hasRelatedInvoices(this.prisma, rawId, this.logger);
 
     if (hasInvoices) {
       throw new HttpException(
@@ -70,6 +110,6 @@ export class BusinessInfoService {
       );
     }
 
-    return await deleteBusinessInfo(this.prisma, id, this.logger);
+    return await deleteBusinessInfo(this.prisma, rawId, this.logger);
   }
 }

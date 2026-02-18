@@ -12,4 +12,10 @@ export class InvoiceService {
   generateInvoicePdf(data: ICreateInvoice[], businessId: string): Observable<any> {
     return this.http.post(`${process.env['NG_APP_API_URL']}/invoice/generate/${businessId}`, data);
   }
+
+  downloadTemplate(): Observable<Blob> {
+    return this.http.get(`${process.env['NG_APP_API_URL']}/invoice/template`, {
+      responseType: 'blob',
+    });
+  }
 }

@@ -23,6 +23,8 @@ import {
 import { CreateInvoiceInputDTO, InvoiceListQueryDTO } from './invoice-dto';
 import { InvoiceService } from './invoice-service';
 import { EventPattern } from '@nestjs/microservices';
+import { generateInvoiceTemplate } from './invoice-template-generator';
+import { UserById } from '../decorator/user.decorator';
 
 /**
  * ToyyibPay callback data interface
@@ -49,13 +51,25 @@ export class InvoiceController {
 
   constructor(private readonly invoiceService: InvoiceService) {}
 
+  @Get('template')
+  @ApiOperation({ summary: 'Download invoice Excel template' })
+  async downloadTemplate(@Res() res: Response): Promise<void> {
+    const buffer = await generateInvoiceTemplate();
+    res.set({
+      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Disposition': 'attachment; filename="invoice-template.xlsx"',
+    });
+    res.send(buffer);
+  }
+
   @Get('list/:businessId')
   @ApiOperation({ summary: 'Get paginated invoice list' })
   async getInvoiceList(
     @Param('businessId') businessId: string,
+    @UserById() userId: string,
     @Query() query: InvoiceListQueryDTO,
   ) {
-    return this.invoiceService.getInvoiceList(businessId, query);
+    return this.invoiceService.getInvoiceList(businessId, userId, query);
   }
 
   /**
@@ -68,6 +82,7 @@ export class InvoiceController {
   @ApiBody({ type: CreateInvoiceInputDTO })
   async generateInvoice(
     @Param('businessId') businessId: string,
+    @UserById() userId: string,
     @Body() invoiceData: CreateInvoiceInputDTO[],
     @Res() res: Response,
   ): Promise<void> {
@@ -75,6 +90,7 @@ export class InvoiceController {
       const result = await this.invoiceService.queueInvoiceGeneration(
         invoiceData,
         businessId,
+        userId,
       );
 
       res.status(HttpStatus.ACCEPTED).json(result);

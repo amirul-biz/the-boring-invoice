@@ -189,6 +189,52 @@ export function removeRecipientForm(
   recipients.removeAt(recipientFormIndex);
 }
 
+export function patchExcelDataToInvoiceForm(
+  invoiceForm: FormGroup<CreateInvoiceForm>,
+  recipients: IRecipient[],
+  items: ICreateInvoiceItem[],
+): void {
+  // Patch recipients
+  const recipientsArray = invoiceForm.controls.recipients;
+  recipientsArray.clear();
+  for (const r of recipients) {
+    const fg = recipientForm();
+    fg.patchValue({
+      name: r.name,
+      email: r.email ?? null,
+      phone: r.phone,
+      tin: r.tin,
+      registrationNumber: r.registrationNumber,
+      addressLine1: r.addressLine1,
+      postcode: r.postcode,
+      city: r.city,
+      state: r.state,
+      countryCode: r.countryCode,
+    });
+    recipientsArray.push(fg);
+  }
+  if (recipientsArray.length === 0) {
+    recipientsArray.push(recipientForm());
+  }
+
+  // Patch items
+  const itemsArray = invoiceForm.controls.items;
+  itemsArray.clear();
+  for (const item of items) {
+    const fg = invoiceItemForm();
+    fg.patchValue({
+      itemName: item.itemName,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      classificationCode: item.classificationCode,
+    });
+    itemsArray.push(fg);
+  }
+  if (itemsArray.length === 0) {
+    itemsArray.push(invoiceItemForm());
+  }
+}
+
 export function getInvoicesData(
   invoiceForm: FormGroup<CreateInvoiceForm>,
 ): ICreateInvoice[] {

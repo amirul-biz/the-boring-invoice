@@ -9,6 +9,7 @@ import {
 } from './invoice-dto';
 import { BusinessInfoService } from '../business-info/business-info-service';
 import { PaymentIntegrationCredential } from '../business-info/business-info-interface';
+import { CryptoService } from '../crypto/crypto.service';
 
 // Utilities
 import { calculateInvoiceData } from './invoice-utility/invoice-utility-calculation';
@@ -33,6 +34,7 @@ export class InvoiceService {
     private readonly mailService: MailerService,
     private readonly queueService: RabbitMqProducerService,
     private readonly businessInfoService: BusinessInfoService,
+    private readonly cryptoService: CryptoService,
   ) {}
 
   /**
@@ -43,12 +45,17 @@ export class InvoiceService {
    */
   async queueInvoiceGeneration(
     invoiceDataList: CreateInvoiceInputDTO[],
-    businessId: string,
+    encodedBusinessId: string,
+    userId: string,
   ): Promise<{ message: string; timestamp: string }> {
     try {
       this.logger.log(
         `Queueing ${invoiceDataList.length} invoice(s) for generation`,
       );
+
+      await this.businessInfoService.verifyOwnership(encodedBusinessId, userId);
+
+      const businessId = this.cryptoService.decodeId(encodedBusinessId);
 
       this.queueService.sendMessageQue(
         'receiver-create-invoice',
@@ -287,7 +294,9 @@ export class InvoiceService {
     }
   }
 
-  async getInvoiceList(businessId: string, query: InvoiceListQuery): Promise<PaginatedInvoiceList> {
+  async getInvoiceList(encodedBusinessId: string, userId: string, query: InvoiceListQuery): Promise<PaginatedInvoiceList> {
+    await this.businessInfoService.verifyOwnership(encodedBusinessId, userId);
+    const businessId = this.cryptoService.decodeId(encodedBusinessId);
     return getInvoiceList(this.prisma, { ...query, businessId }, this.logger);
   }
 }

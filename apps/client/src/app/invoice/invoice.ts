@@ -13,11 +13,14 @@ import {
   removeRecipientForm,
   recipientForm,
   getInvoicesData,
+  patchExcelDataToInvoiceForm,
 } from './invoice-form/invoice-form.config';
 import { InvoiceService } from './invoice-service';
 import { BusinessInfoService } from '../business-info/business-info-service';
 import { MALAYSIAN_STATES, CLASSIFICATION_CODES, INVOICE_TYPES } from './invoice-constants';
+import { parseInvoiceTemplate } from './invoice-template-parser';
 import { tap, finalize } from 'rxjs';
+import { saveAs } from 'file-saver';
 
 @Component({
   selector: 'app-invoice',
@@ -117,6 +120,28 @@ export class Invoice implements OnInit {
     }
   }
 
+
+  onUploadTemplate(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const buffer = e.target?.result as ArrayBuffer;
+      const data = parseInvoiceTemplate(buffer);
+      console.log(data)
+      patchExcelDataToInvoiceForm(this.invoiceForm, data.recipients, data.items);
+      input.value = '';
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  onDownloadTemplate(): void {
+    this.invoiceService.downloadTemplate().subscribe((blob) => {
+      saveAs(blob, 'invoice-template.xlsx');
+    });
+  }
 
   generateInvoice(): void {
     if (this.invoiceForm.invalid) {
