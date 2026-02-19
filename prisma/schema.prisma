@@ -71,6 +71,7 @@ model Invoice {
   totalIncludingTax       Decimal       @db.Decimal(18, 2)
 
   // === Payment ===
+  billCode                String?
   billUrl                 String?
   transactionId           String?
   transactionTime         DateTime?

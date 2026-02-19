@@ -68,6 +68,78 @@ export async function activateInvoice(
   }
 }
 
+export async function saveBillUrl(
+  prisma: PrismaService,
+  invoiceNo: string,
+  billCode: string,
+  billUrl: string,
+  logger: Logger,
+): Promise<Invoice> {
+  try {
+    logger.log(`Saving billCode and billUrl for invoice ${invoiceNo}`);
+
+    const invoice = await prisma.invoice.update({
+      where: { invoiceNo },
+      data: { billCode, billUrl },
+    });
+
+    logger.log(`Invoice ${invoiceNo} billCode and billUrl saved`);
+    return invoice;
+  } catch (error) {
+    logger.error(
+      `Failed to save billUrl for invoice ${invoiceNo}: ${error.message}`,
+      error.stack,
+    );
+
+    if (error.code === 'P2025') {
+      throw new HttpException(
+        `Invoice ${invoiceNo} not found`,
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    throw new HttpException(
+      'Failed to save bill URL',
+      HttpStatus.INTERNAL_SERVER_ERROR,
+    );
+  }
+}
+
+export async function setPendingStatus(
+  prisma: PrismaService,
+  invoiceNo: string,
+  logger: Logger,
+): Promise<Invoice> {
+  try {
+    logger.log(`Setting invoice ${invoiceNo} status to PENDING`);
+
+    const invoice = await prisma.invoice.update({
+      where: { invoiceNo },
+      data: { status: InvoiceStatus.PENDING },
+    });
+
+    logger.log(`Invoice ${invoiceNo} status set to PENDING`);
+    return invoice;
+  } catch (error) {
+    logger.error(
+      `Failed to set PENDING status for invoice ${invoiceNo}: ${error.message}`,
+      error.stack,
+    );
+
+    if (error.code === 'P2025') {
+      throw new HttpException(
+        `Invoice ${invoiceNo} not found`,
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    throw new HttpException(
+      'Failed to set invoice status to PENDING',
+      HttpStatus.INTERNAL_SERVER_ERROR,
+    );
+  }
+}
+
 export async function updateInvoiceStatus(
   prisma: PrismaService,
   data: UpdateInvoiceStatusData,

@@ -21,7 +21,8 @@ import { createInvoice } from './invoice-repository/invoice-repository-create';
 import {
   updateInvoiceStatus,
   UpdateInvoiceStatusData,
-  activateInvoice,
+  saveBillUrl,
+  setPendingStatus,
 } from './invoice-repository/invoice-repository-update-status';
 import { getInvoiceAsReceipt, getInvoiceByNumber } from './invoice-repository/invoice-repository-get';
 import { ToyyibPayUtil } from './invoice-generator/invoice-generator-toyyibpay-bill';
@@ -118,15 +119,23 @@ export class InvoiceService {
         this.logger,
       );
 
-      // Step 4: Activate invoice to PENDING with billUrl
-      await activateInvoice(
+      // Step 4: Save billCode and billUrl to DB — status stays DRAFT
+      await saveBillUrl(
         this.prisma,
         calculatedInvoice.invoiceNo,
+        processedInvoice.billCode,
         processedInvoice.billUrl,
         this.logger,
       );
 
-      // Step 5: Send invoice email (NON-CRITICAL - fire and forget)
+      // Step 5: Activate invoice status to PENDING
+      await setPendingStatus(
+        this.prisma,
+        calculatedInvoice.invoiceNo,
+        this.logger,
+      );
+
+      // Step 6: Send invoice email (NON-CRITICAL - fire and forget)
       sendInvoiceEmail(this.mailService, processedInvoice, this.logger).catch(
         () => {
           this.logger.warn(
