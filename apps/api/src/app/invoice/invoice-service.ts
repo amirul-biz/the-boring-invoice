@@ -171,14 +171,12 @@ export class InvoiceService {
       try {
         await this.processInvoiceCreation(invoiceData, paymentIntegrationCredential, businessId);
       } catch (error) {
-        // Log error but continue processing other invoices
         this.logger.error(
           `Failed to process invoice in batch for ${invoiceData.recipient.name}: ${error.message}`,
           error.stack,
         );
       }
 
-      // Delay between invoices to give ToyyibPay and SMTP rate limiters time to recover
       if (i < invoiceDataList.length - 1) {
         await new Promise(resolve => setTimeout(resolve, this.BATCH_DELAY_MS));
       }
