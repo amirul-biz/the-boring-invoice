@@ -21,7 +21,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { CreateInvoiceInputDTO, InvoiceListQueryDTO } from './invoice-dto';
-import { InvoiceService } from './invoice-service';
+import { InvoiceService, RetryInvoiceMessage } from './invoice-service';
 import { EventPattern } from '@nestjs/microservices';
 import { generateInvoiceTemplate } from './invoice-template-generator';
 import { UserById } from '../decorator/user.decorator';
@@ -152,6 +152,16 @@ export class InvoiceController {
     data: { businessId: string; invoiceDataList: CreateInvoiceInputDTO[] },
   ): Promise<void> {
     await this.invoiceService.processInvoiceBatch(data.businessId, data.invoiceDataList);
+  }
+
+  /**
+   * Event consumer for retry-invoice queue
+   * Waits 1 minute then retries idempotent invoice creation
+   * Re-emits with incremented attemptNo or routes to failed-invoice after 5 attempts
+   */
+  @EventPattern('retry-invoice')
+  async receiverRetryInvoice(data: RetryInvoiceMessage): Promise<void> {
+    await this.invoiceService.processInvoiceRetry(data);
   }
 
   /**
