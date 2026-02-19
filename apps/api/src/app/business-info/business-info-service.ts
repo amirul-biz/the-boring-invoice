@@ -27,7 +27,7 @@ export class BusinessInfoService {
     const payload = {
       ...data,
       userId,
-      userSecretKey: this.cryptoService.encrypt(data.userSecretKey),
+      userSecretKey: this.cryptoService.encrypt(data.userSecretKey.trim()),
     };
     const result = await createBusinessInfo(this.prisma, payload, this.logger);
     return { ...result, id: this.cryptoService.encodeId(result.id), userSecretKey: '***' };
@@ -92,7 +92,7 @@ export class BusinessInfoService {
     const rawId = this.cryptoService.decodeId(encodedId);
     const payload: UpdateBusinessInfoData = { ...data };
     if (data.userSecretKey) {
-      payload.userSecretKey = this.cryptoService.encrypt(data.userSecretKey);
+      payload.userSecretKey = this.cryptoService.encrypt(data.userSecretKey.trim());
     }
     const result = await updateBusinessInfo(this.prisma, rawId, payload, this.logger);
     return { ...result, id: this.cryptoService.encodeId(result.id), userSecretKey: '***' };

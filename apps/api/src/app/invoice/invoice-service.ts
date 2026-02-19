@@ -22,7 +22,8 @@ import {
   updateInvoiceStatus,
   UpdateInvoiceStatusData,
 } from './invoice-repository/invoice-repository-update-status';
-import { getInvoiceAsReceipt } from './invoice-repository/invoice-repository-get';
+import { getInvoiceAsReceipt, getInvoiceByNumber } from './invoice-repository/invoice-repository-get';
+import { ToyyibPayUtil } from './invoice-generator/invoice-generator-toyyibpay-bill';
 import { getInvoiceList, InvoiceListQuery, PaginatedInvoiceList } from './invoice-repository/invoice-repository-list';
 
 @Injectable()
@@ -240,12 +241,27 @@ export class InvoiceService {
         `Processing payment callback for invoice: ${callbackData.order_id}`,
       );
 
-      // Parse callback data
       const invoiceNo = callbackData.order_id;
-      const paymentStatus =
-        callbackData.status === '1'
-          ? InvoiceStatus.PAID
-          : InvoiceStatus.CANCELLED;
+
+      this.logger.log(`[Callback] order_id=${invoiceNo} billcode=${callbackData.billcode}`);
+
+      // Step 1: Look up invoice to confirm it exists in our system
+      const invoice = await getInvoiceByNumber(this.prisma, invoiceNo, this.logger);
+      this.logger.log(`[Callback] Invoice found: ${invoice.invoiceNo}`);
+
+      // Step 2: Query ToyyibPay directly for authoritative payment status
+      const transactions = await ToyyibPayUtil.fetchBillTransactions(callbackData.billcode);
+      this.logger.log(`[Callback] getBillTransactions returned ${transactions.length} record(s) for billCode=${callbackData.billcode}`);
+
+      const match = transactions.find(t => t.billExternalReferenceNo === invoiceNo);
+      if (!match) {
+        this.logger.warn(`[Callback] No matching transaction for invoiceNo=${invoiceNo} in billCode=${callbackData.billcode}`);
+        return;
+      }
+
+      this.logger.log(`[Callback] Matched transaction — billpaymentStatus: ${match.billpaymentStatus}`);
+
+      const paymentStatus = match.billpaymentStatus === '1' ? InvoiceStatus.PAID : InvoiceStatus.CANCELLED;
 
       // Sanitize transaction time
       const sanitizedTransactionTime = callbackData.transaction_time
@@ -262,9 +278,11 @@ export class InvoiceService {
 
       await updateInvoiceStatus(this.prisma, updateData, this.logger);
 
+      this.logger.log(`[Callback] Invoice ${invoiceNo} status updated to ${paymentStatus}`);
+
       // If payment successful, send receipt email
       if (paymentStatus === InvoiceStatus.PAID) {
-        this.logger.log(`Payment successful, sending receipt email`);
+        this.logger.log(`[Callback] Payment successful, queueing receipt email`);
 
         // Get invoice data as receipt
         const receiptData = await getInvoiceAsReceipt(

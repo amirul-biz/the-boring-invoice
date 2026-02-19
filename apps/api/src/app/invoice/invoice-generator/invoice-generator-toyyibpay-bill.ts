@@ -1,3 +1,4 @@
+import { createHash } from 'crypto';
 import { HttpException, HttpStatus, Logger } from '@nestjs/common';
 
 // Import your DTO (adjust path as needed)
@@ -464,6 +465,21 @@ From: ${invoiceOutput.supplier.name}
   }
 
   /**
+   * Verify ToyyibPay callback hash signature
+   * Formula: MD5(secretKey + billCode + status_id)
+   * @param secretKey - Business ToyyibPay secret key
+   * @param receivedHash - Hash value from callback POST data
+   * @param billCode - Bill code from callback POST data
+   * @param statusId - Status ID from callback POST data
+   */
+  static verifyCallbackHash(secretKey: string, receivedHash: string, billCode: string, statusId: string): boolean {
+    const expected = createHash('md5')
+      .update(secretKey.trim() + billCode + statusId)
+      .digest('hex');
+    return expected === receivedHash;
+  }
+
+  /**
    * Parse return URL parameters (simpler version for redirect)
    */
   parseReturnParams(params: Record<string, string>): {
@@ -476,6 +492,37 @@ From: ${invoiceOutput.supplier.name}
       billCode: params.billcode || '',
       orderId: params.order_id || '', // This is your invoiceNo
     };
+  }
+
+  /**
+   * Fetch bill transactions directly from ToyyibPay API (no authentication required)
+   * Use this to verify payment status authoritatively instead of trusting callback hash
+   * @param billCode - Bill code from callback
+   * @param baseUrl - ToyyibPay base URL (defaults to env or production URL)
+   */
+  static async fetchBillTransactions(
+    billCode: string,
+    baseUrl = process.env.PAYMENT_API_BASE_URL || 'https://toyyibpay.com',
+  ): Promise<ToyyibPayTransaction[]> {
+    const url = `${baseUrl}/index.php/api/getBillTransactions`;
+    const formData = new URLSearchParams();
+    formData.append('billCode', billCode);
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: formData.toString(),
+    });
+
+    if (!response.ok) {
+      throw new HttpException(
+        `ToyyibPay getBillTransactions error: ${response.statusText}`,
+        HttpStatus.BAD_GATEWAY,
+      );
+    }
+
+    const text = await response.text();
+    return JSON.parse(text) as ToyyibPayTransaction[];
   }
 }
 
