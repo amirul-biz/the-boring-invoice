@@ -18,7 +18,7 @@ export class RabbitMqProducerService implements OnModuleInit, OnModuleDestroy {
     await this.client.close();
   }
 
-  async sendMessageQue(pattern: string, data: any) {
-    return this.client.send(pattern, data).toPromise();
+  sendMessageQue(pattern: string, data: any) {
+    this.client.emit(pattern, data);
   }
 }

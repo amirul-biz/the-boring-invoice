@@ -62,9 +62,10 @@ export async function processPaymentIntegration(
       `Payment bill created successfully: ${result.billCode}`,
     );
 
-    // Return processed invoice with payment URL
+    // Return processed invoice with payment URL and bill code
     return {
       ...calculatedInvoice,
+      billCode: result.billCode,
       billUrl: result.paymentUrl,
       status: 'PENDING',
     };

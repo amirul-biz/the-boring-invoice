@@ -58,8 +58,8 @@ async function bootstrap() {
   app.use(cookieParser());
 
   // Enable parsing of URL-encoded bodies (for ToyyibPay callbacks)
-  app.use(require('express').urlencoded({ extended: true }));
-  app.use(require('express').json());
+  app.use(require('express').urlencoded({ extended: true, limit: '10mb' }));
+  app.use(require('express').json({ limit: '10mb' }));
 
   // Connect microservice but don't let it block startup
   try {
