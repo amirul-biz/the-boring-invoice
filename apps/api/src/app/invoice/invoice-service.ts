@@ -21,6 +21,7 @@ import { createInvoice } from './invoice-repository/invoice-repository-create';
 import {
   updateInvoiceStatus,
   UpdateInvoiceStatusData,
+  activateInvoice,
 } from './invoice-repository/invoice-repository-update-status';
 import { getInvoiceAsReceipt, getInvoiceByNumber } from './invoice-repository/invoice-repository-get';
 import { ToyyibPayUtil } from './invoice-generator/invoice-generator-toyyibpay-bill';
@@ -29,6 +30,7 @@ import { getInvoiceList, InvoiceListQuery, PaginatedInvoiceList } from './invoic
 @Injectable()
 export class InvoiceService {
   private readonly logger = new Logger(InvoiceService.name);
+  private readonly BATCH_DELAY_MS = 1500; // Delay between invoices to avoid ToyyibPay/SMTP rate limits
 
   constructor(
     private readonly prisma: PrismaService,
@@ -58,7 +60,7 @@ export class InvoiceService {
 
       const businessId = this.cryptoService.decodeId(encodedBusinessId);
 
-      this.queueService.sendMessageQue(
+      await this.queueService.sendMessageQue(
         'receiver-create-invoice',
         { businessId, invoiceDataList },
       );
@@ -101,25 +103,32 @@ export class InvoiceService {
         this.logger,
       );
 
-      // Step 2: Integrate with payment gateway
+      // Step 2: Save to DB as DRAFT first — ensures a record exists before any external call
+      await createInvoice(
+        this.prisma,
+        { ...calculatedInvoice, status: 'DRAFT' },
+        businessId,
+        this.logger,
+      );
+
+      // Step 3: Create ToyyibPay payment bill
       const processedInvoice = await processPaymentIntegration(
         calculatedInvoice,
         paymentIntegrationCredential,
         this.logger,
       );
 
-      // Step 3: Save to database (CRITICAL - must succeed)
-      await createInvoice(
+      // Step 4: Activate invoice to PENDING with billUrl
+      await activateInvoice(
         this.prisma,
-        processedInvoice,
-        businessId,
+        calculatedInvoice.invoiceNo,
+        processedInvoice.billUrl,
         this.logger,
       );
 
-      // Step 4: Send invoice email (NON-CRITICAL - fire and forget)
-      // Don't await - let it run in background
+      // Step 5: Send invoice email (NON-CRITICAL - fire and forget)
       sendInvoiceEmail(this.mailService, processedInvoice, this.logger).catch(
-        (error) => {
+        () => {
           this.logger.warn(
             `Email sending failed but invoice created: ${processedInvoice.invoiceNo}`,
           );
@@ -157,7 +166,8 @@ export class InvoiceService {
 
     const paymentIntegrationCredential = await this.businessInfoService.getPaymentIntegrationCredential(businessId);
 
-    for (const invoiceData of invoiceDataList) {
+    for (let i = 0; i < invoiceDataList.length; i++) {
+      const invoiceData = invoiceDataList[i];
       try {
         await this.processInvoiceCreation(invoiceData, paymentIntegrationCredential, businessId);
       } catch (error) {
@@ -166,7 +176,11 @@ export class InvoiceService {
           `Failed to process invoice in batch for ${invoiceData.recipient.name}: ${error.message}`,
           error.stack,
         );
-        continue;
+      }
+
+      // Delay between invoices to give ToyyibPay and SMTP rate limiters time to recover
+      if (i < invoiceDataList.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, this.BATCH_DELAY_MS));
       }
     }
 
@@ -199,7 +213,7 @@ export class InvoiceService {
         `Queueing payment callback for invoice: ${callbackData.order_id}`,
       );
 
-      this.queueService.sendMessageQue(
+      await this.queueService.sendMessageQue(
         'receiver-update-invoice',
         callbackData,
       );

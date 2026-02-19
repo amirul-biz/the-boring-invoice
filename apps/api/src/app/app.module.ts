@@ -7,15 +7,38 @@ import { AuthMiddleware } from './auth/auth.middleware';
 import { InvoiceModule } from './invoice/invoice-module';
 import { BusinessInfoModule } from './business-info/business-info.module';
 import { MailerModule } from '@nestjs-modules/mailer';
+import { ThrottlerModule } from '@nestjs/throttler';
 
 @Module({
   imports: [
+    ThrottlerModule.forRoot([{ ttl: 60000, limit: 10 }]),
     InvoiceModule,
     AuthModule,
     BusinessInfoModule,
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
+      validate: (config: Record<string, unknown>) => {
+        const required = [
+          'DATABASE_URL',
+          'ENCRYPTION_KEY',
+          'RBBIT_MQ_QUE_URL',
+          'SMTP_MAILER_EMAIL',
+          'SMTP_MAILER_SERVER_PASSWORD',
+          'SMTP_MAILER_HOST',
+          'PAYMENT_API_SECRET_URL',
+          'PAYMENT_API_CATEGORY_CODE',
+          'PAYMENT_RETURN_URL',
+          'NG_APP_API_URL',
+        ];
+        const missing = required.filter((key) => !config[key]);
+        if (missing.length > 0) {
+          throw new Error(
+            `Missing required environment variables: ${missing.join(', ')}`,
+          );
+        }
+        return config;
+      },
     }),
     MailerModule.forRootAsync({
       inject: [ConfigService],

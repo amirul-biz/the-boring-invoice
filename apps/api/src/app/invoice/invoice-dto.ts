@@ -156,7 +156,7 @@ export class CalculatedInvoiceDto extends CreateInvoiceInputDTO {
 
 export class ProcessedInvoiceDto extends CalculatedInvoiceDto {
   @ApiProperty({example: `${process.env.PAYMENT_API_BASE_URL}/api url`})
-  billUrl: string
+  billUrl?: string
   
   @ApiProperty({ enum: ['DRAFT', 'PENDING', 'PAID', 'CANCELLED'], default: 'PENDING' })
   @IsEnum(['DRAFT', 'PENDING', 'PAID', 'CANCELLED'])
