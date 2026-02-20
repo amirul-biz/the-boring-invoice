@@ -14,6 +14,7 @@ import {
   Min,
   ValidateNested,
 } from 'class-validator';
+import { InvoiceType } from '@prisma/client';
 
 // 1. RECIPIENT (BUYER) DTO
 export class RecipientDTO {
@@ -106,9 +107,9 @@ export class InvoiceItemDTO {
 
 // 4. MAIN INPUT DTO
 export class CreateInvoiceInputDTO {
-  @ApiProperty({ enum: ['Invoice', 'Credit Note', 'Debit Note'] })
-  @IsEnum(['Invoice', 'Credit Note', 'Debit Note'])
-  invoiceType: string; // Mandatory for LHDN
+  @ApiProperty({ enum: InvoiceType })
+  @IsEnum(InvoiceType)
+  invoiceType: InvoiceType;
 
   @ApiProperty({ example: 'MYR' })
   @IsString()
@@ -188,10 +189,10 @@ export class InvoiceListQueryDTO {
   @IsIn([10, 50, 100])
   pageSize: number;
 
-  @ApiProperty({ required: false, enum: ['Invoice', 'Credit Note', 'Debit Note'] })
+  @ApiProperty({ required: false, enum: InvoiceType })
   @IsOptional()
-  @IsString()
-  invoiceType?: string;
+  @IsEnum(InvoiceType)
+  invoiceType?: InvoiceType;
 
   @ApiProperty({ required: false, enum: ['DRAFT', 'PENDING', 'PAID', 'CANCELLED'] })
   @IsOptional()

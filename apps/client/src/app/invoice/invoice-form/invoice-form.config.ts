@@ -110,7 +110,7 @@ export function invoiceItemForm(): FormGroup<InvoiceItemForm> {
 
 export function getInvoiceForm(): FormGroup<CreateInvoiceForm> {
   return new FormGroup<CreateInvoiceForm>({
-    invoiceType: new FormControl('Invoice', {
+    invoiceType: new FormControl('INVOICE', {
       nonNullable: true,
       validators: [Validators.required],
     }),
@@ -271,9 +271,9 @@ export function getInvoicesData(
   // Base invoice data (shared across all recipients)
   const baseInvoiceData = {
     invoiceType: formValue.invoiceType as
-      | 'Invoice'
-      | 'Credit Note'
-      | 'Debit Note',
+      | 'INVOICE'
+      | 'CREDIT_NOTE'
+      | 'DEBIT_NOTE',
     currency: formValue.currency ?? 'MYR',
     taxRate: formValue.taxRate,
     dueDate: dueDate,

@@ -1,6 +1,12 @@
 import { MailerService } from '@nestjs-modules/mailer';
 import { ProcessedInvoiceDto } from '../invoice-dto';
 
+const INVOICE_TYPE_LABEL: Record<string, string> = {
+  INVOICE: 'Invoice',
+  CREDIT_NOTE: 'Credit Note',
+  DEBIT_NOTE: 'Debit Note',
+};
+
 function generateInvoiceEmailHtml(invoice: ProcessedInvoiceDto): string {
   const formatCurrency = (amount: number) =>
     `RM ${amount.toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -43,7 +49,7 @@ function generateInvoiceEmailHtml(invoice: ProcessedInvoiceDto): string {
                     <p style="margin: 8px 0 0; color: rgba(255,255,255,0.8); font-size: 14px;">${invoice.supplier.businessActivityDescription}</p>
                   </td>
                   <td style="text-align: right;">
-                    <span style="display: inline-block; background-color: rgba(255,255,255,0.2); color: #ffffff; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">${invoice.invoiceType}</span>
+                    <span style="display: inline-block; background-color: rgba(255,255,255,0.2); color: #ffffff; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">${INVOICE_TYPE_LABEL[invoice.invoiceType] ?? invoice.invoiceType}</span>
                   </td>
                 </tr>
               </table>

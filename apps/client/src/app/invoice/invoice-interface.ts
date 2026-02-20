@@ -32,7 +32,7 @@ export interface ICreateInvoiceItem {
 
 // 4. MAIN INPUT INTERFACE (The one you requested)
 export interface ICreateInvoice {
-  invoiceType: 'Invoice' | 'Credit Note' | 'Debit Note'; // Literal types for stricter safety
+  invoiceType: 'INVOICE' | 'CREDIT_NOTE' | 'DEBIT_NOTE';
   currency: string;
   supplier: ISupplier;
   recipient: IRecipient;

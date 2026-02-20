@@ -2,6 +2,7 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NgbPaginationModule } from '@ng-bootstrap/ng-bootstrap';
 import { IInvoiceListItem } from '../invoice-listing-interface';
+import { INVOICE_TYPE_LABEL } from '../../invoice/invoice-constants';
 
 @Component({
   selector: 'app-invoice-listing-table',
@@ -9,6 +10,8 @@ import { IInvoiceListItem } from '../invoice-listing-interface';
   templateUrl: './invoice-listing-table.html',
 })
 export class InvoiceListingTableComponent {
+  invoiceTypeLabel = INVOICE_TYPE_LABEL;
+
   @Input({ required: true }) invoices: IInvoiceListItem[] = [];
   @Input() page = 1;
   @Input() pageSize = 5;
