@@ -28,6 +28,9 @@ model BusinessInformation {
   msicCode                        String
   categoryCode                    String
   userSecretKey                   String
+  idType                          IdType?
+  sstRegistrationNumber           String?
+  address                         Json?    @db.JsonB
   createdAt                       DateTime @default(now())
   updatedAt                       DateTime @updatedAt
 
@@ -101,4 +104,11 @@ enum InvoiceType {
   INVOICE
   CREDIT_NOTE
   DEBIT_NOTE
+}
+
+enum IdType {
+  BRN
+  NRIC
+  PASSPORT
+  ARMY
 }

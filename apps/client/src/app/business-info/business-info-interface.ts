@@ -1,3 +1,11 @@
+export interface IBusinessAddress {
+  addressLine1: string;
+  city: string;
+  postcode: string;
+  state: string;
+  country: string;
+}
+
 export interface IBusinessInfo {
   id?: string;
   businessName: string;
@@ -8,6 +16,9 @@ export interface IBusinessInfo {
   msicCode: string;
   categoryCode: string;
   userSecretKey: string;
+  idType?: string;
+  sstRegistrationNumber?: string;
+  address?: IBusinessAddress;
 }
 
 export interface IBusinessInfoPublic {
@@ -19,4 +30,7 @@ export interface IBusinessInfoPublic {
   businessActivityDescription: string;
   msicCode: string;
   categoryCode: string;
+  idType?: string;
+  sstRegistrationNumber?: string;
+  address?: IBusinessAddress;
 }

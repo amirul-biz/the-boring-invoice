@@ -84,6 +84,34 @@ export class SupplierDTO {
   @ApiProperty({ example: 'Taekwondo training and sports goods' })
   @IsNotEmpty() @IsString()
   businessActivityDescription: string;
+
+  @ApiProperty({ example: 'BRN', description: 'LHDN ID Type: BRN, NRIC, PASSPORT, ARMY' })
+  @IsNotEmpty() @IsString()
+  idType: string;
+
+  @ApiProperty({ example: 'W10-1234-12345678', required: false })
+  @IsOptional() @IsString()
+  sstRegistrationNumber?: string;
+
+  @ApiProperty({ example: 'No 1, Jalan Mawar' })
+  @IsNotEmpty() @IsString()
+  addressLine1: string;
+
+  @ApiProperty({ example: 'Kuala Lumpur' })
+  @IsNotEmpty() @IsString()
+  city: string;
+
+  @ApiProperty({ example: '50000' })
+  @IsNotEmpty() @IsString()
+  postcode: string;
+
+  @ApiProperty({ example: '14' })
+  @IsNotEmpty() @IsString()
+  state: string;
+
+  @ApiProperty({ example: 'MYS' })
+  @IsNotEmpty() @IsString()
+  country: string;
 }
 
 // 3. ITEM DTO

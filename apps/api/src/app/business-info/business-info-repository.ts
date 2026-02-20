@@ -1,6 +1,6 @@
 import { Logger, HttpException, HttpStatus } from '@nestjs/common';
 import { PrismaService } from '@prismaService';
-import { BusinessInformation } from '@prisma/client';
+import { BusinessInformation, IdType } from '@prisma/client';
 import { BusinessInfoPublicData, CreateBusinessInfoData, PaymentIntegrationCredential, UpdateBusinessInfoData } from './business-info-interface';
 
 export async function createBusinessInfo(
@@ -10,7 +10,22 @@ export async function createBusinessInfo(
 ): Promise<BusinessInformation> {
   try {
     logger.log(`Creating business info for user: ${data.userId}`);
-    const business = await prisma.businessInformation.create({ data });
+    const business = await prisma.businessInformation.create({
+      data: {
+        userId: data.userId,
+        businessName: data.businessName,
+        businessEmail: data.businessEmail,
+        taxIdentificationNumber: data.taxIdentificationNumber,
+        businessRegistrationNumber: data.businessRegistrationNumber,
+        businessActivityDescription: data.businessActivityDescription,
+        msicCode: data.msicCode,
+        categoryCode: data.categoryCode,
+        userSecretKey: data.userSecretKey,
+        idType: data.idType as IdType,
+        sstRegistrationNumber: data.sstRegistrationNumber,
+        address: data.address,
+      },
+    });
     logger.log(`Business info created with ID: ${business.id}`);
     return business;
   } catch (error) {
@@ -81,6 +96,9 @@ export async function findBusinessInfoPublicById(
         businessActivityDescription: true,
         msicCode: true,
         categoryCode: true,
+        idType: true,
+        sstRegistrationNumber: true,
+        address: true,
       },
     });
 
@@ -88,7 +106,7 @@ export async function findBusinessInfoPublicById(
       throw new HttpException('Business info not found', HttpStatus.NOT_FOUND);
     }
 
-    return business;
+    return business as unknown as BusinessInfoPublicData;
   } catch (error) {
     if (error instanceof HttpException) throw error;
     logger.error(`Failed to find public business info by ID: ${error.message}`, error.stack);
@@ -132,7 +150,11 @@ export async function updateBusinessInfo(
     logger.log(`Updating business info: ${id}`);
     const business = await prisma.businessInformation.update({
       where: { id },
-      data,
+      data: {
+        ...data,
+        ...(data.idType !== undefined && { idType: data.idType as IdType }),
+        ...(data.address !== undefined && { address: data.address }),
+      },
     });
     logger.log(`Business info updated: ${id}`);
     return business;
