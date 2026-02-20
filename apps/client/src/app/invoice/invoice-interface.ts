@@ -4,6 +4,7 @@ export interface IRecipient {
   email?: string; // Optional as per @IsOptional()
   phone: string;
   tin: string;
+  idType: string;
   registrationNumber: string;
   addressLine1: string;
   postcode: string;
@@ -34,6 +35,7 @@ export interface ICreateInvoiceItem {
   itemName: string;
   quantity: number;
   unitPrice: number;
+  discountRate: number;
   classificationCode: string;
   taxType: string;
   taxRate: number;
@@ -47,4 +49,5 @@ export interface ICreateInvoice {
   recipient: IRecipient;
   dueDate: string;
   items: ICreateInvoiceItem[];
+  invoiceVersion: string;
 }

@@ -11,6 +11,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  Max,
   Min,
   ValidateNested,
 } from 'class-validator';
@@ -33,6 +34,10 @@ export class RecipientDTO {
   @ApiProperty({ example: 'E100000000010' })
   @IsNotEmpty() @IsString()
   tin: string;
+
+  @ApiProperty({ example: 'BRN', description: 'LHDN ID Type: BRN, NRIC, PASSPORT, ARMY' })
+  @IsNotEmpty() @IsString()
+  idType: string;
 
   @ApiProperty({ example: '900101015555', description: 'NRIC or BRN' })
   @IsNotEmpty() @IsString()
@@ -136,6 +141,12 @@ export class InvoiceItemDTO {
   @IsNotEmpty() @IsString()
   taxType: string;
 
+  @ApiProperty({ example: 0, description: 'Discount percentage (0–100)' })
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  discountRate: number;
+
   @ApiProperty({ example: 0 })
   @IsNumber()
   taxRate: number;
@@ -170,6 +181,11 @@ export class CreateInvoiceInputDTO {
   @ValidateNested({ each: true })
   @Type(() => InvoiceItemDTO)
   items: InvoiceItemDTO[];
+
+  @ApiProperty({ example: '1.0', description: 'LHDN MyInvois specification version' })
+  @IsString()
+  @IsNotEmpty()
+  invoiceVersion: string;
 }
 
 // 5. OUTPUT DTO (Includes LHDN Validation Data)

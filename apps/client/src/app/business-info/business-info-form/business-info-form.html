@@ -173,6 +173,18 @@
             placeholder="e.g. 14">
           <div class="invalid-feedback">State is required</div>
         </div>
+
+        <div class="col-12 col-md-4">
+          <label for="invoiceVersion" class="form-label">Invoice Version</label>
+          <input
+            type="text"
+            class="form-control"
+            [ngClass]="{'is-invalid': isFieldInvalid(form.controls.invoiceVersion)}"
+            id="invoiceVersion"
+            formControlName="invoiceVersion"
+            placeholder="e.g. 1.0">
+          <div class="invalid-feedback">Invoice version is required</div>
+        </div>
       </div>
     </div>
   </div>

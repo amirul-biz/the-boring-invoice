@@ -15,6 +15,7 @@ export interface BusinessInfoForm {
   city: FormControl<string | null>;
   postcode: FormControl<string | null>;
   state: FormControl<string | null>;
+  invoiceVersion: FormControl<string | null>;
 }
 
 export function getBusinessInfoForm(): FormGroup<BusinessInfoForm> {
@@ -69,6 +70,10 @@ export function getBusinessInfoForm(): FormGroup<BusinessInfoForm> {
       validators: [Validators.required],
     }),
     state: new FormControl(null, {
+      nonNullable: true,
+      validators: [Validators.required],
+    }),
+    invoiceVersion: new FormControl('1.0', {
       nonNullable: true,
       validators: [Validators.required],
     }),

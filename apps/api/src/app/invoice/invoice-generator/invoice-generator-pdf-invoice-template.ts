@@ -231,7 +231,8 @@ export async function generatePdfInvoiceTemplate(
       }
 
       if (recipient?.registrationNumber) {
-        doc.text(`ID/Reg No: ${recipient.registrationNumber}`, margin, yPos);
+        const idLabel = (recipient as any)?.idType ?? 'ID/Reg No';
+        doc.text(`${idLabel}: ${recipient.registrationNumber}`, margin, yPos);
       }
 
       // ============ INVOICE DETAILS BOX (Right Side) ============
@@ -317,7 +318,7 @@ export async function generatePdfInvoiceTemplate(
 
       // Table rows
       let rowY = tableTop + 28;
-      const rowHeight = 42;
+      const rowHeight = 56;
 
       items.forEach((item, index) => {
         // Alternating row background
@@ -352,15 +353,29 @@ export async function generatePdfInvoiceTemplate(
         // Unit price
         doc.text(formatCurrency(item.unitPrice, currency), colUnit, textY, { width: 70, align: 'right' });
 
-        // Line subtotal (excl. tax)
+        // Line subtotal (before discount, excl. tax)
         const subtotal = (item.quantity || 0) * (item.unitPrice || 0);
         doc.font('Helvetica-Bold')
           .text(formatCurrency(subtotal, currency), colAmount - 60, textY, { width: 60, align: 'right' });
 
-        // Second line: per-item tax info
-        const taxY = rowY + 22;
+        // Second line: discount info
+        const discountY = rowY + 22;
+        const discountRate = (item as any).discountRate ?? 0;
+        const discountAmount = (item as any).discountAmount ?? parseFloat((subtotal * discountRate / 100).toFixed(2));
+        const discountText = discountRate > 0
+          ? `Discount: ${discountRate.toFixed(2)}%  \u2212${formatCurrency(discountAmount, currency)}`
+          : 'Discount: \u2014';
+
+        doc.font('Helvetica')
+          .fontSize(8)
+          .fillColor(COLORS.textMuted)
+          .text(discountText, colDesc, discountY);
+
+        // Third line: per-item tax info
+        const taxY = rowY + 37;
         const taxRate = item.taxRate || 0;
-        const taxAmount = parseFloat((subtotal * taxRate / 100).toFixed(2));
+        const taxableAmount = (item as any).taxableAmount ?? parseFloat((subtotal - discountAmount).toFixed(2));
+        const taxAmount = (item as any).taxAmount ?? parseFloat((taxableAmount * taxRate / 100).toFixed(2));
         const taxTypeLabel = item.taxType === 'NOT_APPLICABLE'
           ? `No Tax (0%)`
           : `${item.taxType.replace(/_/g, ' ')} (${taxRate}%)`;

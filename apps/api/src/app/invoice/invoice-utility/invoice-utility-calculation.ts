@@ -22,14 +22,18 @@ export async function calculateInvoiceData(
     // 1. Calculate and map items with LHDN mathematical accuracy
     const mappedItems = input.items.map((item) => {
       const subtotal = item.quantity * item.unitPrice;
+      const discountAmount = subtotal * ((item.discountRate ?? 0) / 100);
+      const taxableAmount = subtotal - discountAmount;
       const taxDecimal = item.taxRate / 100;
 
       return {
         ...item,
         subtotal: parseFloat(subtotal.toFixed(2)),
-        // LHDN requires each line to have its own tax amount calculated
-        taxAmount: parseFloat((subtotal * taxDecimal).toFixed(2)),
-        lineTotal: parseFloat((subtotal * (1 + taxDecimal)).toFixed(2)),
+        discountAmount: parseFloat(discountAmount.toFixed(2)),
+        taxableAmount: parseFloat(taxableAmount.toFixed(2)),
+        // LHDN requires each line to have its own tax amount calculated on the taxable amount
+        taxAmount: parseFloat((taxableAmount * taxDecimal).toFixed(2)),
+        lineTotal: parseFloat((taxableAmount * (1 + taxDecimal)).toFixed(2)),
       };
     });
 
@@ -38,7 +42,7 @@ export async function calculateInvoiceData(
 
     // 3. Calculate financial totals with precision
     const totalExcludingTax = mappedItems.reduce(
-      (sum, item) => sum + item.quantity * item.unitPrice,
+      (sum, item) => sum + item.taxableAmount,
       0,
     );
     const totalTaxAmount = mappedItems.reduce(

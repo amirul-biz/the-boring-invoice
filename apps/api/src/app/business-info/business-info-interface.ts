@@ -18,6 +18,7 @@ export interface CreateBusinessInfoBody {
   idType: string;
   sstRegistrationNumber?: string;
   address: BusinessAddress;
+  invoiceVersion: string;
 }
 
 export interface CreateBusinessInfoData extends CreateBusinessInfoBody {
@@ -36,6 +37,7 @@ export interface BusinessInfoPublicData {
   idType?: string;
   sstRegistrationNumber?: string;
   address?: BusinessAddress;
+  invoiceVersion: string;
 }
 
 export interface PaymentIntegrationCredential {
@@ -55,4 +57,5 @@ export interface UpdateBusinessInfoData {
   idType?: string;
   sstRegistrationNumber?: string;
   address?: Partial<BusinessAddress>;
+  invoiceVersion?: string;
 }

@@ -12,6 +12,7 @@ export interface RecipientForm {
   email: FormControl<string | null>;
   phone: FormControl<string | null>;
   tin: FormControl<string | null>;
+  idType: FormControl<string | null>;
   registrationNumber: FormControl<string | null>;
   addressLine1: FormControl<string | null>;
   postcode: FormControl<string | null>;
@@ -40,6 +41,7 @@ export interface InvoiceItemForm {
   itemName: FormControl<string | null>;
   quantity: FormControl<number>;
   unitPrice: FormControl<number>;
+  discountRate: FormControl<number>;
   classificationCode: FormControl<string | null>;
   taxType: FormControl<string | null>;
   taxRate: FormControl<number>;
@@ -67,6 +69,10 @@ export function recipientForm(): FormGroup<RecipientForm> {
     }),
     tin: new FormControl(null, {
       nonNullable: true,
+    }),
+    idType: new FormControl('BRN', {
+      nonNullable: true,
+      validators: [Validators.required],
     }),
     registrationNumber: new FormControl(null, {
       nonNullable: true,
@@ -108,6 +114,10 @@ export function invoiceItemForm(): FormGroup<InvoiceItemForm> {
     unitPrice: new FormControl(0, {
       nonNullable: true,
       validators: [Validators.required, Validators.min(0)],
+    }),
+    discountRate: new FormControl(0, {
+      nonNullable: true,
+      validators: [Validators.required, Validators.min(0), Validators.max(100)],
     }),
     classificationCode: new FormControl('010', {
       nonNullable: true,
@@ -241,6 +251,7 @@ export function patchExcelDataToInvoiceForm(
       email: r.email ?? null,
       phone: r.phone,
       tin: r.tin,
+      idType: r.idType ?? 'BRN',
       registrationNumber: r.registrationNumber,
       addressLine1: r.addressLine1,
       postcode: r.postcode,
@@ -263,6 +274,7 @@ export function patchExcelDataToInvoiceForm(
       itemName: item.itemName,
       quantity: item.quantity,
       unitPrice: item.unitPrice,
+      discountRate: item.discountRate ?? 0,
       classificationCode: item.classificationCode,
     });
     itemsArray.push(fg);
@@ -274,6 +286,7 @@ export function patchExcelDataToInvoiceForm(
 
 export function getInvoicesData(
   invoiceForm: FormGroup<CreateInvoiceForm>,
+  invoiceVersion: string,
 ): ICreateInvoice[] {
   const formValue = invoiceForm.getRawValue();
 
@@ -291,6 +304,7 @@ export function getInvoicesData(
         itemName: item.itemName,
         quantity: item.quantity,
         unitPrice: item.unitPrice,
+        discountRate: item.discountRate ?? 0,
         classificationCode: item.classificationCode,
         taxType: item.taxType,
         taxRate: item.taxRate,
@@ -328,11 +342,13 @@ export function getInvoicesData(
   // Create one invoice per recipient
   return formValue.recipients.map((recipientValue) => ({
     ...baseInvoiceData,
+    invoiceVersion,
     recipient: {
       name: recipientValue.name,
       email: recipientValue.email ?? undefined,
       phone: recipientValue.phone,
       tin: recipientValue.tin,
+      idType: recipientValue.idType,
       registrationNumber: recipientValue.registrationNumber,
       addressLine1: recipientValue.addressLine1,
       postcode: recipientValue.postcode,

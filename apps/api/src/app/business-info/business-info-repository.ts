@@ -1,6 +1,6 @@
 import { Logger, HttpException, HttpStatus } from '@nestjs/common';
 import { PrismaService } from '@prismaService';
-import { BusinessInformation, IdType } from '@prisma/client';
+import { BusinessInformation, IdType, Prisma } from '@prisma/client';
 import { BusinessInfoPublicData, CreateBusinessInfoData, PaymentIntegrationCredential, UpdateBusinessInfoData } from './business-info-interface';
 
 export async function createBusinessInfo(
@@ -23,7 +23,8 @@ export async function createBusinessInfo(
         userSecretKey: data.userSecretKey,
         idType: data.idType as IdType,
         sstRegistrationNumber: data.sstRegistrationNumber,
-        address: data.address,
+        address: data.address as unknown as Prisma.InputJsonValue,
+        invoiceVersion: data.invoiceVersion,
       },
     });
     logger.log(`Business info created with ID: ${business.id}`);
@@ -99,6 +100,7 @@ export async function findBusinessInfoPublicById(
         idType: true,
         sstRegistrationNumber: true,
         address: true,
+        invoiceVersion: true,
       },
     });
 
@@ -153,7 +155,7 @@ export async function updateBusinessInfo(
       data: {
         ...data,
         ...(data.idType !== undefined && { idType: data.idType as IdType }),
-        ...(data.address !== undefined && { address: data.address }),
+        ...(data.address !== undefined && { address: data.address as unknown as Prisma.InputJsonValue }),
       },
     });
     logger.log(`Business info updated: ${id}`);
