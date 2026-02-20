@@ -35,6 +35,26 @@ export interface RetryInvoiceMessage {
   attemptNo: number;
 }
 
+export interface ToyyibPayCallbackData {
+  refno: string;
+  status: string;
+  reason: string;
+  billcode: string;
+  order_id: string;
+  amount: string;
+  status_id: string;
+  msg: string;
+  transaction_id: string;
+  fpx_transaction_id: string;
+  hash: string;
+  transaction_time: string;
+}
+
+export interface RetryPaymentCallbackMessage {
+  callbackData: ToyyibPayCallbackData;
+  attemptNo: number;
+}
+
 @Injectable()
 export class InvoiceService {
   private readonly logger = new Logger(InvoiceService.name);
@@ -297,20 +317,7 @@ export class InvoiceService {
   /**
    * Queue payment callback for asynchronous processing
    */
-  async queuePaymentCallback(callbackData: {
-    refno: string;
-    status: string;
-    reason: string;
-    billcode: string;
-    order_id: string;
-    amount: string;
-    status_id: string;
-    msg: string;
-    transaction_id: string;
-    fpx_transaction_id: string;
-    hash: string;
-    transaction_time: string;
-  }): Promise<{ message: string }> {
+  async queuePaymentCallback(callbackData: ToyyibPayCallbackData): Promise<{ message: string }> {
     try {
       this.logger.log(
         `Queueing payment callback for invoice: ${callbackData.order_id}`,
@@ -334,94 +341,127 @@ export class InvoiceService {
   }
 
   /**
-   * Process payment callback from RabbitMQ queue
-   * Update invoice status and send receipt email if paid
+   * Process payment callback — first attempt from queue consumer
+   * On failure, emits to retry-payment-callback instead of throwing
    */
-  async processPaymentCallbackFromQueue(callbackData: {
-    refno: string;
-    status: string;
-    reason: string;
-    billcode: string;
-    order_id: string;
-    amount: string;
-    status_id: string;
-    msg: string;
-    transaction_id: string;
-    fpx_transaction_id: string;
-    hash: string;
-    transaction_time: string;
-  }): Promise<void> {
+  async processPaymentCallbackFromQueue(callbackData: ToyyibPayCallbackData): Promise<void> {
     try {
-      this.logger.log(
-        `Processing payment callback for invoice: ${callbackData.order_id}`,
-      );
-
-      const invoiceNo = callbackData.order_id;
-
-      this.logger.log(`[Callback] order_id=${invoiceNo} billcode=${callbackData.billcode}`);
-
-      // Step 1: Look up invoice to confirm it exists in our system
-      const invoice = await getInvoiceByNumber(this.prisma, invoiceNo, this.logger);
-      this.logger.log(`[Callback] Invoice found: ${invoice.invoiceNo}`);
-
-      // Step 2: Query ToyyibPay directly for authoritative payment status
-      const transactions = await ToyyibPayUtil.fetchBillTransactions(callbackData.billcode);
-      this.logger.log(`[Callback] getBillTransactions returned ${transactions.length} record(s) for billCode=${callbackData.billcode}`);
-
-      const match = transactions.find(t => t.billExternalReferenceNo === invoiceNo);
-      if (!match) {
-        this.logger.warn(`[Callback] No matching transaction for invoiceNo=${invoiceNo} in billCode=${callbackData.billcode}`);
-        return;
-      }
-
-      this.logger.log(`[Callback] Matched transaction — billpaymentStatus: ${match.billpaymentStatus}`);
-
-      const paymentStatus = match.billpaymentStatus === '1' ? InvoiceStatus.PAID : InvoiceStatus.CANCELLED;
-
-      // Sanitize transaction time
-      const sanitizedTransactionTime = callbackData.transaction_time
-        ? new Date(callbackData.transaction_time.replace(' ', 'T')).toISOString()
-        : new Date().toISOString();
-
-      // Update invoice status
-      const updateData: UpdateInvoiceStatusData = {
-        invoiceNo,
-        status: paymentStatus,
-        transactionId: callbackData.transaction_id,
-        transactionTime: sanitizedTransactionTime,
-      };
-
-      await updateInvoiceStatus(this.prisma, updateData, this.logger);
-
-      this.logger.log(`[Callback] Invoice ${invoiceNo} status updated to ${paymentStatus}`);
-
-      // If payment successful, send receipt email
-      if (paymentStatus === InvoiceStatus.PAID) {
-        this.logger.log(`[Callback] Payment successful, queueing receipt email`);
-
-        const receiptData = await getInvoiceAsReceipt(
-          this.prisma,
-          invoiceNo,
-          this.logger,
-        );
-
-        sendReceiptEmail(this.mailService, receiptData, this.logger).catch(
-          () => {
-            this.logger.warn(
-              `Receipt email failed but payment processed: ${invoiceNo}`,
-            );
-          },
-        );
-      }
-
-      this.logger.log(`Payment callback processed successfully from queue`);
+      await this.executePaymentCallbackCore(callbackData);
     } catch (error) {
       this.logger.error(
-        `Payment callback processing failed: ${error.message}`,
+        `Payment callback failed for ${callbackData.order_id} — emitting to retry queue: ${error.message}`,
         error.stack,
       );
-      throw error;
+      this.sendToPaymentRetryQueue({ callbackData, attemptNo: 1 });
     }
+  }
+
+  /**
+   * Process a payment callback from the retry-payment-callback queue
+   * Waits 1 minute then retries — re-emits with incremented attemptNo or routes to failed queue
+   */
+  async processPaymentCallbackRetry(msg: RetryPaymentCallbackMessage): Promise<void> {
+    this.logger.log(
+      `Payment callback retry attempt ${msg.attemptNo}/5 for invoice ${msg.callbackData.order_id} — waiting 1 minute`,
+    );
+
+    await new Promise(resolve => setTimeout(resolve, 60_000));
+
+    try {
+      await this.executePaymentCallbackCore(msg.callbackData);
+      this.logger.log(
+        `Payment callback retry ${msg.attemptNo}/5 succeeded for invoice ${msg.callbackData.order_id}`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Payment callback retry ${msg.attemptNo}/5 failed for invoice ${msg.callbackData.order_id}: ${error.message}`,
+        error.stack,
+      );
+
+      if (msg.attemptNo < 5) {
+        this.sendToPaymentRetryQueue({ ...msg, attemptNo: msg.attemptNo + 1 });
+      } else {
+        this.sendToPaymentFailedQueue(msg.callbackData, error);
+      }
+    }
+  }
+
+  /**
+   * Core payment callback processing — shared by first attempt and retries
+   * Throws on failure so callers can handle retry logic
+   */
+  private async executePaymentCallbackCore(callbackData: ToyyibPayCallbackData): Promise<void> {
+    this.logger.log(
+      `Processing payment callback for invoice: ${callbackData.order_id}`,
+    );
+
+    const invoiceNo = callbackData.order_id;
+
+    this.logger.log(`[Callback] order_id=${invoiceNo} billcode=${callbackData.billcode}`);
+
+    // Step 1: Look up invoice to confirm it exists in our system
+    const invoice = await getInvoiceByNumber(this.prisma, invoiceNo, this.logger);
+    this.logger.log(`[Callback] Invoice found: ${invoice.invoiceNo}`);
+
+    // Step 2: Query ToyyibPay directly for authoritative payment status
+    const transactions = await ToyyibPayUtil.fetchBillTransactions(callbackData.billcode);
+    this.logger.log(`[Callback] getBillTransactions returned ${transactions.length} record(s) for billCode=${callbackData.billcode}`);
+
+    const match = transactions.find(t => t.billExternalReferenceNo === invoiceNo);
+    if (!match) {
+      this.logger.warn(`[Callback] No matching transaction for invoiceNo=${invoiceNo} in billCode=${callbackData.billcode}`);
+      return;
+    }
+
+    this.logger.log(`[Callback] Matched transaction — billpaymentStatus: ${match.billpaymentStatus}`);
+
+    const paymentStatus = match.billpaymentStatus === '1' ? InvoiceStatus.PAID : InvoiceStatus.CANCELLED;
+
+    // Sanitize transaction time
+    const sanitizedTransactionTime = callbackData.transaction_time
+      ? new Date(callbackData.transaction_time.replace(' ', 'T')).toISOString()
+      : new Date().toISOString();
+
+    // Step 3: Update invoice status in DB
+    const updateData: UpdateInvoiceStatusData = {
+      invoiceNo,
+      status: paymentStatus,
+      transactionId: callbackData.transaction_id,
+      transactionTime: sanitizedTransactionTime,
+    };
+
+    await updateInvoiceStatus(this.prisma, updateData, this.logger);
+
+    this.logger.log(`[Callback] Invoice ${invoiceNo} status updated to ${paymentStatus}`);
+
+    // Step 4: Send receipt email if paid (fire & forget — duplicate receipts are acceptable)
+    if (paymentStatus === InvoiceStatus.PAID) {
+      const receiptData = await getInvoiceAsReceipt(this.prisma, invoiceNo, this.logger);
+
+      sendReceiptEmail(this.mailService, receiptData, this.logger).catch(() => {
+        this.logger.warn(`Receipt email failed but payment processed: ${invoiceNo}`);
+      });
+    }
+
+    this.logger.log(`Payment callback processed successfully: ${invoiceNo}`);
+  }
+
+  private sendToPaymentRetryQueue(msg: RetryPaymentCallbackMessage): void {
+    this.queueService.sendMessageQue('retry-payment-callback', msg);
+    this.logger.log(
+      `Payment callback for ${msg.callbackData.order_id} emitted to retry-payment-callback (attempt ${msg.attemptNo}/5)`,
+    );
+  }
+
+  private sendToPaymentFailedQueue(callbackData: ToyyibPayCallbackData, error: Error): void {
+    this.queueService.sendMessageQue('failed-payment-callback', {
+      callbackData,
+      error: error.message,
+      failedAt: new Date().toISOString(),
+    });
+    this.logger.error(
+      `Payment callback for ${callbackData.order_id} permanently failed after 5 attempts — moved to failed-payment-callback queue`,
+    );
   }
 
   async getInvoiceList(encodedBusinessId: string, userId: string, query: InvoiceListQuery): Promise<PaginatedInvoiceList> {

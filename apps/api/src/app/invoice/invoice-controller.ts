@@ -21,7 +21,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { CreateInvoiceInputDTO, InvoiceListQueryDTO } from './invoice-dto';
-import { InvoiceService, RetryInvoiceMessage } from './invoice-service';
+import { InvoiceService, RetryInvoiceMessage, RetryPaymentCallbackMessage } from './invoice-service';
 import { EventPattern } from '@nestjs/microservices';
 import { generateInvoiceTemplate } from './invoice-template-generator';
 import { UserById } from '../decorator/user.decorator';
@@ -174,5 +174,15 @@ export class InvoiceController {
     callbackData: ToyyibPayCallback,
   ): Promise<void> {
     await this.invoiceService.processPaymentCallbackFromQueue(callbackData);
+  }
+
+  /**
+   * Event consumer for retry-payment-callback queue
+   * Waits 1 minute then retries payment callback processing
+   * Re-emits with incremented attemptNo or routes to failed-payment-callback after 5 attempts
+   */
+  @EventPattern('retry-payment-callback')
+  async receiverRetryPaymentCallback(data: RetryPaymentCallbackMessage): Promise<void> {
+    await this.invoiceService.processPaymentCallbackRetry(data);
   }
 }
