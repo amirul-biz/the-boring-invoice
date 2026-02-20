@@ -103,6 +103,14 @@ export class InvoiceItemDTO {
   @ApiProperty({ example: '010', description: 'LHDN Classification Code' })
   @IsNotEmpty() @IsString()
   classificationCode: string; // e.g., 010 for services
+
+  @ApiProperty({ example: 'NOT_APPLICABLE', description: 'LHDN Tax Type' })
+  @IsNotEmpty() @IsString()
+  taxType: string;
+
+  @ApiProperty({ example: 0 })
+  @IsNumber()
+  taxRate: number;
 }
 
 // 4. MAIN INPUT DTO
@@ -125,10 +133,6 @@ export class CreateInvoiceInputDTO {
   @Type(() => RecipientDTO)
   recipient: RecipientDTO;
 
-  @ApiProperty({ example: 8.00 })
-  @IsNumber()
-  taxRate: number;
-
   @ApiProperty({ example: '2026-01-18' })
   @IsDateString()
   dueDate: string;
@@ -150,6 +154,9 @@ export class CalculatedInvoiceDto extends CreateInvoiceInputDTO {
 
   @ApiProperty({ example: 445.00 })
   totalExcludingTax: number;
+
+  @ApiProperty({ example: 8.00 })
+  totalTaxAmount: number;
 
   @ApiProperty({ example: 453.00 })
   totalIncludingTax: number;

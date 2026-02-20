@@ -50,17 +50,6 @@
           </div>
 
           <div class="col-12 col-md-3">
-            <label for="taxRate" class="form-label">Tax Rate (%)</label>
-            <input
-              type="number"
-              class="form-control"
-              [ngClass]="{'is-invalid': isFieldInvalid(invoiceForm.controls.taxRate)}"
-              id="taxRate"
-              formControlName="taxRate">
-            <div class="invalid-feedback">Tax rate is required</div>
-          </div>
-
-          <div class="col-12 col-md-3">
             <label for="dueDate" class="form-label">Due Date</label>
             <div class="input-group">
               <input
@@ -395,6 +384,32 @@
                       }
                     </select>
                     <div class="invalid-feedback">Classification code is required</div>
+                  </div>
+
+                  <div class="col-12 col-md-2">
+                    <label [for]="'taxType' + $index" class="form-label">Tax Type</label>
+                    <select
+                      class="form-select"
+                      [ngClass]="{'is-invalid': isFieldInvalid(item.get('taxType'))}"
+                      [id]="'taxType' + $index"
+                      formControlName="taxType">
+                      @for (tax of taxTypes; track tax.value) {
+                        <option [value]="tax.value">{{ tax.label }}</option>
+                      }
+                    </select>
+                    <div class="invalid-feedback">Tax type is required</div>
+                  </div>
+
+                  <div class="col-12 col-md-2">
+                    <label [for]="'taxRate' + $index" class="form-label">Tax Rate (%)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      class="form-control"
+                      [ngClass]="{'is-invalid': isFieldInvalid(item.get('taxRate'))}"
+                      [id]="'taxRate' + $index"
+                      formControlName="taxRate">
+                    <div class="invalid-feedback">Tax rate is required</div>
                   </div>
                 </div>
                 </div>

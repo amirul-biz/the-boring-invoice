@@ -34,12 +34,13 @@ export interface InvoiceItemForm {
   quantity: FormControl<number>;
   unitPrice: FormControl<number>;
   classificationCode: FormControl<string | null>;
+  taxType: FormControl<string | null>;
+  taxRate: FormControl<number>;
 }
 
 export interface CreateInvoiceForm {
   invoiceType: FormControl<string | null>;
   currency: FormControl<string | null>;
-  taxRate: FormControl<number>;
   dueDate: FormControl<string | null>;
   supplier: FormGroup<SupplierForm>;
   recipients: FormArray<FormGroup<RecipientForm>>;
@@ -105,6 +106,14 @@ export function invoiceItemForm(): FormGroup<InvoiceItemForm> {
       nonNullable: true,
       validators: [Validators.required],
     }),
+    taxType: new FormControl('NOT_APPLICABLE', {
+      nonNullable: true,
+      validators: [Validators.required],
+    }),
+    taxRate: new FormControl(0, {
+      nonNullable: true,
+      validators: [Validators.required, Validators.min(0)],
+    }),
   });
 }
 
@@ -115,10 +124,6 @@ export function getInvoiceForm(): FormGroup<CreateInvoiceForm> {
       validators: [Validators.required],
     }),
     currency: new FormControl('MYR', {
-      nonNullable: true,
-      validators: [Validators.required],
-    }),
-    taxRate: new FormControl(8.0, {
       nonNullable: true,
       validators: [Validators.required],
     }),
@@ -255,6 +260,8 @@ export function getInvoicesData(
         quantity: item.quantity,
         unitPrice: item.unitPrice,
         classificationCode: item.classificationCode,
+        taxType: item.taxType,
+        taxRate: item.taxRate,
       }) as ICreateInvoiceItem,
   );
 
@@ -275,7 +282,6 @@ export function getInvoicesData(
       | 'CREDIT_NOTE'
       | 'DEBIT_NOTE',
     currency: formValue.currency ?? 'MYR',
-    taxRate: formValue.taxRate,
     dueDate: dueDate,
     supplier: supplier,
     items: items,

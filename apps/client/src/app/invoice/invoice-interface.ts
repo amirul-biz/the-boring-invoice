@@ -28,6 +28,8 @@ export interface ICreateInvoiceItem {
   quantity: number;
   unitPrice: number;
   classificationCode: string;
+  taxType: string;
+  taxRate: number;
 }
 
 // 4. MAIN INPUT INTERFACE (The one you requested)
@@ -36,7 +38,6 @@ export interface ICreateInvoice {
   currency: string;
   supplier: ISupplier;
   recipient: IRecipient;
-  taxRate: number;
   dueDate: string;
   items: ICreateInvoiceItem[];
 }

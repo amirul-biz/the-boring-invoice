@@ -150,10 +150,12 @@ export async function generateInvoiceTemplate(): Promise<Buffer> {
   // Sheet 2: Items
   const itemSheet = wb.addWorksheet('Items');
   itemSheet.columns = [
-    { header: 'itemName', key: 'itemName', width: 40 },
-    { header: 'quantity', key: 'quantity', width: 12 },
-    { header: 'unitPrice', key: 'unitPrice', width: 15 },
+    { header: 'itemName',           key: 'itemName',           width: 40 },
+    { header: 'quantity',           key: 'quantity',           width: 12 },
+    { header: 'unitPrice',          key: 'unitPrice',          width: 15 },
     { header: 'classificationCode', key: 'classificationCode', width: 45 },
+    { header: 'taxType',            key: 'taxType',            width: 20 },
+    { header: 'taxRate',            key: 'taxRate',            width: 12 },
   ];
 
   itemSheet.getRow(1).font = { bold: true };
@@ -163,6 +165,8 @@ export async function generateInvoiceTemplate(): Promise<Buffer> {
     quantity: 1,
     unitPrice: 150.00,
     classificationCode: `${CLASSIFICATION_CODES[0].code} - ${CLASSIFICATION_CODES[0].description}`,
+    taxType: 'NOT_APPLICABLE',
+    taxRate: 0,
   });
 
   // Classification codes — too many for inline formula, use hidden reference sheet

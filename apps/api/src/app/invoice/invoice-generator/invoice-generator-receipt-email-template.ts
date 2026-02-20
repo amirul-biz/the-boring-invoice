@@ -30,8 +30,6 @@ function generateReceiptEmailHtml(receipt: ReceiptDTO): string {
     )
     .join('');
 
-  const taxAmount = receipt.totalIncludingTax - receipt.totalExcludingTax;
-
   return `
 <!DOCTYPE html>
 <html lang="en">
@@ -174,8 +172,8 @@ function generateReceiptEmailHtml(receipt: ReceiptDTO): string {
                         <td style="padding: 8px 0; color: #374151; font-size: 14px; text-align: right;">${formatCurrency(receipt.totalExcludingTax)}</td>
                       </tr>
                       <tr>
-                        <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Tax (${receipt.taxRate}%)</td>
-                        <td style="padding: 8px 0; color: #374151; font-size: 14px; text-align: right;">${formatCurrency(taxAmount)}</td>
+                        <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Total Tax</td>
+                        <td style="padding: 8px 0; color: #374151; font-size: 14px; text-align: right;">${formatCurrency(receipt.totalTaxAmount)}</td>
                       </tr>
                       <tr>
                         <td colspan="2" style="border-top: 2px solid #e5e7eb;"></td>
@@ -281,7 +279,7 @@ ${itemsList}
 SUMMARY
 ───────────────
 Subtotal: ${formatCurrency(receipt.totalExcludingTax)}
-Tax (${receipt.taxRate}%): ${formatCurrency(receipt.totalIncludingTax - receipt.totalExcludingTax)}
+Total Tax: ${formatCurrency(receipt.totalTaxAmount)}
 ━━━━━━━━━━━━━━━
 TOTAL PAID: ${formatCurrency(receipt.totalIncludingTax)}
 

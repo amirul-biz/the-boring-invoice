@@ -50,6 +50,8 @@ export function parseInvoiceTemplate(buffer: ArrayBuffer): ParsedExcelData {
       quantity: Number(row['quantity'] ?? 1),
       unitPrice: Number(row['unitPrice'] ?? 0),
       classificationCode: extractCode(row['classificationCode']),
+      taxType: String(row['taxType'] ?? 'NOT_APPLICABLE'),
+      taxRate: Number(row['taxRate'] ?? 0),
     }));
 
   return { recipients, items };

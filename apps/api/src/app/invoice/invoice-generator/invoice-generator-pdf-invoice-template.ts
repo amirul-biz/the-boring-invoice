@@ -88,10 +88,9 @@ export async function generatePdfInvoiceTemplate(
       const supplier = invoiceData.supplier;
       const recipient = invoiceData.recipient;
       const items = invoiceData.items || [];
-      const taxRate = invoiceData.taxRate || 0;
       const totalExcludingTax = invoiceData.totalExcludingTax || 0;
       const totalIncludingTax = invoiceData.totalIncludingTax || 0;
-      const calculatedTax = (totalExcludingTax * taxRate) / 100;
+      const calculatedTax = invoiceData.totalTaxAmount || 0;
       const currencyCode = invoiceData.currency || 'MYR';
       const currency = currencyCode === 'MYR' ? 'RM' : currencyCode;
       const businessName = supplier?.name || '';
@@ -301,7 +300,7 @@ export async function generatePdfInvoiceTemplate(
 
       // Table rows
       let rowY = tableTop + 28;
-      const rowHeight = 28;
+      const rowHeight = 42;
 
       items.forEach((item, index) => {
         // Alternating row background
@@ -310,7 +309,7 @@ export async function generatePdfInvoiceTemplate(
             .fill(COLORS.lightGray);
         }
 
-        const textY = rowY + 9;
+        const textY = rowY + 7;
 
         // Item name
         doc.font('Helvetica')
@@ -336,10 +335,24 @@ export async function generatePdfInvoiceTemplate(
         // Unit price
         doc.text(formatCurrency(item.unitPrice, currency), colUnit, textY, { width: 70, align: 'right' });
 
-        // Line total
-        const lineTotal = (item.quantity || 0) * (item.unitPrice || 0);
+        // Line subtotal (excl. tax)
+        const subtotal = (item.quantity || 0) * (item.unitPrice || 0);
         doc.font('Helvetica-Bold')
-          .text(formatCurrency(lineTotal, currency), colAmount - 60, textY, { width: 60, align: 'right' });
+          .text(formatCurrency(subtotal, currency), colAmount - 60, textY, { width: 60, align: 'right' });
+
+        // Second line: per-item tax info
+        const taxY = rowY + 22;
+        const taxRate = item.taxRate || 0;
+        const taxAmount = parseFloat((subtotal * taxRate / 100).toFixed(2));
+        const taxTypeLabel = item.taxType === 'NOT_APPLICABLE'
+          ? `No Tax (0%)`
+          : `${item.taxType.replace(/_/g, ' ')} (${taxRate}%)`;
+
+        doc.font('Helvetica')
+          .fontSize(8)
+          .fillColor(COLORS.textMuted)
+          .text(taxTypeLabel, colDesc, taxY)
+          .text(taxAmount > 0 ? formatCurrency(taxAmount, currency) : '-', colAmount - 60, taxY, { width: 60, align: 'right' });
 
         rowY += rowHeight;
       });
@@ -365,7 +378,7 @@ export async function generatePdfInvoiceTemplate(
       totalsY += 17;
 
       // Tax
-      doc.text(`Tax (${taxRate}%):`, totalsX, totalsY)
+      doc.text(`Total Tax:`, totalsX, totalsY)
         .text(formatCurrency(calculatedTax, currency), totalsX + 80, totalsY, { width: 118, align: 'right' });
 
       totalsY += 23;
