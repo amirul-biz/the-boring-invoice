@@ -52,7 +52,7 @@ export class BusinessInfoService {
     if (result.userId !== userId) {
       throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
     }
-    return { ...result, id: this.cryptoService.encodeId(result.id), userSecretKey: '***' };
+    return { ...result, id: this.cryptoService.encodeId(result.id), userSecretKey: this.cryptoService.decrypt(result.userSecretKey) };
   }
 
   async findPublicById(encodedId: string): Promise<BusinessInfoPublicData> {
