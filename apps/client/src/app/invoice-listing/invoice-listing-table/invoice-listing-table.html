@@ -18,7 +18,7 @@
         <tr>
           <td>{{ getRowNumber(i) }}</td>
           <td>{{ invoice.invoiceNo }}</td>
-          <td>{{ invoice.invoiceType }}</td>
+          <td>{{ invoiceTypeLabel[invoice.invoiceType] }}</td>
           <td>{{ invoice.recipientName }}</td>
           <td>{{ invoice.currency }} {{ invoice.totalIncludingTax | number:'1.2-2' }}</td>
           <td>{{ invoice.issuedDate | date:'dd/MM/yyyy' }}</td>

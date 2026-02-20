@@ -1,9 +1,12 @@
 // Invoice Types as per LHDN requirements
 export const INVOICE_TYPES = [
-  { value: 'Invoice', label: 'Invoice' },
-  { value: 'Credit Note', label: 'Credit Note' },
-  { value: 'Debit Note', label: 'Debit Note' },
+  { value: 'INVOICE',     label: 'Invoice' },
+  { value: 'CREDIT_NOTE', label: 'Credit Note' },
+  { value: 'DEBIT_NOTE',  label: 'Debit Note' },
 ] as const;
+
+export const INVOICE_TYPE_LABEL: Record<string, string> =
+  Object.fromEntries(INVOICE_TYPES.map(t => [t.value, t.label]));
 
 // Malaysian State Codes as per LHDN requirements
 export const MALAYSIAN_STATES = [

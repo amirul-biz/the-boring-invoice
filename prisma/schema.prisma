@@ -46,7 +46,7 @@ model Invoice {
 
   // === Core ===
   invoiceNo               String        @unique
-  invoiceType             String        // 'Invoice' | 'Credit Note' | 'Debit Note'
+  invoiceType             InvoiceType
   currency                String        @default("MYR")
   status                  InvoiceStatus @default(PENDING)
 
@@ -95,4 +95,10 @@ enum InvoiceStatus {
   PENDING
   PAID
   CANCELLED
+}
+
+enum InvoiceType {
+  INVOICE
+  CREDIT_NOTE
+  DEBIT_NOTE
 }

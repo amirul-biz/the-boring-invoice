@@ -111,7 +111,8 @@ export async function generatePdfInvoiceTemplate(
         .text(businessName, margin, 45, { width: 300 });
 
       // Invoice type badge
-      const invoiceType = (invoiceData.invoiceType || 'Invoice').toUpperCase();
+      const INVOICE_TYPE_LABEL: Record<string, string> = { INVOICE: 'Invoice', CREDIT_NOTE: 'Credit Note', DEBIT_NOTE: 'Debit Note' };
+      const invoiceType = (INVOICE_TYPE_LABEL[invoiceData.invoiceType] ?? invoiceData.invoiceType).toUpperCase();
       const badgeWidth = doc.widthOfString(invoiceType) + 14;
       doc.roundedRect(margin, 70, badgeWidth, 16, 3)
         .fill('#2d4a7c');
