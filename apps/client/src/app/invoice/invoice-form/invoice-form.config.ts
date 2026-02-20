@@ -27,6 +27,13 @@ export interface SupplierForm {
   registrationNumber: FormControl<string | null>;
   msicCode: FormControl<string | null>;
   businessActivityDescription: FormControl<string | null>;
+  idType: FormControl<string | null>;
+  sstRegistrationNumber: FormControl<string | null>;
+  addressLine1: FormControl<string | null>;
+  city: FormControl<string | null>;
+  postcode: FormControl<string | null>;
+  state: FormControl<string | null>;
+  country: FormControl<string | null>;
 }
 
 export interface InvoiceItemForm {
@@ -155,6 +162,31 @@ export function getInvoiceForm(): FormGroup<CreateInvoiceForm> {
         nonNullable: true,
         validators: [Validators.required],
       }),
+      idType: new FormControl({ value: null, disabled: true }, {
+        nonNullable: true,
+        validators: [Validators.required],
+      }),
+      sstRegistrationNumber: new FormControl<string | null>({ value: null, disabled: true }),
+      addressLine1: new FormControl({ value: null, disabled: true }, {
+        nonNullable: true,
+        validators: [Validators.required],
+      }),
+      city: new FormControl({ value: null, disabled: true }, {
+        nonNullable: true,
+        validators: [Validators.required],
+      }),
+      postcode: new FormControl({ value: null, disabled: true }, {
+        nonNullable: true,
+        validators: [Validators.required],
+      }),
+      state: new FormControl({ value: null, disabled: true }, {
+        nonNullable: true,
+        validators: [Validators.required],
+      }),
+      country: new FormControl({ value: null, disabled: true }, {
+        nonNullable: true,
+        validators: [Validators.required],
+      }),
     }),
 
     // Nested Recipients Array
@@ -271,8 +303,14 @@ export function getInvoicesData(
     tin: formValue.supplier.tin,
     registrationNumber: formValue.supplier.registrationNumber,
     msicCode: formValue.supplier.msicCode,
-    businessActivityDescription:
-      formValue.supplier.businessActivityDescription,
+    businessActivityDescription: formValue.supplier.businessActivityDescription,
+    idType: formValue.supplier.idType,
+    sstRegistrationNumber: formValue.supplier.sstRegistrationNumber ?? undefined,
+    addressLine1: formValue.supplier.addressLine1,
+    city: formValue.supplier.city,
+    postcode: formValue.supplier.postcode,
+    state: formValue.supplier.state,
+    country: formValue.supplier.country,
   } as ISupplier;
 
   // Base invoice data (shared across all recipients)

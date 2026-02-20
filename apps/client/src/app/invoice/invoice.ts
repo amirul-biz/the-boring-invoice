@@ -65,6 +65,13 @@ export class Invoice implements OnInit {
           registrationNumber: data.businessRegistrationNumber,
           msicCode: data.msicCode,
           businessActivityDescription: data.businessActivityDescription,
+          idType: data.idType,
+          sstRegistrationNumber: data.sstRegistrationNumber,
+          addressLine1: data.address?.addressLine1,
+          city: data.address?.city,
+          postcode: data.address?.postcode,
+          state: data.address?.state,
+          country: data.address?.country ?? 'MYS',
         });
       }),
       finalize(() => this.spinner.hide()),

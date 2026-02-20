@@ -20,6 +20,13 @@ export interface ISupplier {
   registrationNumber: string;
   msicCode: string;
   businessActivityDescription: string;
+  idType: string;
+  sstRegistrationNumber?: string;
+  addressLine1: string;
+  city: string;
+  postcode: string;
+  state: string;
+  country: string;
 }
 
 // 3. ITEM INTERFACE

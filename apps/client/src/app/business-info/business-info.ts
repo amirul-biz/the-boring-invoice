@@ -45,6 +45,12 @@ export class BusinessInfo implements OnInit {
           msicCode: data.msicCode,
           categoryCode: data.categoryCode,
           userSecretKey: data.userSecretKey,
+          idType: data.idType,
+          sstRegistrationNumber: data.sstRegistrationNumber,
+          addressLine1: data.address?.addressLine1,
+          city: data.address?.city,
+          postcode: data.address?.postcode,
+          state: data.address?.state,
         });
       }),
       finalize(() => this.spinner.hide()),
@@ -69,6 +75,15 @@ export class BusinessInfo implements OnInit {
       msicCode: formValue.msicCode!,
       categoryCode: formValue.categoryCode!,
       userSecretKey: formValue.userSecretKey!,
+      idType: formValue.idType!,
+      sstRegistrationNumber: formValue.sstRegistrationNumber ?? undefined,
+      address: {
+        addressLine1: formValue.addressLine1!,
+        city: formValue.city!,
+        postcode: formValue.postcode!,
+        state: formValue.state!,
+        country: 'MYS',
+      },
     };
 
     const request$ = this.mode === 'edit'

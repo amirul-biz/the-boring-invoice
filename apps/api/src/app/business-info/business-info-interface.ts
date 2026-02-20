@@ -1,3 +1,11 @@
+export interface BusinessAddress {
+  addressLine1: string;
+  city: string;
+  postcode: string;
+  state: string;
+  country: string;
+}
+
 export interface CreateBusinessInfoBody {
   businessName: string;
   businessEmail: string;
@@ -7,6 +15,9 @@ export interface CreateBusinessInfoBody {
   msicCode: string;
   categoryCode: string;
   userSecretKey: string;
+  idType: string;
+  sstRegistrationNumber?: string;
+  address: BusinessAddress;
 }
 
 export interface CreateBusinessInfoData extends CreateBusinessInfoBody {
@@ -22,6 +33,9 @@ export interface BusinessInfoPublicData {
   businessActivityDescription: string;
   msicCode: string;
   categoryCode: string;
+  idType?: string;
+  sstRegistrationNumber?: string;
+  address?: BusinessAddress;
 }
 
 export interface PaymentIntegrationCredential {
@@ -38,4 +52,7 @@ export interface UpdateBusinessInfoData {
   msicCode?: string;
   categoryCode?: string;
   userSecretKey?: string;
+  idType?: string;
+  sstRegistrationNumber?: string;
+  address?: Partial<BusinessAddress>;
 }

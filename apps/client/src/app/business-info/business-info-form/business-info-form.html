@@ -101,6 +101,78 @@
             rows="2"></textarea>
           <div class="invalid-feedback">Business activity description is required</div>
         </div>
+
+        <div class="col-12 col-md-4">
+          <label for="idType" class="form-label">ID Type</label>
+          <select
+            class="form-select"
+            [ngClass]="{'is-invalid': isFieldInvalid(form.controls.idType)}"
+            id="idType"
+            formControlName="idType">
+            <option value="">Select ID Type</option>
+            <option value="BRN">BRN (Business Registration No.)</option>
+            <option value="NRIC">NRIC (MyKad)</option>
+            <option value="PASSPORT">Passport</option>
+            <option value="ARMY">Army ID</option>
+          </select>
+          <div class="invalid-feedback">ID type is required</div>
+        </div>
+
+        <div class="col-12 col-md-4">
+          <label for="sstRegistrationNumber" class="form-label">SST Registration Number <span class="text-muted">(optional)</span></label>
+          <input
+            type="text"
+            class="form-control"
+            id="sstRegistrationNumber"
+            formControlName="sstRegistrationNumber"
+            placeholder="e.g. W10-1234-12345678">
+        </div>
+
+        <div class="col-12">
+          <label for="addressLine1" class="form-label">Business Address</label>
+          <input
+            type="text"
+            class="form-control"
+            [ngClass]="{'is-invalid': isFieldInvalid(form.controls.addressLine1)}"
+            id="addressLine1"
+            formControlName="addressLine1"
+            placeholder="Street address">
+          <div class="invalid-feedback">Address is required</div>
+        </div>
+
+        <div class="col-12 col-md-4">
+          <label for="postcode" class="form-label">Postcode</label>
+          <input
+            type="text"
+            class="form-control"
+            [ngClass]="{'is-invalid': isFieldInvalid(form.controls.postcode)}"
+            id="postcode"
+            formControlName="postcode">
+          <div class="invalid-feedback">Postcode is required</div>
+        </div>
+
+        <div class="col-12 col-md-4">
+          <label for="city" class="form-label">City</label>
+          <input
+            type="text"
+            class="form-control"
+            [ngClass]="{'is-invalid': isFieldInvalid(form.controls.city)}"
+            id="city"
+            formControlName="city">
+          <div class="invalid-feedback">City is required</div>
+        </div>
+
+        <div class="col-12 col-md-4">
+          <label for="state" class="form-label">State</label>
+          <input
+            type="text"
+            class="form-control"
+            [ngClass]="{'is-invalid': isFieldInvalid(form.controls.state)}"
+            id="state"
+            formControlName="state"
+            placeholder="e.g. 14">
+          <div class="invalid-feedback">State is required</div>
+        </div>
       </div>
     </div>
   </div>

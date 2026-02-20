@@ -98,7 +98,7 @@ export async function generatePdfInvoiceTemplate(
       const billUrl = invoiceData.billUrl || '';
 
       // ============ HEADER SECTION ============
-      const headerHeight = 136;
+      const headerHeight = 160;
 
       // Header background
       doc.rect(0, 0, pageWidth, headerHeight).fill(COLORS.primary);
@@ -148,6 +148,23 @@ export async function generatePdfInvoiceTemplate(
         .fontSize(8)
         .fillColor('#a0aec0')
         .text(supplierInfoParts.join('    '), margin, 118);
+
+      // Supplier address line
+      const addrParts = [
+        (supplier as any)?.addressLine1,
+        (supplier as any)?.postcode,
+        (supplier as any)?.city,
+        (supplier as any)?.state,
+        (supplier as any)?.country,
+      ].filter(Boolean);
+      if (addrParts.length > 0) {
+        doc.text(addrParts.join(', '), margin, 131);
+      }
+
+      // SST registration (conditional)
+      if ((supplier as any)?.sstRegistrationNumber) {
+        doc.text(`SST Reg: ${(supplier as any).sstRegistrationNumber}`, margin, 144);
+      }
 
       // ============ META SECTION ============
       let yPos = headerHeight + 35;

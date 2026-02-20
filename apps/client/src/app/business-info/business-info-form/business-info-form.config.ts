@@ -9,6 +9,12 @@ export interface BusinessInfoForm {
   msicCode: FormControl<string | null>;
   categoryCode: FormControl<string | null>;
   userSecretKey: FormControl<string | null>;
+  idType: FormControl<string | null>;
+  sstRegistrationNumber: FormControl<string | null>;
+  addressLine1: FormControl<string | null>;
+  city: FormControl<string | null>;
+  postcode: FormControl<string | null>;
+  state: FormControl<string | null>;
 }
 
 export function getBusinessInfoForm(): FormGroup<BusinessInfoForm> {
@@ -42,6 +48,27 @@ export function getBusinessInfoForm(): FormGroup<BusinessInfoForm> {
       validators: [Validators.required],
     }),
     userSecretKey: new FormControl(null, {
+      nonNullable: true,
+      validators: [Validators.required],
+    }),
+    idType: new FormControl('BRN', {
+      nonNullable: true,
+      validators: [Validators.required],
+    }),
+    sstRegistrationNumber: new FormControl<string | null>(null),
+    addressLine1: new FormControl(null, {
+      nonNullable: true,
+      validators: [Validators.required],
+    }),
+    city: new FormControl(null, {
+      nonNullable: true,
+      validators: [Validators.required],
+    }),
+    postcode: new FormControl(null, {
+      nonNullable: true,
+      validators: [Validators.required],
+    }),
+    state: new FormControl(null, {
       nonNullable: true,
       validators: [Validators.required],
     }),
