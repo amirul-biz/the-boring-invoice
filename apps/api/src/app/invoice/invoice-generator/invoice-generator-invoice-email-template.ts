@@ -23,8 +23,6 @@ function generateInvoiceEmailHtml(invoice: ProcessedInvoiceDto): string {
     )
     .join('');
 
-  const taxAmount = invoice.totalIncludingTax - invoice.totalExcludingTax;
-
   return `
 <!DOCTYPE html>
 <html lang="en">
@@ -134,8 +132,8 @@ function generateInvoiceEmailHtml(invoice: ProcessedInvoiceDto): string {
                         <td style="padding: 8px 0; color: #374151; font-size: 14px; text-align: right;">${formatCurrency(invoice.totalExcludingTax)}</td>
                       </tr>
                       <tr>
-                        <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Tax (${invoice.taxRate}%)</td>
-                        <td style="padding: 8px 0; color: #374151; font-size: 14px; text-align: right;">${formatCurrency(taxAmount)}</td>
+                        <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Total Tax</td>
+                        <td style="padding: 8px 0; color: #374151; font-size: 14px; text-align: right;">${formatCurrency(invoice.totalTaxAmount)}</td>
                       </tr>
                       <tr>
                         <td colspan="2" style="border-top: 2px solid #e5e7eb;"></td>
@@ -225,7 +223,7 @@ ${itemsList}
 SUMMARY
 ───────────────
 Subtotal: ${formatCurrency(invoice.totalExcludingTax)}
-Tax (${invoice.taxRate}%): ${formatCurrency(invoice.totalIncludingTax - invoice.totalExcludingTax)}
+Total Tax: ${formatCurrency(invoice.totalTaxAmount)}
 ━━━━━━━━━━━━━━━
 TOTAL: ${formatCurrency(invoice.totalIncludingTax)}
 

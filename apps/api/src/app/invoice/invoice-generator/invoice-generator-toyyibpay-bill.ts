@@ -38,12 +38,12 @@ interface CalculatedInvoiceDto {
   currency: string;
   supplier: SupplierDTO;
   recipient: RecipientDTO;
-  taxRate: number;
   dueDate: string;
   items: InvoiceItemDTO[];
   invoiceNo: string;
   issuedDate: string;
   totalExcludingTax: number;
+  totalTaxAmount: number;
   totalIncludingTax: number;
 }
 
@@ -261,7 +261,7 @@ Items:
 ${itemsList}
 
 Subtotal: ${invoiceOutput.currency} ${invoiceOutput.totalExcludingTax.toFixed(2)}
-Tax (${invoiceOutput.taxRate}%): ${invoiceOutput.currency} ${(invoiceOutput.totalIncludingTax - invoiceOutput.totalExcludingTax).toFixed(2)}
+Total Tax: ${invoiceOutput.currency} ${invoiceOutput.totalTaxAmount.toFixed(2)}
 Total: ${invoiceOutput.currency} ${invoiceOutput.totalIncludingTax.toFixed(2)}
 
 From: ${invoiceOutput.supplier.name}

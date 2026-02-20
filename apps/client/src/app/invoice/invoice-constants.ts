@@ -8,6 +8,19 @@ export const INVOICE_TYPES = [
 export const INVOICE_TYPE_LABEL: Record<string, string> =
   Object.fromEntries(INVOICE_TYPES.map(t => [t.value, t.label]));
 
+// Tax Types as per LHDN requirements
+export const TAX_TYPES = [
+  { value: 'SST',                  label: 'SST',                  rate: 6 },
+  { value: 'SERVICE_TAX',          label: 'Service Tax',          rate: 8 },
+  { value: 'TOURISM_TAX',          label: 'Tourism Tax',          rate: 0 },
+  { value: 'HIGH_VALUE_GOODS_TAX', label: 'High-Value Goods Tax', rate: 0 },
+  { value: 'NOT_APPLICABLE',       label: 'Not Applicable',       rate: 0 },
+  { value: 'EXEMPT',               label: 'Exempt',               rate: 0 },
+] as const;
+
+export const TAX_TYPE_LABEL: Record<string, string> =
+  Object.fromEntries(TAX_TYPES.map(t => [t.value, t.label]));
+
 // Malaysian State Codes as per LHDN requirements
 export const MALAYSIAN_STATES = [
   { code: '01', name: 'Johor' },

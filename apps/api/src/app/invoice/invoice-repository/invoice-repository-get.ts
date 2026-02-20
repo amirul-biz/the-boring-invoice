@@ -58,8 +58,8 @@ export async function getInvoiceAsReceipt(
 
       items: invoice.items as any as InvoiceItemDTO[],
 
-      taxRate: parseFloat(invoice.taxRate.toString()),
       totalExcludingTax: parseFloat(invoice.totalExcludingTax.toString()),
+      totalTaxAmount: parseFloat(invoice.totalTaxAmount.toString()),
       totalIncludingTax: parseFloat(invoice.totalIncludingTax.toString()),
 
       billUrl: invoice.billUrl || '',

@@ -17,7 +17,7 @@ import {
 } from './invoice-form/invoice-form.config';
 import { InvoiceService } from './invoice-service';
 import { BusinessInfoService } from '../business-info/business-info-service';
-import { MALAYSIAN_STATES, CLASSIFICATION_CODES, INVOICE_TYPES } from './invoice-constants';
+import { MALAYSIAN_STATES, CLASSIFICATION_CODES, INVOICE_TYPES, TAX_TYPES } from './invoice-constants';
 import { parseInvoiceTemplate } from './invoice-template-parser';
 import { tap, finalize } from 'rxjs';
 import { saveAs } from 'file-saver';
@@ -35,6 +35,7 @@ export class Invoice implements OnInit {
   spinner = inject(NgxSpinnerService);
   private route = inject(ActivatedRoute);
   invoiceTypes = INVOICE_TYPES;
+  taxTypes = TAX_TYPES;
   malaysianStates = MALAYSIAN_STATES;
   classificationCodes = CLASSIFICATION_CODES;
   Validators = Validators;

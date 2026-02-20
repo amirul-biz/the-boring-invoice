@@ -66,8 +66,8 @@ model Invoice {
   items                   Json          @db.JsonB
 
   // === Totals ===
-  taxRate                 Decimal       @db.Decimal(5, 2)
   totalExcludingTax       Decimal       @db.Decimal(18, 2)
+  totalTaxAmount          Decimal       @db.Decimal(18, 2)
   totalIncludingTax       Decimal       @db.Decimal(18, 2)
 
   // === Payment ===
