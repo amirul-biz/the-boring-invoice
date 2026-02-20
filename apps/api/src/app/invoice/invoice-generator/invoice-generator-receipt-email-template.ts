@@ -8,8 +8,13 @@ function generateReceiptEmailHtml(receipt: ReceiptDTO): string {
   const formatDateTime = (dateTimeStr: string) => {
     const date = new Date(dateTimeStr);
     return date.toLocaleString('en-MY', {
-      dateStyle: 'medium',
-      timeStyle: 'short',
+      timeZone: 'Asia/Kuala_Lumpur',
+      year: 'numeric',
+      month: 'short',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
     });
   };
 
@@ -236,8 +241,13 @@ function generateReceiptEmailText(receipt: ReceiptDTO): string {
   const formatDateTime = (dateTimeStr: string) => {
     const date = new Date(dateTimeStr);
     return date.toLocaleString('en-MY', {
-      dateStyle: 'medium',
-      timeStyle: 'short',
+      timeZone: 'Asia/Kuala_Lumpur',
+      year: 'numeric',
+      month: 'short',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
     });
   };
 

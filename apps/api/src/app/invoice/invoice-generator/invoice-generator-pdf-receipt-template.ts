@@ -25,31 +25,38 @@ function formatAddress(recipient: ReceiptDTO['recipient']): string {
 }
 
 /**
- * Format date for display
+ * Format date for display in MYT (Malaysia Time, UTC+8)
  */
 function formatDate(dateString: string): string {
   if (!dateString) return '';
-  if (dateString.includes('T')) {
-    return dateString.split('T')[0];
+  try {
+    return new Date(dateString).toLocaleDateString('en-MY', {
+      timeZone: 'Asia/Kuala_Lumpur',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+  } catch {
+    return dateString;
   }
-  return dateString;
 }
 
 /**
- * Format datetime for display (includes time)
+ * Format datetime for display in MYT (Malaysia Time, UTC+8)
  */
 function formatDateTime(dateString: string): string {
   if (!dateString) return '';
   try {
     const date = new Date(dateString);
     return date.toLocaleString('en-MY', {
+      timeZone: 'Asia/Kuala_Lumpur',
       year: 'numeric',
       month: 'short',
       day: '2-digit',
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',
-      hour12: true,
+      hour12: false,
     });
   } catch {
     return dateString;

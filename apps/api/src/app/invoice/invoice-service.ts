@@ -417,10 +417,8 @@ export class InvoiceService {
 
     const paymentStatus = match.billpaymentStatus === '1' ? InvoiceStatus.PAID : InvoiceStatus.CANCELLED;
 
-    // Sanitize transaction time
-    const sanitizedTransactionTime = callbackData.transaction_time
-      ? new Date(callbackData.transaction_time.replace(' ', 'T')).toISOString()
-      : new Date().toISOString();
+    // Use billPaymentDate from getBillTransactions — more reliable than callbackData.transaction_time
+    const sanitizedTransactionTime = this.parseBillPaymentDate(match.billPaymentDate);
 
     // Step 3: Update invoice status in DB
     const updateData: UpdateInvoiceStatusData = {
@@ -462,6 +460,26 @@ export class InvoiceService {
     this.logger.error(
       `Payment callback for ${callbackData.order_id} permanently failed after 5 attempts — moved to failed-payment-callback queue`,
     );
+  }
+
+  /**
+   * Parse billPaymentDate from ToyyibPay getBillTransactions response.
+   * Handles both 24h ("DD-MM-YYYY HH:MM:SS") and 12h ("DD-MM-YYYY HH:MM:SS am/pm") formats in MYT (UTC+8).
+   * Returns UTC ISO string for DB storage.
+   */
+  private parseBillPaymentDate(billPaymentDate: string): string {
+    if (!billPaymentDate) return new Date().toISOString();
+    const [datePart, timePart, meridiem] = billPaymentDate.trim().split(' ');
+    const [day, month, year] = datePart.split('-');
+    const [, m, s] = timePart.split(':').map(Number);
+    let h = Number(timePart.split(':')[0]);
+    if (meridiem) {
+      const isPm = meridiem.toLowerCase() === 'pm';
+      if (isPm && h !== 12) h += 12;
+      if (!isPm && h === 12) h = 0;
+    }
+    const time24 = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    return new Date(`${year}-${month}-${day}T${time24}+08:00`).toISOString();
   }
 
   async getInvoiceList(encodedBusinessId: string, userId: string, query: InvoiceListQuery): Promise<PaginatedInvoiceList> {
