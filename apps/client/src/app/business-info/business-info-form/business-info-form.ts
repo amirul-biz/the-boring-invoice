@@ -13,6 +13,12 @@ export class BusinessInfoFormComponent {
   @Input({ required: true }) mode!: string;
   @Output() save = new EventEmitter<void>();
 
+  showSecretKey = false;
+
+  toggleSecretKey() {
+    this.showSecretKey = !this.showSecretKey;
+  }
+
   isFieldInvalid(control: any): boolean {
     return control?.invalid && (control?.dirty || control?.touched);
   }
