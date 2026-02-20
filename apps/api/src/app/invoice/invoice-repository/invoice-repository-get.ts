@@ -89,6 +89,23 @@ export async function getInvoiceAsReceipt(
 }
 
 /**
+ * Find invoice by number — returns null if not found, never throws
+ * Use this for idempotency checks where absence is a valid state
+ */
+export async function findInvoiceByNumber(
+  prisma: PrismaService,
+  invoiceNo: string,
+  logger: Logger,
+) {
+  try {
+    return await prisma.invoice.findUnique({ where: { invoiceNo } });
+  } catch (error) {
+    logger.error(`Failed to find invoice ${invoiceNo}: ${error.message}`, error.stack);
+    throw error;
+  }
+}
+
+/**
  * Retrieve invoice data by invoice number
  * General purpose retrieval without receipt validation
  *

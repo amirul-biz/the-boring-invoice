@@ -21,7 +21,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { CreateInvoiceInputDTO, InvoiceListQueryDTO } from './invoice-dto';
-import { InvoiceService } from './invoice-service';
+import { InvoiceService, RetryInvoiceMessage, RetryPaymentCallbackMessage } from './invoice-service';
 import { EventPattern } from '@nestjs/microservices';
 import { generateInvoiceTemplate } from './invoice-template-generator';
 import { UserById } from '../decorator/user.decorator';
@@ -155,6 +155,16 @@ export class InvoiceController {
   }
 
   /**
+   * Event consumer for retry-invoice queue
+   * Waits 1 minute then retries idempotent invoice creation
+   * Re-emits with incremented attemptNo or routes to failed-invoice after 5 attempts
+   */
+  @EventPattern('retry-invoice')
+  async receiverRetryInvoice(data: RetryInvoiceMessage): Promise<void> {
+    await this.invoiceService.processInvoiceRetry(data);
+  }
+
+  /**
    * Event consumer for queued payment callback updates
    * Processes payment callbacks from RabbitMQ queue
    * This avoids timeout issues in serverless environments
@@ -164,5 +174,15 @@ export class InvoiceController {
     callbackData: ToyyibPayCallback,
   ): Promise<void> {
     await this.invoiceService.processPaymentCallbackFromQueue(callbackData);
+  }
+
+  /**
+   * Event consumer for retry-payment-callback queue
+   * Waits 1 minute then retries payment callback processing
+   * Re-emits with incremented attemptNo or routes to failed-payment-callback after 5 attempts
+   */
+  @EventPattern('retry-payment-callback')
+  async receiverRetryPaymentCallback(data: RetryPaymentCallbackMessage): Promise<void> {
+    await this.invoiceService.processPaymentCallbackRetry(data);
   }
 }

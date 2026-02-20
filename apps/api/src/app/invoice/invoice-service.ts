@@ -4,6 +4,7 @@ import { MailerService } from '@nestjs-modules/mailer';
 import { RabbitMqProducerService } from '../rabbit-mq/rabbit-mq-producer.service.config';
 import { InvoiceStatus } from '@prisma/client';
 import {
+  CalculatedInvoiceDto,
   CreateInvoiceInputDTO,
   ProcessedInvoiceDto,
 } from './invoice-dto';
@@ -24,14 +25,40 @@ import {
   saveBillUrl,
   setPendingStatus,
 } from './invoice-repository/invoice-repository-update-status';
-import { getInvoiceAsReceipt, getInvoiceByNumber } from './invoice-repository/invoice-repository-get';
+import { findInvoiceByNumber, getInvoiceAsReceipt, getInvoiceByNumber } from './invoice-repository/invoice-repository-get';
 import { ToyyibPayUtil } from './invoice-generator/invoice-generator-toyyibpay-bill';
 import { getInvoiceList, InvoiceListQuery, PaginatedInvoiceList } from './invoice-repository/invoice-repository-list';
+
+export interface RetryInvoiceMessage {
+  businessId: string;
+  calculatedInvoice: CalculatedInvoiceDto;
+  attemptNo: number;
+}
+
+export interface ToyyibPayCallbackData {
+  refno: string;
+  status: string;
+  reason: string;
+  billcode: string;
+  order_id: string;
+  amount: string;
+  status_id: string;
+  msg: string;
+  transaction_id: string;
+  fpx_transaction_id: string;
+  hash: string;
+  transaction_time: string;
+}
+
+export interface RetryPaymentCallbackMessage {
+  callbackData: ToyyibPayCallbackData;
+  attemptNo: number;
+}
 
 @Injectable()
 export class InvoiceService {
   private readonly logger = new Logger(InvoiceService.name);
-  private readonly BATCH_DELAY_MS = 1500; // Delay between invoices to avoid ToyyibPay/SMTP rate limits
+  private readonly BATCH_DELAY_MS = 1500;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -43,9 +70,6 @@ export class InvoiceService {
 
   /**
    * Queue invoice generation for asynchronous processing
-   *
-   * @param invoiceDataList - Array of invoice data to process
-   * @returns Success confirmation with timestamp
    */
   async queueInvoiceGeneration(
     invoiceDataList: CreateInvoiceInputDTO[],
@@ -82,76 +106,108 @@ export class InvoiceService {
   }
 
   /**
-   * Process complete invoice creation workflow
-   * Calculate -> Integrate Payment -> Save to DB -> Send Email
+   * Idempotent invoice creation workflow
+   * Receives already-calculated invoice data — checks DB state at each step and skips what is already done
    *
-   * @param inputData - Raw invoice input data
-   * @returns Created invoice data with payment URL
+   * Step 1: findInvoiceByNumber → null → createInvoice(DRAFT) / found → skip
+   * Step 2: billCode null → processPaymentIntegration → saveBillUrl / set → skip
+   * Step 3: status DRAFT → setPendingStatus / other → skip
+   * Step 4: sendInvoiceEmail (fire & forget)
    */
   async processInvoiceCreation(
-    inputData: CreateInvoiceInputDTO,
+    calculatedInvoice: CalculatedInvoiceDto,
     paymentIntegrationCredential: PaymentIntegrationCredential,
     businessId: string,
   ): Promise<ProcessedInvoiceDto> {
     try {
       this.logger.log(
-        `Processing invoice creation for: ${inputData.recipient.name}`,
+        `Processing invoice creation for: ${calculatedInvoice.invoiceNo}`,
       );
 
-      // Step 1: Calculate invoice data (totals, invoice number)
-      const calculatedInvoice = await calculateInvoiceData(
-        inputData,
-        this.logger,
-      );
-
-      // Step 2: Save to DB as DRAFT first — ensures a record exists before any external call
-      await createInvoice(
-        this.prisma,
-        { ...calculatedInvoice, status: 'DRAFT' },
-        businessId,
-        this.logger,
-      );
-
-      // Step 3: Create ToyyibPay payment bill
-      const processedInvoice = await processPaymentIntegration(
-        calculatedInvoice,
-        paymentIntegrationCredential,
-        this.logger,
-      );
-
-      // Step 4: Save billCode and billUrl to DB — status stays DRAFT
-      await saveBillUrl(
-        this.prisma,
-        calculatedInvoice.invoiceNo,
-        processedInvoice.billCode,
-        processedInvoice.billUrl,
-        this.logger,
-      );
-
-      // Step 5: Activate invoice status to PENDING
-      await setPendingStatus(
+      // Step 1: Check if invoice already exists — create DRAFT only if not
+      let existingInvoice = await findInvoiceByNumber(
         this.prisma,
         calculatedInvoice.invoiceNo,
         this.logger,
       );
 
-      // Step 6: Send invoice email (NON-CRITICAL - fire and forget)
+      if (!existingInvoice) {
+        await createInvoice(
+          this.prisma,
+          { ...calculatedInvoice, status: 'DRAFT' },
+          businessId,
+          this.logger,
+        );
+        existingInvoice = await findInvoiceByNumber(
+          this.prisma,
+          calculatedInvoice.invoiceNo,
+          this.logger,
+        );
+      } else {
+        this.logger.log(
+          `Invoice ${calculatedInvoice.invoiceNo} already exists (${existingInvoice.status}) — resuming`,
+        );
+      }
+
+      // Step 2: Create ToyyibPay bill only if billCode not yet saved
+      let processedInvoice: ProcessedInvoiceDto;
+
+      if (!existingInvoice.billCode) {
+        processedInvoice = await processPaymentIntegration(
+          calculatedInvoice,
+          paymentIntegrationCredential,
+          this.logger,
+        );
+
+        await saveBillUrl(
+          this.prisma,
+          calculatedInvoice.invoiceNo,
+          processedInvoice.billCode,
+          processedInvoice.billUrl,
+          this.logger,
+        );
+      } else {
+        this.logger.log(
+          `Invoice ${calculatedInvoice.invoiceNo} already has billCode — skipping ToyyibPay`,
+        );
+        processedInvoice = {
+          ...calculatedInvoice,
+          billCode: existingInvoice.billCode,
+          billUrl: existingInvoice.billUrl,
+          status: existingInvoice.status,
+        };
+      }
+
+      // Step 3: Activate to PENDING only if still DRAFT
+      if (existingInvoice.status === InvoiceStatus.DRAFT) {
+        await setPendingStatus(
+          this.prisma,
+          calculatedInvoice.invoiceNo,
+          this.logger,
+        );
+      } else {
+        this.logger.log(
+          `Invoice ${calculatedInvoice.invoiceNo} already ${existingInvoice.status} — skipping setPendingStatus`,
+        );
+      }
+
+      // Step 4: Send invoice email (NON-CRITICAL — fire and forget)
       sendInvoiceEmail(this.mailService, processedInvoice, this.logger).catch(
         () => {
           this.logger.warn(
-            `Email sending failed but invoice created: ${processedInvoice.invoiceNo}`,
+            `Email failed for ${processedInvoice.invoiceNo} — resend manually or wait for SES migration`,
           );
         },
       );
 
       this.logger.log(
-        `Invoice creation completed successfully: ${processedInvoice.invoiceNo}`,
+        `Invoice creation completed: ${processedInvoice.invoiceNo}`,
       );
 
       return processedInvoice;
     } catch (error) {
       this.logger.error(
-        `Invoice creation failed: ${error.message}`,
+        `Invoice creation failed for ${calculatedInvoice.invoiceNo}: ${error.message}`,
         error.stack,
       );
       throw error;
@@ -159,11 +215,9 @@ export class InvoiceService {
   }
 
   /**
-   * Process multiple invoices (from queue consumer)
-   * Fetches payment credential once, then processes each invoice with error isolation
-   *
-   * @param businessId - Business ID to fetch payment credentials
-   * @param invoiceDataList - Array of invoice data to process
+   * Process multiple invoices from queue consumer
+   * Calculates each invoice first (generates invoiceNo), then attempts creation once.
+   * On failure, emits to retry-invoice queue immediately — does NOT block the batch.
    */
   async processInvoiceBatch(
     businessId: string,
@@ -177,13 +231,18 @@ export class InvoiceService {
 
     for (let i = 0; i < invoiceDataList.length; i++) {
       const invoiceData = invoiceDataList[i];
+
+      // Calculate first (pure computation, generates invoiceNo) — invoiceNo is stable for retries
+      const calculatedInvoice = await calculateInvoiceData(invoiceData, this.logger);
+
       try {
-        await this.processInvoiceCreation(invoiceData, paymentIntegrationCredential, businessId);
+        await this.processInvoiceCreation(calculatedInvoice, paymentIntegrationCredential, businessId);
       } catch (error) {
         this.logger.error(
-          `Failed to process invoice in batch for ${invoiceData.recipient.name}: ${error.message}`,
+          `Invoice ${calculatedInvoice.invoiceNo} failed — emitting to retry queue: ${error.message}`,
           error.stack,
         );
+        this.sendToRetryQueue({ businessId, calculatedInvoice, attemptNo: 1 });
       }
 
       if (i < invoiceDataList.length - 1) {
@@ -195,32 +254,76 @@ export class InvoiceService {
   }
 
   /**
-   * Queue payment callback for asynchronous processing
-   * This avoids timeout issues in serverless environments
-   *
-   * @param callbackData - Payment callback data from ToyyibPay
-   * @returns Success confirmation
+   * Process a single invoice from the retry-invoice queue
+   * Waits 1 minute then retries — idempotent, resumes from DB state
+   * On failure, re-emits with incremented attemptNo or routes to failed-invoice
    */
-  async queuePaymentCallback(callbackData: {
-    refno: string;
-    status: string;
-    reason: string;
-    billcode: string;
-    order_id: string;
-    amount: string;
-    status_id: string;
-    msg: string;
-    transaction_id: string;
-    fpx_transaction_id: string;
-    hash: string;
-    transaction_time: string;
-  }): Promise<{ message: string }> {
+  async processInvoiceRetry(msg: RetryInvoiceMessage): Promise<void> {
+    this.logger.log(
+      `Retry attempt ${msg.attemptNo}/5 for invoice ${msg.calculatedInvoice.invoiceNo} — waiting 1 minute`,
+    );
+
+    await new Promise(resolve => setTimeout(resolve, 60_000));
+
+    const paymentIntegrationCredential = await this.businessInfoService.getPaymentIntegrationCredential(msg.businessId);
+
+    try {
+      await this.processInvoiceCreation(
+        msg.calculatedInvoice,
+        paymentIntegrationCredential,
+        msg.businessId,
+      );
+      this.logger.log(
+        `Retry ${msg.attemptNo}/5 succeeded for invoice ${msg.calculatedInvoice.invoiceNo}`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Retry ${msg.attemptNo}/5 failed for invoice ${msg.calculatedInvoice.invoiceNo}: ${error.message}`,
+        error.stack,
+      );
+
+      if (msg.attemptNo < 5) {
+        this.sendToRetryQueue({ ...msg, attemptNo: msg.attemptNo + 1 });
+      } else {
+        this.sendToFailedQueue(msg.businessId, msg.calculatedInvoice, error);
+      }
+    }
+  }
+
+  private sendToRetryQueue(msg: RetryInvoiceMessage): void {
+    this.queueService.sendMessageQue('retry-invoice', msg);
+    this.logger.log(
+      `Invoice ${msg.calculatedInvoice.invoiceNo} emitted to retry-invoice (attempt ${msg.attemptNo}/5)`,
+    );
+  }
+
+  private sendToFailedQueue(
+    businessId: string,
+    calculatedInvoice: CalculatedInvoiceDto,
+    error: Error,
+  ): void {
+    // TODO: decide whether to delete the DRAFT invoice or mark as CANCELLED — KIV
+    this.queueService.sendMessageQue('failed-invoice', {
+      businessId,
+      calculatedInvoice,
+      error: error.message,
+      failedAt: new Date().toISOString(),
+    });
+    this.logger.error(
+      `Invoice ${calculatedInvoice.invoiceNo} permanently failed after 5 attempts — moved to failed-invoice queue`,
+    );
+  }
+
+  /**
+   * Queue payment callback for asynchronous processing
+   */
+  async queuePaymentCallback(callbackData: ToyyibPayCallbackData): Promise<{ message: string }> {
     try {
       this.logger.log(
         `Queueing payment callback for invoice: ${callbackData.order_id}`,
       );
 
-      await this.queueService.sendMessageQue(
+      this.queueService.sendMessageQue(
         'receiver-update-invoice',
         callbackData,
       );
@@ -238,99 +341,145 @@ export class InvoiceService {
   }
 
   /**
-   * Process payment callback from RabbitMQ queue
-   * Update invoice status and send receipt email if paid
-   *
-   * @param callbackData - Payment callback data from ToyyibPay
+   * Process payment callback — first attempt from queue consumer
+   * On failure, emits to retry-payment-callback instead of throwing
    */
-  async processPaymentCallbackFromQueue(callbackData: {
-    refno: string;
-    status: string;
-    reason: string;
-    billcode: string;
-    order_id: string;
-    amount: string;
-    status_id: string;
-    msg: string;
-    transaction_id: string;
-    fpx_transaction_id: string;
-    hash: string;
-    transaction_time: string;
-  }): Promise<void> {
+  async processPaymentCallbackFromQueue(callbackData: ToyyibPayCallbackData): Promise<void> {
     try {
-      this.logger.log(
-        `Processing payment callback for invoice: ${callbackData.order_id}`,
-      );
-
-      const invoiceNo = callbackData.order_id;
-
-      this.logger.log(`[Callback] order_id=${invoiceNo} billcode=${callbackData.billcode}`);
-
-      // Step 1: Look up invoice to confirm it exists in our system
-      const invoice = await getInvoiceByNumber(this.prisma, invoiceNo, this.logger);
-      this.logger.log(`[Callback] Invoice found: ${invoice.invoiceNo}`);
-
-      // Step 2: Query ToyyibPay directly for authoritative payment status
-      const transactions = await ToyyibPayUtil.fetchBillTransactions(callbackData.billcode);
-      this.logger.log(`[Callback] getBillTransactions returned ${transactions.length} record(s) for billCode=${callbackData.billcode}`);
-
-      const match = transactions.find(t => t.billExternalReferenceNo === invoiceNo);
-      if (!match) {
-        this.logger.warn(`[Callback] No matching transaction for invoiceNo=${invoiceNo} in billCode=${callbackData.billcode}`);
-        return;
-      }
-
-      this.logger.log(`[Callback] Matched transaction — billpaymentStatus: ${match.billpaymentStatus}`);
-
-      const paymentStatus = match.billpaymentStatus === '1' ? InvoiceStatus.PAID : InvoiceStatus.CANCELLED;
-
-      // Sanitize transaction time
-      const sanitizedTransactionTime = callbackData.transaction_time
-        ? new Date(callbackData.transaction_time.replace(' ', 'T')).toISOString()
-        : new Date().toISOString();
-
-      // Update invoice status
-      const updateData: UpdateInvoiceStatusData = {
-        invoiceNo,
-        status: paymentStatus,
-        transactionId: callbackData.transaction_id,
-        transactionTime: sanitizedTransactionTime,
-      };
-
-      await updateInvoiceStatus(this.prisma, updateData, this.logger);
-
-      this.logger.log(`[Callback] Invoice ${invoiceNo} status updated to ${paymentStatus}`);
-
-      // If payment successful, send receipt email
-      if (paymentStatus === InvoiceStatus.PAID) {
-        this.logger.log(`[Callback] Payment successful, queueing receipt email`);
-
-        // Get invoice data as receipt
-        const receiptData = await getInvoiceAsReceipt(
-          this.prisma,
-          invoiceNo,
-          this.logger,
-        );
-
-        // Send receipt email (non-blocking)
-        sendReceiptEmail(this.mailService, receiptData, this.logger).catch(
-          (error) => {
-            this.logger.warn(
-              `Receipt email failed but payment processed: ${invoiceNo}`,
-            );
-          },
-        );
-      }
-
-      this.logger.log(`Payment callback processed successfully from queue`);
+      await this.executePaymentCallbackCore(callbackData);
     } catch (error) {
       this.logger.error(
-        `Payment callback processing failed: ${error.message}`,
+        `Payment callback failed for ${callbackData.order_id} — emitting to retry queue: ${error.message}`,
         error.stack,
       );
-      // Re-throw to let RabbitMQ handle retry logic
-      throw error;
+      this.sendToPaymentRetryQueue({ callbackData, attemptNo: 1 });
     }
+  }
+
+  /**
+   * Process a payment callback from the retry-payment-callback queue
+   * Waits 1 minute then retries — re-emits with incremented attemptNo or routes to failed queue
+   */
+  async processPaymentCallbackRetry(msg: RetryPaymentCallbackMessage): Promise<void> {
+    this.logger.log(
+      `Payment callback retry attempt ${msg.attemptNo}/5 for invoice ${msg.callbackData.order_id} — waiting 1 minute`,
+    );
+
+    await new Promise(resolve => setTimeout(resolve, 60_000));
+
+    try {
+      await this.executePaymentCallbackCore(msg.callbackData);
+      this.logger.log(
+        `Payment callback retry ${msg.attemptNo}/5 succeeded for invoice ${msg.callbackData.order_id}`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Payment callback retry ${msg.attemptNo}/5 failed for invoice ${msg.callbackData.order_id}: ${error.message}`,
+        error.stack,
+      );
+
+      if (msg.attemptNo < 5) {
+        this.sendToPaymentRetryQueue({ ...msg, attemptNo: msg.attemptNo + 1 });
+      } else {
+        this.sendToPaymentFailedQueue(msg.callbackData, error);
+      }
+    }
+  }
+
+  /**
+   * Core payment callback processing — shared by first attempt and retries
+   * Throws on failure so callers can handle retry logic
+   */
+  private async executePaymentCallbackCore(callbackData: ToyyibPayCallbackData): Promise<void> {
+    this.logger.log(
+      `Processing payment callback for invoice: ${callbackData.order_id}`,
+    );
+
+    const invoiceNo = callbackData.order_id;
+
+    this.logger.log(`[Callback] order_id=${invoiceNo} billcode=${callbackData.billcode}`);
+
+    // Step 1: Look up invoice to confirm it exists in our system
+    const invoice = await getInvoiceByNumber(this.prisma, invoiceNo, this.logger);
+    this.logger.log(`[Callback] Invoice found: ${invoice.invoiceNo}`);
+
+    // Step 2: Query ToyyibPay directly for authoritative payment status
+    const transactions = await ToyyibPayUtil.fetchBillTransactions(callbackData.billcode);
+    this.logger.log(`[Callback] getBillTransactions returned ${transactions.length} record(s) for billCode=${callbackData.billcode}`);
+
+    const match = transactions.find(t => t.billExternalReferenceNo === invoiceNo);
+    if (!match) {
+      this.logger.warn(`[Callback] No matching transaction for invoiceNo=${invoiceNo} in billCode=${callbackData.billcode}`);
+      return;
+    }
+
+    this.logger.log(`[Callback] Matched transaction — billpaymentStatus: ${match.billpaymentStatus}`);
+
+    const paymentStatus = match.billpaymentStatus === '1' ? InvoiceStatus.PAID : InvoiceStatus.CANCELLED;
+
+    // Use billPaymentDate from getBillTransactions — more reliable than callbackData.transaction_time
+    const sanitizedTransactionTime = this.parseBillPaymentDate(match.billPaymentDate);
+
+    // Step 3: Update invoice status in DB
+    const updateData: UpdateInvoiceStatusData = {
+      invoiceNo,
+      status: paymentStatus,
+      transactionId: callbackData.transaction_id,
+      transactionTime: sanitizedTransactionTime,
+    };
+
+    await updateInvoiceStatus(this.prisma, updateData, this.logger);
+
+    this.logger.log(`[Callback] Invoice ${invoiceNo} status updated to ${paymentStatus}`);
+
+    // Step 4: Send receipt email if paid (fire & forget — duplicate receipts are acceptable)
+    if (paymentStatus === InvoiceStatus.PAID) {
+      const receiptData = await getInvoiceAsReceipt(this.prisma, invoiceNo, this.logger);
+
+      sendReceiptEmail(this.mailService, receiptData, this.logger).catch(() => {
+        this.logger.warn(`Receipt email failed but payment processed: ${invoiceNo}`);
+      });
+    }
+
+    this.logger.log(`Payment callback processed successfully: ${invoiceNo}`);
+  }
+
+  private sendToPaymentRetryQueue(msg: RetryPaymentCallbackMessage): void {
+    this.queueService.sendMessageQue('retry-payment-callback', msg);
+    this.logger.log(
+      `Payment callback for ${msg.callbackData.order_id} emitted to retry-payment-callback (attempt ${msg.attemptNo}/5)`,
+    );
+  }
+
+  private sendToPaymentFailedQueue(callbackData: ToyyibPayCallbackData, error: Error): void {
+    this.queueService.sendMessageQue('failed-payment-callback', {
+      callbackData,
+      error: error.message,
+      failedAt: new Date().toISOString(),
+    });
+    this.logger.error(
+      `Payment callback for ${callbackData.order_id} permanently failed after 5 attempts — moved to failed-payment-callback queue`,
+    );
+  }
+
+  /**
+   * Parse billPaymentDate from ToyyibPay getBillTransactions response.
+   * Handles both 24h ("DD-MM-YYYY HH:MM:SS") and 12h ("DD-MM-YYYY HH:MM:SS am/pm") formats in MYT (UTC+8).
+   * Returns UTC ISO string for DB storage.
+   */
+  private parseBillPaymentDate(billPaymentDate: string): string {
+    if (!billPaymentDate) return new Date().toISOString();
+    const [datePart, timePart, meridiem] = billPaymentDate.trim().split(' ');
+    const [day, month, year] = datePart.split('-');
+    const [, m, s] = timePart.split(':').map(Number);
+    let h = Number(timePart.split(':')[0]);
+    if (meridiem) {
+      const isPm = meridiem.toLowerCase() === 'pm';
+      if (isPm && h !== 12) h += 12;
+      if (!isPm && h === 12) h = 0;
+    }
+    const time24 = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    return new Date(`${year}-${month}-${day}T${time24}+08:00`).toISOString();
   }
 
   async getInvoiceList(encodedBusinessId: string, userId: string, query: InvoiceListQuery): Promise<PaginatedInvoiceList> {
