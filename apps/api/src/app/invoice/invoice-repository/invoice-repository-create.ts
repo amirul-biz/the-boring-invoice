@@ -39,9 +39,10 @@ export async function createInvoice(
 
         items: invoiceData.items as unknown as Prisma.JsonArray,
 
-        totalExcludingTax: invoiceData.totalExcludingTax,
+        totalNetAmount: invoiceData.totalNetAmount,
         totalTaxAmount: invoiceData.totalTaxAmount,
-        totalIncludingTax: invoiceData.totalIncludingTax,
+        totalDiscountAmount: invoiceData.totalDiscountAmount,
+        totalPayableAmount: invoiceData.totalPayableAmount,
 
         invoiceVersion: invoiceData.invoiceVersion,
 

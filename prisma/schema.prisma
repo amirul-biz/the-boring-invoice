@@ -31,6 +31,7 @@ model BusinessInformation {
   idType                          IdType?
   sstRegistrationNumber           String?
   address                         Json?    @db.JsonB
+  invoiceVersion                  String   @default("1.0")
   createdAt                       DateTime @default(now())
   updatedAt                       DateTime @updatedAt
 
@@ -69,9 +70,10 @@ model Invoice {
   items                   Json          @db.JsonB
 
   // === Totals ===
-  totalExcludingTax       Decimal       @db.Decimal(18, 2)
+  totalNetAmount          Decimal       @db.Decimal(18, 2)
   totalTaxAmount          Decimal       @db.Decimal(18, 2)
-  totalIncludingTax       Decimal       @db.Decimal(18, 2)
+  totalDiscountAmount     Decimal       @db.Decimal(18, 2) @default(0)
+  totalPayableAmount      Decimal       @db.Decimal(18, 2)
 
   // === Payment ===
   billCode                String?
@@ -79,7 +81,8 @@ model Invoice {
   transactionId           String?
   transactionTime         DateTime?
 
-  // === LHDN (future: UIN, validation, etc.) ===
+  // === LHDN ===
+  invoiceVersion          String        @default("1.0")
   lhdnMeta                Json?         @db.JsonB
 
   createdAt               DateTime      @default(now())

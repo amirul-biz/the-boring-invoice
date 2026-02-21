@@ -100,7 +100,7 @@ function generateReceiptEmailHtml(receipt: ReceiptDTO): string {
                         </td>
                         <td style="width: 50%; text-align: right;">
                           <p style="margin: 0; color: #64748b; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Amount Paid</p>
-                          <p style="margin: 4px 0 0; color: #059669; font-size: 24px; font-weight: 700;">${formatCurrency(receipt.totalIncludingTax)}</p>
+                          <p style="margin: 4px 0 0; color: #059669; font-size: 24px; font-weight: 700;">${formatCurrency(receipt.totalPayableAmount)}</p>
                         </td>
                       </tr>
                       <tr>
@@ -168,9 +168,13 @@ function generateReceiptEmailHtml(receipt: ReceiptDTO): string {
                   <td style="width: 40%;">
                     <table role="presentation" style="width: 100%;">
                       <tr>
-                        <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Subtotal</td>
-                        <td style="padding: 8px 0; color: #374151; font-size: 14px; text-align: right;">${formatCurrency(receipt.totalExcludingTax)}</td>
+                        <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Net Amount</td>
+                        <td style="padding: 8px 0; color: #374151; font-size: 14px; text-align: right;">${formatCurrency(receipt.totalNetAmount)}</td>
                       </tr>
+                      ${receipt.totalDiscountAmount > 0 ? `<tr>
+                        <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Total Discount</td>
+                        <td style="padding: 8px 0; color: #374151; font-size: 14px; text-align: right;">\u2212${formatCurrency(receipt.totalDiscountAmount)}</td>
+                      </tr>` : ''}
                       <tr>
                         <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Total Tax</td>
                         <td style="padding: 8px 0; color: #374151; font-size: 14px; text-align: right;">${formatCurrency(receipt.totalTaxAmount)}</td>
@@ -180,7 +184,7 @@ function generateReceiptEmailHtml(receipt: ReceiptDTO): string {
                       </tr>
                       <tr>
                         <td style="padding: 12px 0; color: #1e293b; font-size: 16px; font-weight: 700;">Total Paid</td>
-                        <td style="padding: 12px 0; color: #059669; font-size: 18px; font-weight: 700; text-align: right;">${formatCurrency(receipt.totalIncludingTax)}</td>
+                        <td style="padding: 12px 0; color: #059669; font-size: 18px; font-weight: 700; text-align: right;">${formatCurrency(receipt.totalPayableAmount)}</td>
                       </tr>
                     </table>
                   </td>
@@ -278,10 +282,10 @@ ${itemsList}
 
 SUMMARY
 ───────────────
-Subtotal: ${formatCurrency(receipt.totalExcludingTax)}
-Total Tax: ${formatCurrency(receipt.totalTaxAmount)}
+Net Amount: ${formatCurrency(receipt.totalNetAmount)}
+${receipt.totalDiscountAmount > 0 ? `Total Discount: -${formatCurrency(receipt.totalDiscountAmount)}\n` : ''}Total Tax: ${formatCurrency(receipt.totalTaxAmount)}
 ━━━━━━━━━━━━━━━
-TOTAL PAID: ${formatCurrency(receipt.totalIncludingTax)}
+TOTAL PAID: ${formatCurrency(receipt.totalPayableAmount)}
 
 VIEW TRANSACTION
 ───────────────

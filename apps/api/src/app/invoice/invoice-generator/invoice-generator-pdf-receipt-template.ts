@@ -105,9 +105,10 @@ export async function generatePdfReceiptTemplate(
       const supplier = receiptData.supplier;
       const recipient = receiptData.recipient;
       const items = receiptData.items || [];
-      const totalExcludingTax = receiptData.totalExcludingTax || 0;
-      const totalIncludingTax = receiptData.totalIncludingTax || 0;
+      const totalNetAmount = receiptData.totalNetAmount || 0;
+      const totalPayableAmount = receiptData.totalPayableAmount || 0;
       const calculatedTax = receiptData.totalTaxAmount || 0;
+      const totalDiscountAmount = receiptData.totalDiscountAmount || 0;
       const currencyCode = receiptData.currency || 'MYR';
       const currency = currencyCode === 'MYR' ? 'RM' : currencyCode;
       const businessName = supplier?.name || '';
@@ -349,7 +350,7 @@ export async function generatePdfReceiptTemplate(
       doc.font('Helvetica-Bold')
         .fontSize(15)
         .fillColor(COLORS.success)
-        .text(formatCurrency(totalIncludingTax, currency), detailX, detailY);
+        .text(formatCurrency(totalPayableAmount, currency), detailX, detailY);
 
       detailY += 22;
 
@@ -473,14 +474,21 @@ export async function generatePdfReceiptTemplate(
       const totalsX = pageWidth - margin - 198;
       let totalsY = rowY + 23;
 
-      // Subtotal
+      // Net Amount
       doc.font('Helvetica')
         .fontSize(10)
         .fillColor(COLORS.textDark)
-        .text('Subtotal:', totalsX, totalsY)
-        .text(formatCurrency(totalExcludingTax, currency), totalsX + 80, totalsY, { width: 118, align: 'right' });
+        .text('Net Amount:', totalsX, totalsY)
+        .text(formatCurrency(totalNetAmount, currency), totalsX + 80, totalsY, { width: 118, align: 'right' });
 
       totalsY += 17;
+
+      // Total Discount (only shown when > 0)
+      if (totalDiscountAmount > 0) {
+        doc.text('Total Discount:', totalsX, totalsY)
+          .text(`\u2212${formatCurrency(totalDiscountAmount, currency)}`, totalsX + 80, totalsY, { width: 118, align: 'right' });
+        totalsY += 17;
+      }
 
       // Tax
       doc.text(`Total Tax:`, totalsX, totalsY)
@@ -502,7 +510,7 @@ export async function generatePdfReceiptTemplate(
         .fontSize(14)
         .fillColor(COLORS.success)
         .text('TOTAL PAID:', totalsX, totalsY)
-        .text(formatCurrency(totalIncludingTax, currency), totalsX + 80, totalsY, { width: 118, align: 'right' });
+        .text(formatCurrency(totalPayableAmount, currency), totalsX + 80, totalsY, { width: 118, align: 'right' });
 
       // ============ PAYMENT CONFIRMATION SECTION ============
       const confirmSectionY = totalsY + 50;
