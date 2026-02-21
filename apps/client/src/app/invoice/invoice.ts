@@ -52,6 +52,17 @@ export class Invoice implements OnInit {
     if (this.businessId) {
       this.getSupplierInfo(this.businessId);
     }
+
+    this.invoiceForm.controls.invoiceType.valueChanges.subscribe((type) => {
+      const ctrl = this.invoiceForm.controls.originalInvoiceRef;
+      if (type === 'CREDIT_NOTE' || type === 'DEBIT_NOTE') {
+        ctrl.setValidators([Validators.required]);
+      } else {
+        ctrl.clearValidators();
+        ctrl.reset(null);
+      }
+      ctrl.updateValueAndValidity();
+    });
   }
 
   private getSupplierInfo(businessId: string): void {

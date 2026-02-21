@@ -38,6 +38,20 @@
             <div class="invalid-feedback">Invoice type is required</div>
           </div>
 
+          @if (invoiceForm.controls.invoiceType.value === 'CREDIT_NOTE' || invoiceForm.controls.invoiceType.value === 'DEBIT_NOTE') {
+            <div class="col-12 col-md-3">
+              <label for="originalInvoiceRef" class="form-label">Original Invoice Ref <span class="text-danger">*</span></label>
+              <input
+                type="text"
+                class="form-control"
+                [ngClass]="{'is-invalid': isFieldInvalid(invoiceForm.controls.originalInvoiceRef)}"
+                id="originalInvoiceRef"
+                formControlName="originalInvoiceRef"
+                placeholder="e.g. INV-2512191830-AMIRUL-8D2F">
+              <div class="invalid-feedback">Original invoice reference is required for Credit/Debit Notes</div>
+            </div>
+          }
+
           <div class="col-12 col-md-3">
             <label for="currency" class="form-label">Currency</label>
             <input

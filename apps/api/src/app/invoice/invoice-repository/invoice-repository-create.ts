@@ -25,6 +25,7 @@ export async function createInvoice(
         businessId,
         invoiceNo: invoiceData.invoiceNo,
         invoiceType: invoiceData.invoiceType,
+        originalInvoiceRef: invoiceData.originalInvoiceRef ?? null,
         currency: invoiceData.currency,
         status: (invoiceData.status as InvoiceStatus) || InvoiceStatus.PENDING,
 

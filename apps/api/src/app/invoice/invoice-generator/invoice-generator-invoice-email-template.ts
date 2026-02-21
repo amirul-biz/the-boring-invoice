@@ -73,6 +73,7 @@ function generateInvoiceEmailHtml(invoice: ProcessedInvoiceDto): string {
                         <td style="width: 50%;">
                           <p style="margin: 0; color: #64748b; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Invoice Number</p>
                           <p style="margin: 4px 0 0; color: #1e293b; font-size: 15px; font-weight: 600;">${invoice.invoiceNo}</p>
+                          ${invoice.originalInvoiceRef ? `<p style="margin: 4px 0 0; color: #64748b; font-size: 12px;">Ref: ${invoice.originalInvoiceRef}</p>` : ''}
                         </td>
                         <td style="width: 50%; text-align: right;">
                           <p style="margin: 0; color: #64748b; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Amount Due</p>
@@ -221,7 +222,7 @@ Thank you for your continued support. Please find your invoice details below.
 INVOICE DETAILS
 ───────────────
 Invoice No: ${invoice.invoiceNo}
-Issue Date: ${invoice.issuedDate.split('T')[0]}
+${invoice.originalInvoiceRef ? `Original Invoice Ref: ${invoice.originalInvoiceRef}\n` : ''}Issue Date: ${invoice.issuedDate.split('T')[0]}
 Due Date: ${invoice.dueDate}
 
 ITEMS

@@ -133,6 +133,14 @@ export async function generatePdfInvoiceTemplate(
         .fillColor('#a0aec0')
         .text(invoiceNo, pageWidth - margin - 200, 80, { width: 200, align: 'right' });
 
+      // Original invoice reference (Credit Note / Debit Note only)
+      if (invoiceData.originalInvoiceRef) {
+        doc.font('Helvetica')
+          .fontSize(8)
+          .fillColor('#a0aec0')
+          .text(`Ref: ${invoiceData.originalInvoiceRef}`, pageWidth - margin - 200, 95, { width: 200, align: 'right' });
+      }
+
       // Supplier info line
       doc.moveTo(margin, 110)
         .lineTo(pageWidth - margin, 110)
