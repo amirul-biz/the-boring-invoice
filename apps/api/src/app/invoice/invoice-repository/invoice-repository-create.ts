@@ -43,6 +43,8 @@ export async function createInvoice(
         totalTaxAmount: invoiceData.totalTaxAmount,
         totalIncludingTax: invoiceData.totalIncludingTax,
 
+        invoiceVersion: invoiceData.invoiceVersion,
+
         billUrl: invoiceData.billUrl,
       },
     });

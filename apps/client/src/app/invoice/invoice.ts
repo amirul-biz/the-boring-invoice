@@ -41,6 +41,7 @@ export class Invoice implements OnInit {
   Validators = Validators;
 
   private businessId = '';
+  private invoiceVersion = '1.0';
 
   constructor() {
     this.invoiceForm = getInvoiceForm();
@@ -73,6 +74,7 @@ export class Invoice implements OnInit {
           state: data.address?.state,
           country: data.address?.country ?? 'MYS',
         });
+        this.invoiceVersion = data.invoiceVersion ?? '1.0';
       }),
       finalize(() => this.spinner.hide()),
     ).subscribe();
@@ -159,7 +161,7 @@ export class Invoice implements OnInit {
 
     this.spinner.show();
 
-    const invoicesData = getInvoicesData(this.invoiceForm);
+    const invoicesData = getInvoicesData(this.invoiceForm, this.invoiceVersion);
     this.invoiceService.generateInvoicePdf(invoicesData, this.businessId).pipe(
       tap(() => {
         const count = invoicesData.length;

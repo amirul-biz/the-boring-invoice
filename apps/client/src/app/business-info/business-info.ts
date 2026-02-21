@@ -51,6 +51,7 @@ export class BusinessInfo implements OnInit {
           city: data.address?.city,
           postcode: data.address?.postcode,
           state: data.address?.state,
+          invoiceVersion: data.invoiceVersion,
         });
       }),
       finalize(() => this.spinner.hide()),
@@ -77,6 +78,7 @@ export class BusinessInfo implements OnInit {
       userSecretKey: formValue.userSecretKey!,
       idType: formValue.idType!,
       sstRegistrationNumber: formValue.sstRegistrationNumber ?? undefined,
+      invoiceVersion: formValue.invoiceVersion!,
       address: {
         addressLine1: formValue.addressLine1!,
         city: formValue.city!,

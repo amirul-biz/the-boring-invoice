@@ -64,6 +64,8 @@ export async function getInvoiceAsReceipt(
 
       billUrl: invoice.billUrl || '',
 
+      invoiceVersion: invoice.invoiceVersion,
+
       transactionId: invoice.transactionId,
       transactionTime: invoice.transactionTime.toISOString(),
     };

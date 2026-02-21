@@ -19,6 +19,7 @@ export interface IBusinessInfo {
   idType?: string;
   sstRegistrationNumber?: string;
   address?: IBusinessAddress;
+  invoiceVersion?: string;
 }
 
 export interface IBusinessInfoPublic {
@@ -33,4 +34,5 @@ export interface IBusinessInfoPublic {
   idType?: string;
   sstRegistrationNumber?: string;
   address?: IBusinessAddress;
+  invoiceVersion?: string;
 }

@@ -227,7 +227,22 @@
                     <div class="invalid-feedback">TIN is required</div>
                   </div>
 
-                  <div class="col-12 col-md-4">
+                  <div class="col-12 col-md-2">
+                    <label [for]="'recipientIdType' + $index" class="form-label">ID Type</label>
+                    <select
+                      class="form-select"
+                      [ngClass]="{'is-invalid': isFieldInvalid(recipient.get('idType'))}"
+                      [id]="'recipientIdType' + $index"
+                      formControlName="idType">
+                      <option value="BRN">BRN</option>
+                      <option value="NRIC">NRIC</option>
+                      <option value="PASSPORT">PASSPORT</option>
+                      <option value="ARMY">ARMY</option>
+                    </select>
+                    <div class="invalid-feedback">ID type is required</div>
+                  </div>
+
+                  <div class="col-12 col-md-6">
                     <label [for]="'recipientRegNum' + $index" class="form-label">
                       Registration Number{{ !recipient.get('registrationNumber')?.hasValidator(Validators.required) ? ' (required for B2B)' : '' }}
                     </label>
@@ -410,6 +425,21 @@
                       [id]="'taxRate' + $index"
                       formControlName="taxRate">
                     <div class="invalid-feedback">Tax rate is required</div>
+                  </div>
+
+                  <div class="col-12 col-md-2">
+                    <label [for]="'discountRate' + $index" class="form-label">Discount (%)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      max="100"
+                      class="form-control"
+                      [ngClass]="{'is-invalid': isFieldInvalid(item.get('discountRate'))}"
+                      [id]="'discountRate' + $index"
+                      formControlName="discountRate"
+                      placeholder="0">
+                    <div class="invalid-feedback">Discount must be 0–100</div>
                   </div>
                 </div>
                 </div>
