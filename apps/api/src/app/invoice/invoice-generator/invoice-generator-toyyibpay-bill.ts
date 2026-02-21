@@ -42,9 +42,10 @@ interface CalculatedInvoiceDto {
   items: InvoiceItemDTO[];
   invoiceNo: string;
   issuedDate: string;
-  totalExcludingTax: number;
+  totalNetAmount: number;
   totalTaxAmount: number;
-  totalIncludingTax: number;
+  totalDiscountAmount: number;
+  totalPayableAmount: number;
 }
 
 // ToyyibPay Configuration
@@ -208,7 +209,7 @@ export class ToyyibPayUtil {
     );
 
     // Convert amount to cents (ToyyibPay expects amount in cents)
-    const billAmountInCents = Math.round(invoiceOutput.totalIncludingTax * 100);
+    const billAmountInCents = Math.round(invoiceOutput.totalPayableAmount * 100);
 
     // Format phone number (remove any non-numeric characters except +)
     const formattedPhone = this.formatPhoneNumber(invoiceOutput.recipient.phone);
@@ -260,9 +261,9 @@ Due Date: ${invoiceOutput.dueDate}
 Items:
 ${itemsList}
 
-Subtotal: ${invoiceOutput.currency} ${invoiceOutput.totalExcludingTax.toFixed(2)}
+Net Amount: ${invoiceOutput.currency} ${invoiceOutput.totalNetAmount.toFixed(2)}
 Total Tax: ${invoiceOutput.currency} ${invoiceOutput.totalTaxAmount.toFixed(2)}
-Total: ${invoiceOutput.currency} ${invoiceOutput.totalIncludingTax.toFixed(2)}
+Total: ${invoiceOutput.currency} ${invoiceOutput.totalPayableAmount.toFixed(2)}
 
 From: ${invoiceOutput.supplier.name}
     `.trim();

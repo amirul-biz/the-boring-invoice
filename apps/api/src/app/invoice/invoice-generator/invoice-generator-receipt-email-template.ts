@@ -167,14 +167,18 @@ function generateReceiptEmailHtml(receipt: ReceiptDTO): string {
                   <td style="width: 60%;"></td>
                   <td style="width: 40%;">
                     <table role="presentation" style="width: 100%;">
+                      ${receipt.totalDiscountAmount > 0 ? `<tr>
+                        <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Subtotal</td>
+                        <td style="padding: 8px 0; color: #374151; font-size: 14px; text-align: right;">${formatCurrency(receipt.totalNetAmount + receipt.totalDiscountAmount)}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Total Discount</td>
+                        <td style="padding: 8px 0; color: #374151; font-size: 14px; text-align: right;">\u2212${formatCurrency(receipt.totalDiscountAmount)}</td>
+                      </tr>` : ''}
                       <tr>
                         <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Net Amount</td>
                         <td style="padding: 8px 0; color: #374151; font-size: 14px; text-align: right;">${formatCurrency(receipt.totalNetAmount)}</td>
                       </tr>
-                      ${receipt.totalDiscountAmount > 0 ? `<tr>
-                        <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Total Discount</td>
-                        <td style="padding: 8px 0; color: #374151; font-size: 14px; text-align: right;">\u2212${formatCurrency(receipt.totalDiscountAmount)}</td>
-                      </tr>` : ''}
                       <tr>
                         <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Total Tax</td>
                         <td style="padding: 8px 0; color: #374151; font-size: 14px; text-align: right;">${formatCurrency(receipt.totalTaxAmount)}</td>
@@ -282,8 +286,8 @@ ${itemsList}
 
 SUMMARY
 ───────────────
-Net Amount: ${formatCurrency(receipt.totalNetAmount)}
-${receipt.totalDiscountAmount > 0 ? `Total Discount: -${formatCurrency(receipt.totalDiscountAmount)}\n` : ''}Total Tax: ${formatCurrency(receipt.totalTaxAmount)}
+${receipt.totalDiscountAmount > 0 ? `Subtotal: ${formatCurrency(receipt.totalNetAmount + receipt.totalDiscountAmount)}\nTotal Discount: -${formatCurrency(receipt.totalDiscountAmount)}\n` : ''}Net Amount: ${formatCurrency(receipt.totalNetAmount)}
+Total Tax: ${formatCurrency(receipt.totalTaxAmount)}
 ━━━━━━━━━━━━━━━
 TOTAL PAID: ${formatCurrency(receipt.totalPayableAmount)}
 

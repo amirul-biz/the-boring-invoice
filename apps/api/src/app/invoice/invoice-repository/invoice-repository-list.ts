@@ -19,7 +19,7 @@ export interface InvoiceListItem {
   invoiceNo: string;
   invoiceType: string;
   recipientName: string;
-  totalIncludingTax: number;
+  totalPayableAmount: number;
   currency: string;
   status: string;
   issuedDate: string;
@@ -84,7 +84,7 @@ export async function getInvoiceList(
       prisma.invoice.groupBy({
         by: ['status'],
         where,
-        _sum: { totalIncludingTax: true },
+        _sum: { totalPayableAmount: true },
         _count: true,
       }),
     ]);
@@ -96,7 +96,7 @@ export async function getInvoiceList(
         invoiceNo: invoice.invoiceNo,
         invoiceType: invoice.invoiceType,
         recipientName: recipient?.name || '',
-        totalIncludingTax: parseFloat(invoice.totalIncludingTax.toString()),
+        totalPayableAmount: parseFloat(invoice.totalPayableAmount.toString()),
         currency: invoice.currency,
         status: invoice.status,
         issuedDate: invoice.issuedDate.toISOString(),
@@ -111,8 +111,8 @@ export async function getInvoiceList(
     const paidGroup = summaryGroups.find((g) => g.status === 'PAID');
 
     const invoiceSummary: InvoiceSummary = {
-      pendingAmount: pendingGroup?._sum.totalIncludingTax ? parseFloat(pendingGroup._sum.totalIncludingTax.toString()) : 0,
-      totalPaid: paidGroup?._sum.totalIncludingTax ? parseFloat(paidGroup._sum.totalIncludingTax.toString()) : 0,
+      pendingAmount: pendingGroup?._sum.totalPayableAmount ? parseFloat(pendingGroup._sum.totalPayableAmount.toString()) : 0,
+      totalPaid: paidGroup?._sum.totalPayableAmount ? parseFloat(paidGroup._sum.totalPayableAmount.toString()) : 0,
       pendingCount: pendingGroup?._count ?? 0,
       paidCount: paidGroup?._count ?? 0,
     };
