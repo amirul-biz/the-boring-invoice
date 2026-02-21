@@ -41,8 +41,12 @@ export async function calculateInvoiceData(
     const invoiceNo = generateInvoiceNumber(input.recipient.name);
 
     // 3. Calculate financial totals with precision
-    const totalExcludingTax = mappedItems.reduce(
+    const totalNetAmount = mappedItems.reduce(
       (sum, item) => sum + item.taxableAmount,
+      0,
+    );
+    const totalDiscountAmount = mappedItems.reduce(
+      (sum, item) => sum + item.discountAmount,
       0,
     );
     const totalTaxAmount = mappedItems.reduce(
@@ -58,10 +62,11 @@ export async function calculateInvoiceData(
     output.invoiceNo = invoiceNo;
     output.issuedDate = new Date().toISOString();
     output.items = mappedItems;
-    output.totalExcludingTax = parseFloat(totalExcludingTax.toFixed(2));
+    output.totalNetAmount = parseFloat(totalNetAmount.toFixed(2));
+    output.totalDiscountAmount = parseFloat(totalDiscountAmount.toFixed(2));
     output.totalTaxAmount = parseFloat(totalTaxAmount.toFixed(2));
-    output.totalIncludingTax = parseFloat(
-      (totalExcludingTax + totalTaxAmount).toFixed(2),
+    output.totalPayableAmount = parseFloat(
+      (totalNetAmount + totalTaxAmount).toFixed(2),
     );
 
     logger.log(`Invoice calculation completed: ${invoiceNo}`);

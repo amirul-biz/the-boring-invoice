@@ -88,9 +88,10 @@ export async function generatePdfInvoiceTemplate(
       const supplier = invoiceData.supplier;
       const recipient = invoiceData.recipient;
       const items = invoiceData.items || [];
-      const totalExcludingTax = invoiceData.totalExcludingTax || 0;
-      const totalIncludingTax = invoiceData.totalIncludingTax || 0;
+      const totalNetAmount = invoiceData.totalNetAmount || 0;
+      const totalPayableAmount = invoiceData.totalPayableAmount || 0;
       const calculatedTax = invoiceData.totalTaxAmount || 0;
+      const totalDiscountAmount = invoiceData.totalDiscountAmount || 0;
       const currencyCode = invoiceData.currency || 'MYR';
       const currency = currencyCode === 'MYR' ? 'RM' : currencyCode;
       const businessName = supplier?.name || '';
@@ -287,7 +288,7 @@ export async function generatePdfInvoiceTemplate(
       doc.font('Helvetica-Bold')
         .fontSize(15)
         .fillColor(COLORS.primary)
-        .text(formatCurrency(totalIncludingTax, currency), detailX, detailY);
+        .text(formatCurrency(totalPayableAmount, currency), detailX, detailY);
 
       // ============ ITEMS TABLE ============
       const tableTop = headerHeight + 165;
@@ -400,14 +401,21 @@ export async function generatePdfInvoiceTemplate(
       const totalsX = pageWidth - margin - 198;
       let totalsY = rowY + 23;
 
-      // Subtotal
+      // Net Amount
       doc.font('Helvetica')
         .fontSize(10)
         .fillColor(COLORS.textDark)
-        .text('Subtotal:', totalsX, totalsY)
-        .text(formatCurrency(totalExcludingTax, currency), totalsX + 80, totalsY, { width: 118, align: 'right' });
+        .text('Net Amount:', totalsX, totalsY)
+        .text(formatCurrency(totalNetAmount, currency), totalsX + 80, totalsY, { width: 118, align: 'right' });
 
       totalsY += 17;
+
+      // Total Discount (only shown when > 0)
+      if (totalDiscountAmount > 0) {
+        doc.text('Total Discount:', totalsX, totalsY)
+          .text(`\u2212${formatCurrency(totalDiscountAmount, currency)}`, totalsX + 80, totalsY, { width: 118, align: 'right' });
+        totalsY += 17;
+      }
 
       // Tax
       doc.text(`Total Tax:`, totalsX, totalsY)
@@ -429,7 +437,7 @@ export async function generatePdfInvoiceTemplate(
         .fontSize(14)
         .fillColor(COLORS.primary)
         .text('TOTAL:', totalsX, totalsY)
-        .text(formatCurrency(totalIncludingTax, currency), totalsX + 80, totalsY, { width: 118, align: 'right' });
+        .text(formatCurrency(totalPayableAmount, currency), totalsX + 80, totalsY, { width: 118, align: 'right' });
 
       // ============ PAYMENT SECTION (QR Code + Pay Button) ============
       if (billUrl) {
@@ -513,7 +521,7 @@ export async function generatePdfInvoiceTemplate(
         doc.font('Helvetica-Bold')
           .fontSize(16)
           .fillColor(COLORS.primary)
-          .text(formatCurrency(totalIncludingTax, currency), detailsX, detailsY + 14);
+          .text(formatCurrency(totalPayableAmount, currency), detailsX, detailsY + 14);
 
         doc.font('Helvetica')
           .fontSize(9)

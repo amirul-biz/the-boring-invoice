@@ -189,21 +189,24 @@ export class CreateInvoiceInputDTO {
 }
 
 // 5. OUTPUT DTO (Includes LHDN Validation Data)
-export class CalculatedInvoiceDto extends CreateInvoiceInputDTO { 
+export class CalculatedInvoiceDto extends CreateInvoiceInputDTO {
   @ApiProperty({ example: 'year-date-month-time-stamp-email-7digituuid' })
   invoiceNo: string;
 
   @ApiProperty({ example: '2025-12-19T08:52:10Z' })
   issuedDate: string;
 
-  @ApiProperty({ example: 445.00 })
-  totalExcludingTax: number;
+  @ApiProperty({ example: 445.00, description: 'Net amount after discounts, before tax' })
+  totalNetAmount: number;
 
-  @ApiProperty({ example: 8.00 })
+  @ApiProperty({ example: 8.00, description: 'Total discount amount across all items' })
+  totalDiscountAmount: number;
+
+  @ApiProperty({ example: 8.00, description: 'Total tax amount' })
   totalTaxAmount: number;
 
-  @ApiProperty({ example: 453.00 })
-  totalIncludingTax: number;
+  @ApiProperty({ example: 453.00, description: 'Final payable amount (net + tax)' })
+  totalPayableAmount: number;
 }
 
 export class ProcessedInvoiceDto extends CalculatedInvoiceDto {
