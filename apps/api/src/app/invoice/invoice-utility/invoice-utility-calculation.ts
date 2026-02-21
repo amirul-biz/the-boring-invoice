@@ -24,7 +24,7 @@ export async function calculateInvoiceData(
       const subtotal = item.quantity * item.unitPrice;
       const discountAmount = subtotal * ((item.discountRate ?? 0) / 100);
       const taxableAmount = subtotal - discountAmount;
-      const taxDecimal = item.taxRate / 100;
+      const taxDecimal = item.taxType === 'NOT_APPLICABLE' ? 0 : item.taxRate / 100;
 
       return {
         ...item,

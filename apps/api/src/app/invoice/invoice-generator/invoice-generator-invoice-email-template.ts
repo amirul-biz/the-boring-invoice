@@ -127,14 +127,18 @@ function generateInvoiceEmailHtml(invoice: ProcessedInvoiceDto): string {
                   <td style="width: 60%;"></td>
                   <td style="width: 40%;">
                     <table role="presentation" style="width: 100%;">
+                      ${invoice.totalDiscountAmount > 0 ? `<tr>
+                        <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Subtotal</td>
+                        <td style="padding: 8px 0; color: #374151; font-size: 14px; text-align: right;">${formatCurrency(invoice.totalNetAmount + invoice.totalDiscountAmount)}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Total Discount</td>
+                        <td style="padding: 8px 0; color: #374151; font-size: 14px; text-align: right;">\u2212${formatCurrency(invoice.totalDiscountAmount)}</td>
+                      </tr>` : ''}
                       <tr>
                         <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Net Amount</td>
                         <td style="padding: 8px 0; color: #374151; font-size: 14px; text-align: right;">${formatCurrency(invoice.totalNetAmount)}</td>
                       </tr>
-                      ${invoice.totalDiscountAmount > 0 ? `<tr>
-                        <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Total Discount</td>
-                        <td style="padding: 8px 0; color: #374151; font-size: 14px; text-align: right;">\u2212${formatCurrency(invoice.totalDiscountAmount)}</td>
-                      </tr>` : ''}
                       <tr>
                         <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Total Tax</td>
                         <td style="padding: 8px 0; color: #374151; font-size: 14px; text-align: right;">${formatCurrency(invoice.totalTaxAmount)}</td>
@@ -226,8 +230,8 @@ ${itemsList}
 
 SUMMARY
 ───────────────
-Net Amount: ${formatCurrency(invoice.totalNetAmount)}
-${invoice.totalDiscountAmount > 0 ? `Total Discount: -${formatCurrency(invoice.totalDiscountAmount)}\n` : ''}Total Tax: ${formatCurrency(invoice.totalTaxAmount)}
+${invoice.totalDiscountAmount > 0 ? `Subtotal: ${formatCurrency(invoice.totalNetAmount + invoice.totalDiscountAmount)}\nTotal Discount: -${formatCurrency(invoice.totalDiscountAmount)}\n` : ''}Net Amount: ${formatCurrency(invoice.totalNetAmount)}
+Total Tax: ${formatCurrency(invoice.totalTaxAmount)}
 ━━━━━━━━━━━━━━━
 TOTAL: ${formatCurrency(invoice.totalPayableAmount)}
 

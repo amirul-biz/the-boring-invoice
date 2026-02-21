@@ -437,7 +437,7 @@ export async function generatePdfReceiptTemplate(
         const discountRate = (item as any).discountRate ?? 0;
         const discountAmount = (item as any).discountAmount ?? parseFloat((subtotal * discountRate / 100).toFixed(2));
         const discountText = discountRate > 0
-          ? `Discount: ${discountRate.toFixed(2)}%  \u2212${formatCurrency(discountAmount, currency)}`
+          ? `Discount: ${discountRate.toFixed(2)}%  -${formatCurrency(discountAmount, currency)}`
           : 'Discount: \u2014';
 
         doc.font('Helvetica')
@@ -454,11 +454,13 @@ export async function generatePdfReceiptTemplate(
           ? `No Tax (0%)`
           : `${item.taxType.replace(/_/g, ' ')} (${taxRate}%)`;
 
+        const taxText = taxAmount > 0
+          ? `${taxTypeLabel}  ${formatCurrency(taxAmount, currency)}`
+          : taxTypeLabel;
         doc.font('Helvetica')
           .fontSize(8)
           .fillColor(COLORS.textMuted)
-          .text(taxTypeLabel, colDesc, taxY)
-          .text(taxAmount > 0 ? formatCurrency(taxAmount, currency) : '-', colAmount - 60, taxY, { width: 60, align: 'right' });
+          .text(taxText, colDesc, taxY);
 
         rowY += rowHeight;
       });
@@ -474,21 +476,28 @@ export async function generatePdfReceiptTemplate(
       const totalsX = pageWidth - margin - 198;
       let totalsY = rowY + 23;
 
-      // Net Amount
+      // If discount exists: Subtotal → Total Discount → Net Amount → Tax
+      // If no discount:    Net Amount → Tax
       doc.font('Helvetica')
         .fontSize(10)
-        .fillColor(COLORS.textDark)
-        .text('Net Amount:', totalsX, totalsY)
+        .fillColor(COLORS.textDark);
+
+      if (totalDiscountAmount > 0) {
+        const grossSubtotal = totalNetAmount + totalDiscountAmount;
+        doc.text('Subtotal:', totalsX, totalsY)
+          .text(formatCurrency(grossSubtotal, currency), totalsX + 80, totalsY, { width: 118, align: 'right' });
+        totalsY += 17;
+
+        doc.text('Total Discount:', totalsX, totalsY)
+          .text(`-${formatCurrency(totalDiscountAmount, currency)}`, totalsX + 80, totalsY, { width: 118, align: 'right' });
+        totalsY += 17;
+      }
+
+      // Net Amount
+      doc.text('Net Amount:', totalsX, totalsY)
         .text(formatCurrency(totalNetAmount, currency), totalsX + 80, totalsY, { width: 118, align: 'right' });
 
       totalsY += 17;
-
-      // Total Discount (only shown when > 0)
-      if (totalDiscountAmount > 0) {
-        doc.text('Total Discount:', totalsX, totalsY)
-          .text(`\u2212${formatCurrency(totalDiscountAmount, currency)}`, totalsX + 80, totalsY, { width: 118, align: 'right' });
-        totalsY += 17;
-      }
 
       // Tax
       doc.text(`Total Tax:`, totalsX, totalsY)
