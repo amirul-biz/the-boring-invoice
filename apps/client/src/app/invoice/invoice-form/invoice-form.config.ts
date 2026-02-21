@@ -49,6 +49,7 @@ export interface InvoiceItemForm {
 
 export interface CreateInvoiceForm {
   invoiceType: FormControl<string | null>;
+  originalInvoiceRef: FormControl<string | null>;
   currency: FormControl<string | null>;
   dueDate: FormControl<string | null>;
   supplier: FormGroup<SupplierForm>;
@@ -140,6 +141,7 @@ export function getInvoiceForm(): FormGroup<CreateInvoiceForm> {
       nonNullable: true,
       validators: [Validators.required],
     }),
+    originalInvoiceRef: new FormControl<string | null>(null),
     currency: new FormControl('MYR', {
       nonNullable: true,
       validators: [Validators.required],
@@ -333,6 +335,7 @@ export function getInvoicesData(
       | 'INVOICE'
       | 'CREDIT_NOTE'
       | 'DEBIT_NOTE',
+    originalInvoiceRef: formValue.originalInvoiceRef ?? undefined,
     currency: formValue.currency ?? 'MYR',
     dueDate: dueDate,
     supplier: supplier,

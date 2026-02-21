@@ -97,6 +97,7 @@ function generateReceiptEmailHtml(receipt: ReceiptDTO): string {
                         <td style="width: 50%;">
                           <p style="margin: 0; color: #64748b; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Receipt Number</p>
                           <p style="margin: 4px 0 0; color: #1e293b; font-size: 15px; font-weight: 600;">${receipt.invoiceNo}</p>
+                          ${receipt.originalInvoiceRef ? `<p style="margin: 4px 0 0; color: #64748b; font-size: 12px;">Ref: ${receipt.originalInvoiceRef}</p>` : ''}
                         </td>
                         <td style="width: 50%; text-align: right;">
                           <p style="margin: 0; color: #64748b; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Amount Paid</p>
@@ -278,7 +279,7 @@ TRANSACTION DETAILS
 Transaction ID: ${receipt.transactionId}
 Payment Date: ${formatDateTime(receipt.transactionTime)}
 Receipt No: ${receipt.invoiceNo}
-Status: PAID
+${receipt.originalInvoiceRef ? `Original Invoice Ref: ${receipt.originalInvoiceRef}\n` : ''}Status: PAID
 
 ITEMS
 ───────────────

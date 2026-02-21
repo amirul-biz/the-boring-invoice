@@ -13,6 +13,7 @@ import {
   IsString,
   Max,
   Min,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
 import { InvoiceType } from '@prisma/client';
@@ -157,6 +158,12 @@ export class CreateInvoiceInputDTO {
   @ApiProperty({ enum: InvoiceType })
   @IsEnum(InvoiceType)
   invoiceType: InvoiceType;
+
+  @ApiProperty({ example: 'INV-2512191830-AMIRUL-8D2F', required: false })
+  @ValidateIf(o => o.invoiceType === 'CREDIT_NOTE' || o.invoiceType === 'DEBIT_NOTE')
+  @IsNotEmpty()
+  @IsString()
+  originalInvoiceRef?: string;
 
   @ApiProperty({ example: 'MYR' })
   @IsString()

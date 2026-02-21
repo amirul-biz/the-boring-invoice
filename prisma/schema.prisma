@@ -51,6 +51,7 @@ model Invoice {
   // === Core ===
   invoiceNo               String        @unique
   invoiceType             InvoiceType
+  originalInvoiceRef      String?
   currency                String        @default("MYR")
   status                  InvoiceStatus @default(PENDING)
 

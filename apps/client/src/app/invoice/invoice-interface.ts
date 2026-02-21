@@ -44,6 +44,7 @@ export interface ICreateInvoiceItem {
 // 4. MAIN INPUT INTERFACE (The one you requested)
 export interface ICreateInvoice {
   invoiceType: 'INVOICE' | 'CREDIT_NOTE' | 'DEBIT_NOTE';
+  originalInvoiceRef?: string;
   currency: string;
   supplier: ISupplier;
   recipient: IRecipient;

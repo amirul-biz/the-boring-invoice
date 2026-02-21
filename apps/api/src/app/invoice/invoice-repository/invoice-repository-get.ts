@@ -47,6 +47,7 @@ export async function getInvoiceAsReceipt(
     const receiptDto: ReceiptDTO = {
       invoiceNo: invoice.invoiceNo,
       invoiceType: invoice.invoiceType,
+      originalInvoiceRef: invoice.originalInvoiceRef ?? undefined,
       currency: invoice.currency,
       status: invoice.status,
 

@@ -150,6 +150,14 @@ export async function generatePdfReceiptTemplate(
         .fillColor(COLORS.successLight)
         .text(invoiceNo, pageWidth - margin - 200, 80, { width: 200, align: 'right' });
 
+      // Original invoice reference (Credit Note / Debit Note only)
+      if (receiptData.originalInvoiceRef) {
+        doc.font('Helvetica')
+          .fontSize(8)
+          .fillColor(COLORS.successLight)
+          .text(`Ref: ${receiptData.originalInvoiceRef}`, pageWidth - margin - 200, 95, { width: 200, align: 'right' });
+      }
+
       // Supplier info line
       doc.moveTo(margin, 110)
         .lineTo(pageWidth - margin, 110)
