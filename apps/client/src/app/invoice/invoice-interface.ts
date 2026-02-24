@@ -23,6 +23,7 @@ export interface ISupplier {
   businessActivityDescription: string;
   idType: string;
   sstRegistrationNumber?: string;
+  contactNumber: string;
   addressLine1: string;
   city: string;
   postcode: string;

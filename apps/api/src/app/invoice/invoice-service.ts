@@ -148,6 +148,9 @@ export class InvoiceService {
           tin: this.cryptoService.encrypt(calculatedInvoice.supplier.tin),
           registrationNumber: this.cryptoService.encrypt(calculatedInvoice.supplier.registrationNumber),
           msicCode: this.cryptoService.encrypt(calculatedInvoice.supplier.msicCode),
+          contactNumber: calculatedInvoice.supplier.contactNumber
+            ? this.cryptoService.encrypt(calculatedInvoice.supplier.contactNumber)
+            : undefined,
         };
         await createInvoice(
           this.prisma,
@@ -467,6 +470,9 @@ export class InvoiceService {
           tin: this.cryptoService.decrypt(rawReceipt.supplier.tin),
           registrationNumber: this.cryptoService.decrypt(rawReceipt.supplier.registrationNumber),
           msicCode: this.cryptoService.decrypt(rawReceipt.supplier.msicCode),
+          contactNumber: rawReceipt.supplier.contactNumber
+            ? this.cryptoService.decrypt(rawReceipt.supplier.contactNumber as string)
+            : undefined,
         },
       };
 

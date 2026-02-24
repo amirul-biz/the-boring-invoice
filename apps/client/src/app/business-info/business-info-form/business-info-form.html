@@ -28,6 +28,18 @@
         </div>
 
         <div class="col-12 col-md-6">
+          <label for="businessContactNumber" class="form-label">Contact Number</label>
+          <input
+            type="tel"
+            class="form-control"
+            [ngClass]="{'is-invalid': isFieldInvalid(form.controls.businessContactNumber)}"
+            id="businessContactNumber"
+            formControlName="businessContactNumber"
+            placeholder="+60123456789">
+          <div class="invalid-feedback">Contact number is required</div>
+        </div>
+
+        <div class="col-12 col-md-6">
           <label for="taxIdentificationNumber" class="form-label">Tax Identification Number (TIN)</label>
           <input
             type="text"

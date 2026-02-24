@@ -218,7 +218,8 @@ function generateReceiptEmailHtml(receipt: ReceiptDTO): string {
             <td style="padding: 24px 40px; background-color: #f8fafc;">
               <p style="margin: 0; color: #64748b; font-size: 12px; line-height: 1.6;">
                 <strong style="color: #475569;">${receipt.supplier.name}</strong><br>
-                TIN: ${receipt.supplier.tin} | SSM: ${receipt.supplier.registrationNumber} | MSIC: ${receipt.supplier.msicCode}
+                TIN: ${receipt.supplier.tin} | SSM: ${receipt.supplier.registrationNumber} | MSIC: ${receipt.supplier.msicCode}<br>
+                ${receipt.supplier.email ? `Email: ${receipt.supplier.email}` : ''}${receipt.supplier.email && receipt.supplier.contactNumber ? ' | ' : ''}${receipt.supplier.contactNumber ? `Tel: ${receipt.supplier.contactNumber}` : ''}
               </p>
             </td>
           </tr>
@@ -299,6 +300,7 @@ ${receipt.billUrl}
 ───────────────────────────────────────
 ${receipt.supplier.name}
 TIN: ${receipt.supplier.tin} | SSM: ${receipt.supplier.registrationNumber} | MSIC: ${receipt.supplier.msicCode}
+${receipt.supplier.email ? `Email: ${receipt.supplier.email}` : ''}${receipt.supplier.email && receipt.supplier.contactNumber ? ' | ' : ''}${receipt.supplier.contactNumber ? `Tel: ${receipt.supplier.contactNumber}` : ''}
 
 This is an official payment receipt for transaction ${receipt.transactionId}
 For questions, contact us at ${receipt.supplier.email}

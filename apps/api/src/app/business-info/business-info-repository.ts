@@ -95,6 +95,7 @@ export async function findBusinessInfoPublicById(
         taxIdentificationNumber: true,
         businessRegistrationNumber: true,
         businessActivityDescription: true,
+        businessContactNumber: true,
         msicCode: true,
         categoryCode: true,
         idType: true,

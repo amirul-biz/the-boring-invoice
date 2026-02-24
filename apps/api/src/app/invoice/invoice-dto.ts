@@ -99,6 +99,10 @@ export class SupplierDTO {
   @IsOptional() @IsString()
   sstRegistrationNumber?: string;
 
+  @ApiProperty({ example: '+60123456789', required: false })
+  @IsOptional() @IsString()
+  contactNumber?: string;
+
   @ApiProperty({ example: 'No 1, Jalan Mawar' })
   @IsNotEmpty() @IsString()
   addressLine1: string;

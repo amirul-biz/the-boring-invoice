@@ -117,7 +117,7 @@ export async function generatePdfReceiptTemplate(
       const transactionTime = receiptData.transactionTime || '';
 
       // ============ HEADER SECTION ============
-      const headerHeight = 160;
+      const headerHeight = 176;
 
       // Header background - using success green to indicate paid
       doc.rect(0, 0, pageWidth, headerHeight).fill(COLORS.success);
@@ -175,6 +175,14 @@ export async function generatePdfReceiptTemplate(
         .fillColor(COLORS.successLight)
         .text(supplierInfoParts.join('    '), margin, 118);
 
+      // Supplier email and contact number line
+      const supplierContactParts: string[] = [];
+      if (supplier?.email) supplierContactParts.push(`Email: ${supplier.email}`);
+      if (supplier?.contactNumber) supplierContactParts.push(`Tel: ${supplier.contactNumber}`);
+      if (supplierContactParts.length > 0) {
+        doc.text(supplierContactParts.join('    '), margin, 131);
+      }
+
       // Supplier address line
       const addrParts = [
         (supplier as any)?.addressLine1,
@@ -184,12 +192,12 @@ export async function generatePdfReceiptTemplate(
         (supplier as any)?.country,
       ].filter(Boolean);
       if (addrParts.length > 0) {
-        doc.text(addrParts.join(', '), margin, 131);
+        doc.text(addrParts.join(', '), margin, 144);
       }
 
       // SST registration (conditional)
       if ((supplier as any)?.sstRegistrationNumber) {
-        doc.text(`SST Reg: ${(supplier as any).sstRegistrationNumber}`, margin, 144);
+        doc.text(`SST Reg: ${(supplier as any).sstRegistrationNumber}`, margin, 157);
       }
 
       // ============ TRANSACTION INFO SECTION ============

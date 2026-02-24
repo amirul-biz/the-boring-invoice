@@ -47,6 +47,7 @@ export class BusinessInfo implements OnInit {
           userSecretKey: data.userSecretKey,
           idType: data.idType,
           sstRegistrationNumber: data.sstRegistrationNumber,
+          businessContactNumber: data.businessContactNumber,
           addressLine1: data.address?.addressLine1,
           city: data.address?.city,
           postcode: data.address?.postcode,
@@ -78,6 +79,7 @@ export class BusinessInfo implements OnInit {
       userSecretKey: formValue.userSecretKey!,
       idType: formValue.idType!,
       sstRegistrationNumber: formValue.sstRegistrationNumber ?? undefined,
+      businessContactNumber: formValue.businessContactNumber!,
       invoiceVersion: formValue.invoiceVersion!,
       address: {
         addressLine1: formValue.addressLine1!,
