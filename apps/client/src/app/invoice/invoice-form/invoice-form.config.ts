@@ -64,7 +64,7 @@ export function recipientForm(): FormGroup<RecipientForm> {
       nonNullable: true,
       validators: [Validators.required],
     }),
-    email: new FormControl<string | null>(null, [Validators.email]),
+    email: new FormControl<string | null>(null, [Validators.required, Validators.email]),
     phone: new FormControl(null, {
       nonNullable: true,
       validators: [Validators.required],
