@@ -27,6 +27,11 @@ export class BusinessInfoService {
     const payload = {
       ...data,
       userId,
+      businessEmail: this.cryptoService.encrypt(data.businessEmail),
+      taxIdentificationNumber: this.cryptoService.encrypt(data.taxIdentificationNumber),
+      businessRegistrationNumber: this.cryptoService.encrypt(data.businessRegistrationNumber),
+      msicCode: this.cryptoService.encrypt(data.msicCode),
+      sstRegistrationNumber: data.sstRegistrationNumber ? this.cryptoService.encrypt(data.sstRegistrationNumber) : undefined,
       userSecretKey: this.cryptoService.encrypt(data.userSecretKey.trim()),
     };
     const result = await createBusinessInfo(this.prisma, payload, this.logger);
@@ -35,7 +40,16 @@ export class BusinessInfoService {
 
   async findByUserId(userId: string): Promise<BusinessInformation[]> {
     const results = await findBusinessInfoByUserId(this.prisma, userId, this.logger);
-    return results.map((b) => ({ ...b, id: this.cryptoService.encodeId(b.id), userSecretKey: '***' }));
+    return results.map((b) => ({
+      ...b,
+      id: this.cryptoService.encodeId(b.id),
+      businessEmail: this.cryptoService.decrypt(b.businessEmail),
+      taxIdentificationNumber: this.cryptoService.decrypt(b.taxIdentificationNumber),
+      businessRegistrationNumber: this.cryptoService.decrypt(b.businessRegistrationNumber),
+      msicCode: this.cryptoService.decrypt(b.msicCode),
+      sstRegistrationNumber: b.sstRegistrationNumber ? this.cryptoService.decrypt(b.sstRegistrationNumber) : b.sstRegistrationNumber,
+      userSecretKey: '***',
+    }));
   }
 
   async verifyOwnership(encodedId: string, userId: string): Promise<void> {
@@ -52,13 +66,30 @@ export class BusinessInfoService {
     if (result.userId !== userId) {
       throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
     }
-    return { ...result, id: this.cryptoService.encodeId(result.id), userSecretKey: this.cryptoService.decrypt(result.userSecretKey) };
+    return {
+      ...result,
+      id: this.cryptoService.encodeId(result.id),
+      businessEmail: this.cryptoService.decrypt(result.businessEmail),
+      taxIdentificationNumber: this.cryptoService.decrypt(result.taxIdentificationNumber),
+      businessRegistrationNumber: this.cryptoService.decrypt(result.businessRegistrationNumber),
+      msicCode: this.cryptoService.decrypt(result.msicCode),
+      sstRegistrationNumber: result.sstRegistrationNumber ? this.cryptoService.decrypt(result.sstRegistrationNumber) : result.sstRegistrationNumber,
+      userSecretKey: this.cryptoService.decrypt(result.userSecretKey),
+    };
   }
 
   async findPublicById(encodedId: string): Promise<BusinessInfoPublicData> {
     const rawId = this.cryptoService.decodeId(encodedId);
     const result = await findBusinessInfoPublicById(this.prisma, rawId, this.logger);
-    return { ...result, id: this.cryptoService.encodeId(result.id) };
+    return {
+      ...result,
+      id: this.cryptoService.encodeId(result.id),
+      businessEmail: this.cryptoService.decrypt(result.businessEmail),
+      taxIdentificationNumber: this.cryptoService.decrypt(result.taxIdentificationNumber),
+      businessRegistrationNumber: this.cryptoService.decrypt(result.businessRegistrationNumber),
+      msicCode: this.cryptoService.decrypt(result.msicCode),
+      sstRegistrationNumber: result.sstRegistrationNumber ? this.cryptoService.decrypt(result.sstRegistrationNumber) : result.sstRegistrationNumber,
+    };
   }
 
   /**
@@ -91,11 +122,23 @@ export class BusinessInfoService {
     await this.verifyOwnership(encodedId, userId);
     const rawId = this.cryptoService.decodeId(encodedId);
     const payload: UpdateBusinessInfoData = { ...data };
-    if (data.userSecretKey) {
-      payload.userSecretKey = this.cryptoService.encrypt(data.userSecretKey.trim());
-    }
+    if (data.businessEmail) payload.businessEmail = this.cryptoService.encrypt(data.businessEmail);
+    if (data.taxIdentificationNumber) payload.taxIdentificationNumber = this.cryptoService.encrypt(data.taxIdentificationNumber);
+    if (data.businessRegistrationNumber) payload.businessRegistrationNumber = this.cryptoService.encrypt(data.businessRegistrationNumber);
+    if (data.msicCode) payload.msicCode = this.cryptoService.encrypt(data.msicCode);
+    if (data.sstRegistrationNumber) payload.sstRegistrationNumber = this.cryptoService.encrypt(data.sstRegistrationNumber);
+    if (data.userSecretKey) payload.userSecretKey = this.cryptoService.encrypt(data.userSecretKey.trim());
     const result = await updateBusinessInfo(this.prisma, rawId, payload, this.logger);
-    return { ...result, id: this.cryptoService.encodeId(result.id), userSecretKey: '***' };
+    return {
+      ...result,
+      id: this.cryptoService.encodeId(result.id),
+      businessEmail: this.cryptoService.decrypt(result.businessEmail),
+      taxIdentificationNumber: this.cryptoService.decrypt(result.taxIdentificationNumber),
+      businessRegistrationNumber: this.cryptoService.decrypt(result.businessRegistrationNumber),
+      msicCode: this.cryptoService.decrypt(result.msicCode),
+      sstRegistrationNumber: result.sstRegistrationNumber ? this.cryptoService.decrypt(result.sstRegistrationNumber) : result.sstRegistrationNumber,
+      userSecretKey: '***',
+    };
   }
 
   async delete(encodedId: string, userId: string): Promise<BusinessInformation> {

@@ -278,6 +278,8 @@ export function patchExcelDataToInvoiceForm(
       unitPrice: item.unitPrice,
       discountRate: item.discountRate ?? 0,
       classificationCode: item.classificationCode,
+      taxType: item.taxType ?? 'NOT_APPLICABLE',
+      taxRate: item.taxRate ?? 0,
     });
     itemsArray.push(fg);
   }
