@@ -153,6 +153,7 @@ export async function generateInvoiceTemplate(): Promise<Buffer> {
     { header: 'itemName',           key: 'itemName',           width: 40 },
     { header: 'quantity',           key: 'quantity',           width: 12 },
     { header: 'unitPrice',          key: 'unitPrice',          width: 15 },
+    { header: 'discountRate',       key: 'discountRate',       width: 15 },
     { header: 'classificationCode', key: 'classificationCode', width: 45 },
     { header: 'taxType',            key: 'taxType',            width: 20 },
     { header: 'taxRate',            key: 'taxRate',            width: 12 },
@@ -164,6 +165,7 @@ export async function generateInvoiceTemplate(): Promise<Buffer> {
     itemName: 'Monthly Taekwondo Tuition (Junior Class)',
     quantity: 1,
     unitPrice: 150.00,
+    discountRate: 0,
     classificationCode: `${CLASSIFICATION_CODES[0].code} - ${CLASSIFICATION_CODES[0].description}`,
     taxType: 'NOT_APPLICABLE',
     taxRate: 0,
@@ -177,15 +179,26 @@ export async function generateInvoiceTemplate(): Promise<Buffer> {
   });
 
   const classificationFormula = `'_Ref'!$A$1:$A$${classificationOptions.length}`;
+  const taxTypeFormula = '"SST,SERVICE_TAX,TOURISM_TAX,HIGH_VALUE_GOODS_TAX,NOT_APPLICABLE,EXEMPT"';
 
   for (let row = 2; row <= 100; row++) {
-    itemSheet.getCell(`D${row}`).dataValidation = {
+    // Column E: classificationCode (shifted from D due to new discountRate column)
+    itemSheet.getCell(`E${row}`).dataValidation = {
       type: 'list',
       allowBlank: true,
       formulae: [classificationFormula],
       showErrorMessage: true,
       errorTitle: 'Invalid Code',
       error: 'Please select a valid classification code from the dropdown.',
+    };
+    // Column F: taxType dropdown
+    itemSheet.getCell(`F${row}`).dataValidation = {
+      type: 'list',
+      allowBlank: true,
+      formulae: [taxTypeFormula],
+      showErrorMessage: true,
+      errorTitle: 'Invalid Tax Type',
+      error: 'Please select a valid tax type from the dropdown.',
     };
   }
 

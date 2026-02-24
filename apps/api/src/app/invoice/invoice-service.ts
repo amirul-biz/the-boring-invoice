@@ -7,6 +7,9 @@ import {
   CalculatedInvoiceDto,
   CreateInvoiceInputDTO,
   ProcessedInvoiceDto,
+  RecipientDTO,
+  SupplierDTO,
+  ReceiptDTO,
 } from './invoice-dto';
 import { BusinessInfoService } from '../business-info/business-info-service';
 import { PaymentIntegrationCredential } from '../business-info/business-info-interface';
@@ -132,9 +135,23 @@ export class InvoiceService {
       );
 
       if (!existingInvoice) {
+        const encryptedRecipient: RecipientDTO = {
+          ...calculatedInvoice.recipient,
+          email: this.cryptoService.encrypt(calculatedInvoice.recipient.email),
+          phone: this.cryptoService.encrypt(calculatedInvoice.recipient.phone),
+          tin: this.cryptoService.encrypt(calculatedInvoice.recipient.tin),
+          registrationNumber: this.cryptoService.encrypt(calculatedInvoice.recipient.registrationNumber),
+        };
+        const encryptedSupplier: SupplierDTO = {
+          ...calculatedInvoice.supplier,
+          email: this.cryptoService.encrypt(calculatedInvoice.supplier.email),
+          tin: this.cryptoService.encrypt(calculatedInvoice.supplier.tin),
+          registrationNumber: this.cryptoService.encrypt(calculatedInvoice.supplier.registrationNumber),
+          msicCode: this.cryptoService.encrypt(calculatedInvoice.supplier.msicCode),
+        };
         await createInvoice(
           this.prisma,
-          { ...calculatedInvoice, status: 'DRAFT' },
+          { ...calculatedInvoice, status: 'DRAFT', recipient: encryptedRecipient, supplier: encryptedSupplier },
           businessId,
           this.logger,
         );
@@ -434,7 +451,24 @@ export class InvoiceService {
 
     // Step 4: Send receipt email if paid (fire & forget — duplicate receipts are acceptable)
     if (paymentStatus === InvoiceStatus.PAID) {
-      const receiptData = await getInvoiceAsReceipt(this.prisma, invoiceNo, this.logger);
+      const rawReceipt = await getInvoiceAsReceipt(this.prisma, invoiceNo, this.logger);
+      const receiptData: ReceiptDTO = {
+        ...rawReceipt,
+        recipient: {
+          ...rawReceipt.recipient,
+          email: this.cryptoService.decrypt(rawReceipt.recipient.email),
+          phone: this.cryptoService.decrypt(rawReceipt.recipient.phone),
+          tin: this.cryptoService.decrypt(rawReceipt.recipient.tin),
+          registrationNumber: this.cryptoService.decrypt(rawReceipt.recipient.registrationNumber),
+        },
+        supplier: {
+          ...rawReceipt.supplier,
+          email: this.cryptoService.decrypt(rawReceipt.supplier.email),
+          tin: this.cryptoService.decrypt(rawReceipt.supplier.tin),
+          registrationNumber: this.cryptoService.decrypt(rawReceipt.supplier.registrationNumber),
+          msicCode: this.cryptoService.decrypt(rawReceipt.supplier.msicCode),
+        },
+      };
 
       sendReceiptEmail(this.mailService, receiptData, this.logger).catch(() => {
         this.logger.warn(`Receipt email failed but payment processed: ${invoiceNo}`);
