@@ -137,9 +137,9 @@ export class InvoiceService {
       if (!existingInvoice) {
         const encryptedRecipient: RecipientDTO = {
           ...calculatedInvoice.recipient,
-          email: this.cryptoService.encrypt(calculatedInvoice.recipient.email),
+          email: calculatedInvoice.recipient.email ? this.cryptoService.encrypt(calculatedInvoice.recipient.email) : calculatedInvoice.recipient.email,
           phone: this.cryptoService.encrypt(calculatedInvoice.recipient.phone),
-          tin: this.cryptoService.encrypt(calculatedInvoice.recipient.tin),
+          tin: calculatedInvoice.recipient.tin ? this.cryptoService.encrypt(calculatedInvoice.recipient.tin) : calculatedInvoice.recipient.tin,
           registrationNumber: this.cryptoService.encrypt(calculatedInvoice.recipient.registrationNumber),
         };
         const encryptedSupplier: SupplierDTO = {
@@ -148,6 +148,9 @@ export class InvoiceService {
           tin: this.cryptoService.encrypt(calculatedInvoice.supplier.tin),
           registrationNumber: this.cryptoService.encrypt(calculatedInvoice.supplier.registrationNumber),
           msicCode: this.cryptoService.encrypt(calculatedInvoice.supplier.msicCode),
+          contactNumber: calculatedInvoice.supplier.contactNumber
+            ? this.cryptoService.encrypt(calculatedInvoice.supplier.contactNumber)
+            : undefined,
         };
         await createInvoice(
           this.prisma,
@@ -456,9 +459,9 @@ export class InvoiceService {
         ...rawReceipt,
         recipient: {
           ...rawReceipt.recipient,
-          email: this.cryptoService.decrypt(rawReceipt.recipient.email),
+          email: rawReceipt.recipient.email ? this.cryptoService.decrypt(rawReceipt.recipient.email) : rawReceipt.recipient.email,
           phone: this.cryptoService.decrypt(rawReceipt.recipient.phone),
-          tin: this.cryptoService.decrypt(rawReceipt.recipient.tin),
+          tin: rawReceipt.recipient.tin ? this.cryptoService.decrypt(rawReceipt.recipient.tin) : rawReceipt.recipient.tin,
           registrationNumber: this.cryptoService.decrypt(rawReceipt.recipient.registrationNumber),
         },
         supplier: {
@@ -467,6 +470,9 @@ export class InvoiceService {
           tin: this.cryptoService.decrypt(rawReceipt.supplier.tin),
           registrationNumber: this.cryptoService.decrypt(rawReceipt.supplier.registrationNumber),
           msicCode: this.cryptoService.decrypt(rawReceipt.supplier.msicCode),
+          contactNumber: rawReceipt.supplier.contactNumber
+            ? this.cryptoService.decrypt(rawReceipt.supplier.contactNumber as string)
+            : undefined,
         },
       };
 

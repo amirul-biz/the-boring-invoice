@@ -18,6 +18,7 @@ export interface IBusinessInfo {
   userSecretKey: string;
   idType?: string;
   sstRegistrationNumber?: string;
+  businessContactNumber: string;
   address?: IBusinessAddress;
   invoiceVersion?: string;
 }
@@ -33,6 +34,7 @@ export interface IBusinessInfoPublic {
   categoryCode: string;
   idType?: string;
   sstRegistrationNumber?: string;
+  businessContactNumber: string;
   address?: IBusinessAddress;
   invoiceVersion?: string;
 }

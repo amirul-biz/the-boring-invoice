@@ -17,6 +17,7 @@ export interface CreateBusinessInfoBody {
   userSecretKey: string;
   idType: string;
   sstRegistrationNumber?: string;
+  businessContactNumber: string;
   address: BusinessAddress;
   invoiceVersion: string;
 }
@@ -36,6 +37,7 @@ export interface BusinessInfoPublicData {
   categoryCode: string;
   idType?: string;
   sstRegistrationNumber?: string;
+  businessContactNumber: string;
   address?: BusinessAddress;
   invoiceVersion: string;
 }
@@ -56,6 +58,7 @@ export interface UpdateBusinessInfoData {
   userSecretKey?: string;
   idType?: string;
   sstRegistrationNumber?: string;
+  businessContactNumber?: string;
   address?: Partial<BusinessAddress>;
   invoiceVersion?: string;
 }

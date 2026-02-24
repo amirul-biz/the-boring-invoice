@@ -178,7 +178,8 @@ function generateInvoiceEmailHtml(invoice: ProcessedInvoiceDto): string {
             <td style="padding: 24px 40px; background-color: #f8fafc;">
               <p style="margin: 0; color: #64748b; font-size: 12px; line-height: 1.6;">
                 <strong style="color: #475569;">${invoice.supplier.name}</strong><br>
-                TIN: ${invoice.supplier.tin} | SSM: ${invoice.supplier.registrationNumber} | MSIC: ${invoice.supplier.msicCode}
+                TIN: ${invoice.supplier.tin} | SSM: ${invoice.supplier.registrationNumber} | MSIC: ${invoice.supplier.msicCode}<br>
+                ${invoice.supplier.email ? `Email: ${invoice.supplier.email}` : ''}${invoice.supplier.email && invoice.supplier.contactNumber ? ' | ' : ''}${invoice.supplier.contactNumber ? `Tel: ${invoice.supplier.contactNumber}` : ''}
               </p>
             </td>
           </tr>
@@ -245,6 +246,7 @@ Accepts FPX & Credit/Debit Cards
 ───────────────────────────────────────
 ${invoice.supplier.name}
 TIN: ${invoice.supplier.tin} | SSM: ${invoice.supplier.registrationNumber} | MSIC: ${invoice.supplier.msicCode}
+${invoice.supplier.email ? `Email: ${invoice.supplier.email}` : ''}${invoice.supplier.email && invoice.supplier.contactNumber ? ' | ' : ''}${invoice.supplier.contactNumber ? `Tel: ${invoice.supplier.contactNumber}` : ''}
 
 Please include invoice number ${invoice.invoiceNo} in your payment reference.
 For questions, contact us at ${invoice.supplier.email}

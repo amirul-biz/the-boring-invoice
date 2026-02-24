@@ -30,6 +30,7 @@ export interface SupplierForm {
   businessActivityDescription: FormControl<string | null>;
   idType: FormControl<string | null>;
   sstRegistrationNumber: FormControl<string | null>;
+  contactNumber: FormControl<string | null>;
   addressLine1: FormControl<string | null>;
   city: FormControl<string | null>;
   postcode: FormControl<string | null>;
@@ -63,7 +64,7 @@ export function recipientForm(): FormGroup<RecipientForm> {
       nonNullable: true,
       validators: [Validators.required],
     }),
-    email: new FormControl<string | null>(null, [Validators.email]),
+    email: new FormControl<string | null>(null, [Validators.required, Validators.email]),
     phone: new FormControl(null, {
       nonNullable: true,
       validators: [Validators.required],
@@ -179,6 +180,7 @@ export function getInvoiceForm(): FormGroup<CreateInvoiceForm> {
         validators: [Validators.required],
       }),
       sstRegistrationNumber: new FormControl<string | null>({ value: null, disabled: true }),
+      contactNumber: new FormControl<string | null>({ value: null, disabled: true }),
       addressLine1: new FormControl({ value: null, disabled: true }, {
         nonNullable: true,
         validators: [Validators.required],
@@ -324,6 +326,7 @@ export function getInvoicesData(
     businessActivityDescription: formValue.supplier.businessActivityDescription,
     idType: formValue.supplier.idType,
     sstRegistrationNumber: formValue.supplier.sstRegistrationNumber ?? undefined,
+    contactNumber: formValue.supplier.contactNumber ?? undefined,
     addressLine1: formValue.supplier.addressLine1,
     city: formValue.supplier.city,
     postcode: formValue.supplier.postcode,

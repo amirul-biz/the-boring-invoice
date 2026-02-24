@@ -79,6 +79,7 @@ export class Invoice implements OnInit {
           businessActivityDescription: data.businessActivityDescription,
           idType: data.idType,
           sstRegistrationNumber: data.sstRegistrationNumber,
+          contactNumber: data.businessContactNumber,
           addressLine1: data.address?.addressLine1,
           city: data.address?.city,
           postcode: data.address?.postcode,

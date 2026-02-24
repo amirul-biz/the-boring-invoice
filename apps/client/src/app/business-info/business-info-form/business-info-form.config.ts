@@ -11,6 +11,7 @@ export interface BusinessInfoForm {
   userSecretKey: FormControl<string | null>;
   idType: FormControl<string | null>;
   sstRegistrationNumber: FormControl<string | null>;
+  businessContactNumber: FormControl<string | null>;
   addressLine1: FormControl<string | null>;
   city: FormControl<string | null>;
   postcode: FormControl<string | null>;
@@ -57,6 +58,10 @@ export function getBusinessInfoForm(): FormGroup<BusinessInfoForm> {
       validators: [Validators.required],
     }),
     sstRegistrationNumber: new FormControl<string | null>(null),
+    businessContactNumber: new FormControl(<string | null>(null), {
+      nonNullable: true,
+      validators: [Validators.required],
+    }),
     addressLine1: new FormControl(null, {
       nonNullable: true,
       validators: [Validators.required],

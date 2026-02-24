@@ -30,6 +30,7 @@ model BusinessInformation {
   userSecretKey                   String
   idType                          IdType?
   sstRegistrationNumber           String?
+  businessContactNumber           String?
   address                         Json?    @db.JsonB
   invoiceVersion                  String   @default("1.0")
   createdAt                       DateTime @default(now())

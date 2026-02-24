@@ -32,6 +32,7 @@ export class BusinessInfoService {
       businessRegistrationNumber: this.cryptoService.encrypt(data.businessRegistrationNumber),
       msicCode: this.cryptoService.encrypt(data.msicCode),
       sstRegistrationNumber: data.sstRegistrationNumber ? this.cryptoService.encrypt(data.sstRegistrationNumber) : undefined,
+      businessContactNumber: this.cryptoService.encrypt(data.businessContactNumber),
       userSecretKey: this.cryptoService.encrypt(data.userSecretKey.trim()),
     };
     const result = await createBusinessInfo(this.prisma, payload, this.logger);
@@ -48,6 +49,7 @@ export class BusinessInfoService {
       businessRegistrationNumber: this.cryptoService.decrypt(b.businessRegistrationNumber),
       msicCode: this.cryptoService.decrypt(b.msicCode),
       sstRegistrationNumber: b.sstRegistrationNumber ? this.cryptoService.decrypt(b.sstRegistrationNumber) : b.sstRegistrationNumber,
+      businessContactNumber: b.businessContactNumber ? this.cryptoService.decrypt(b.businessContactNumber) : b.businessContactNumber,
       userSecretKey: '***',
     }));
   }
@@ -74,6 +76,7 @@ export class BusinessInfoService {
       businessRegistrationNumber: this.cryptoService.decrypt(result.businessRegistrationNumber),
       msicCode: this.cryptoService.decrypt(result.msicCode),
       sstRegistrationNumber: result.sstRegistrationNumber ? this.cryptoService.decrypt(result.sstRegistrationNumber) : result.sstRegistrationNumber,
+      businessContactNumber: result.businessContactNumber ? this.cryptoService.decrypt(result.businessContactNumber) : result.businessContactNumber,
       userSecretKey: this.cryptoService.decrypt(result.userSecretKey),
     };
   }
@@ -89,6 +92,7 @@ export class BusinessInfoService {
       businessRegistrationNumber: this.cryptoService.decrypt(result.businessRegistrationNumber),
       msicCode: this.cryptoService.decrypt(result.msicCode),
       sstRegistrationNumber: result.sstRegistrationNumber ? this.cryptoService.decrypt(result.sstRegistrationNumber) : result.sstRegistrationNumber,
+      businessContactNumber: result.businessContactNumber ? this.cryptoService.decrypt(result.businessContactNumber) : result.businessContactNumber,
     };
   }
 
@@ -127,6 +131,7 @@ export class BusinessInfoService {
     if (data.businessRegistrationNumber) payload.businessRegistrationNumber = this.cryptoService.encrypt(data.businessRegistrationNumber);
     if (data.msicCode) payload.msicCode = this.cryptoService.encrypt(data.msicCode);
     if (data.sstRegistrationNumber) payload.sstRegistrationNumber = this.cryptoService.encrypt(data.sstRegistrationNumber);
+    if (data.businessContactNumber) payload.businessContactNumber = this.cryptoService.encrypt(data.businessContactNumber);
     if (data.userSecretKey) payload.userSecretKey = this.cryptoService.encrypt(data.userSecretKey.trim());
     const result = await updateBusinessInfo(this.prisma, rawId, payload, this.logger);
     return {
@@ -137,6 +142,7 @@ export class BusinessInfoService {
       businessRegistrationNumber: this.cryptoService.decrypt(result.businessRegistrationNumber),
       msicCode: this.cryptoService.decrypt(result.msicCode),
       sstRegistrationNumber: result.sstRegistrationNumber ? this.cryptoService.decrypt(result.sstRegistrationNumber) : result.sstRegistrationNumber,
+      businessContactNumber: result.businessContactNumber ? this.cryptoService.decrypt(result.businessContactNumber) : result.businessContactNumber,
       userSecretKey: '***',
     };
   }
