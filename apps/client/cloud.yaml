@@ -1,0 +1,46 @@
+# Cloud Run service definition for the-boring-invoice client (Angular SPA + Nginx)
+# Deploy with:
+#   gcloud run services replace apps/client/cloud.yaml --region=YOUR_REGION
+#
+# Build & push image first (NG_APP_API_URL is baked in at build time):
+#   docker build -t YOUR_REGION-docker.pkg.dev/YOUR_PROJECT_ID/YOUR_REPO/client:latest \
+#     --build-arg NG_APP_API_URL=https://the-boring-invoice-api-YOUR_HASH-YOUR_REGION.a.run.app \
+#     -f apps/client/Dockerfile .
+#   docker push YOUR_REGION-docker.pkg.dev/YOUR_PROJECT_ID/YOUR_REPO/client:latest
+
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: the-boring-invoice-client
+  annotations:
+    # Allow unauthenticated public traffic
+    run.googleapis.com/ingress: all
+spec:
+  template:
+    metadata:
+      annotations:
+        # Scale to zero when idle; cap at 5 instances
+        autoscaling.knative.dev/minScale: "0"
+        autoscaling.knative.dev/maxScale: "5"
+        # Use second-generation execution environment
+        run.googleapis.com/execution-environment: gen2
+    spec:
+      timeoutSeconds: 300
+      containers:
+        - image: YOUR_REGION-docker.pkg.dev/YOUR_PROJECT_ID/YOUR_REPO/client:latest
+          # Nginx listens on port 80; Cloud Run routes traffic here
+          ports:
+            - containerPort: 80
+          resources:
+            limits:
+              memory: 256Mi
+              cpu: "1"
+
+          # Startup probe — waits for Nginx to be ready
+          startupProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 6

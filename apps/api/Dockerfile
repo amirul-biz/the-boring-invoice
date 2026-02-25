@@ -3,20 +3,23 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files
+# Install build tools for native modules (better-sqlite3, bcrypt, etc.)
+RUN apk add --no-cache python3 make g++ openssl
+
+# Copy root workspace manifest files
 COPY package*.json ./
 COPY prisma ./prisma/
 
-# Install dependencies
+# Install all dependencies (devDeps needed for Nx build)
 RUN npm ci
 
-# Copy source code
+# Copy full workspace source
 COPY . .
 
-# Generate Prisma client
+# Generate Prisma client targeting linux/musl (Alpine)
 RUN npx prisma generate
 
-# Build the API
+# Build the NestJS API with Nx
 RUN npx nx build api --prod
 
 # Stage 2: Production
@@ -24,15 +27,22 @@ FROM node:20-alpine AS production
 
 WORKDIR /app
 
-# Copy built application
-COPY --from=builder /app/dist/api ./dist
+# Required by Prisma client at runtime
+RUN apk add --no-cache openssl
+
+# Copy the built application (webpack generates package.json here too)
+COPY --from=builder /app/dist/api ./
+
+# Copy full node_modules — preserves Prisma linux binaries and prisma CLI
 COPY --from=builder /app/node_modules ./node_modules
+
+# Copy Prisma schema and migrations for runtime migrations
 COPY --from=builder /app/prisma ./prisma
 
-# Set environment
 ENV NODE_ENV=production
-ENV PORT=3000
+ENV PORT=8080
 
-EXPOSE 3000
+EXPOSE 8080
 
-CMD ["node", "dist/main.js"]
+# Run migrations then start the server (exec hands PID 1 to node for signal handling)
+CMD ["sh", "-c", "node_modules/.bin/prisma migrate deploy && exec node main.js"]
