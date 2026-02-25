@@ -1,0 +1,115 @@
+# Cloud Run service definition for the-boring-invoice API
+# Deploy with:
+#   gcloud run services replace apps/api/cloud.yaml --region=YOUR_REGION
+#
+# Build & push image first:
+#   docker build -t YOUR_REGION-docker.pkg.dev/YOUR_PROJECT_ID/YOUR_REPO/api:latest \
+#     -f apps/api/Dockerfile .
+#   docker push YOUR_REGION-docker.pkg.dev/YOUR_PROJECT_ID/YOUR_REPO/api:latest
+
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: the-boring-invoice-api
+  annotations:
+    # Allow unauthenticated public traffic
+    run.googleapis.com/ingress: all
+spec:
+  template:
+    metadata:
+      annotations:
+        # Instance-based billing; scale to zero when idle; cap at 10 instances
+        autoscaling.knative.dev/minScale: "0"
+        autoscaling.knative.dev/maxScale: "10"
+        run.googleapis.com/cpu-throttling: "false"
+        # Use second-generation execution environment
+        run.googleapis.com/execution-environment: gen2
+        # Scale down quickly after last request to minimise idle billing
+        run.googleapis.com/idle-timeout: 60s
+    spec:
+      # Increase startup timeout to allow prisma migrate deploy on cold start
+      timeoutSeconds: 300
+      containers:
+        - image: YOUR_REGION-docker.pkg.dev/YOUR_PROJECT_ID/YOUR_REPO/api:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: PORT
+              value: "8080"
+
+            # ── Sensitive values — store in GCP Secret Manager ──────────────
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: DATABASE_URL
+                  key: latest
+
+            - name: ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: ENCRYPTION_KEY
+                  key: latest
+
+            - name: RBBIT_MQ_QUE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: RBBIT_MQ_QUE_URL
+                  key: latest
+
+            - name: SMTP_MAILER_EMAIL
+              valueFrom:
+                secretKeyRef:
+                  name: SMTP_MAILER_EMAIL
+                  key: latest
+
+            - name: SMTP_MAILER_SERVER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: SMTP_MAILER_SERVER_PASSWORD
+                  key: latest
+
+            - name: SMTP_MAILER_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: SMTP_MAILER_HOST
+                  key: latest
+
+            - name: PAYMENT_API_SECRET_URL
+              valueFrom:
+                secretKeyRef:
+                  name: PAYMENT_API_SECRET_URL
+                  key: latest
+
+            - name: PAYMENT_API_CATEGORY_CODE
+              valueFrom:
+                secretKeyRef:
+                  name: PAYMENT_API_CATEGORY_CODE
+                  key: latest
+
+            - name: PAYMENT_RETURN_URL
+              valueFrom:
+                secretKeyRef:
+                  name: PAYMENT_RETURN_URL
+                  key: latest
+
+            - name: NG_APP_API_URL
+              valueFrom:
+                secretKeyRef:
+                  name: NG_APP_API_URL
+                  key: latest
+
+          resources:
+            limits:
+              memory: 512Mi
+              cpu: "1"
+
+          # Startup probe — waits for the server to be ready before routing traffic
+          startupProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 12
