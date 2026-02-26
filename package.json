@@ -11,11 +11,11 @@
     "db:push:prod": "dotenv -e .env.production -- prisma db push",
     "serve:dev": "nx serve api --configuration=development",
     "serve:prod": "nx serve api --configuration=production",
-    "docker:build:api:dev": "docker build -f apps/api/Dockerfile -t amirulbiz/the-boring-invoice-api:latest .",
-    "docker:push:api:dev": "docker push amirulbiz/the-boring-invoice-api:latest",
+    "docker:build:api:dev": "docker build -f apps/api/Dockerfile -t amirulbiz/the-boring-invoice-api:dev .",
+    "docker:push:api:dev": "docker push amirulbiz/the-boring-invoice-api:dev",
     "docker:deploy:api:dev": "node scripts/check-branch.js development && npm run docker:build:api:dev && npm run docker:push:api:dev",
-    "docker:build:api:prod": "docker build -f apps/api/Dockerfile -t amirulbiz/the-boring-invoice-api:latest .",
-    "docker:push:api:prod": "docker push amirulbiz/the-boring-invoice-api:latest",
+    "docker:build:api:prod": "docker build -f apps/api/Dockerfile -t amirulbiz/the-boring-invoice-api:prod .",
+    "docker:push:api:prod": "docker push amirulbiz/the-boring-invoice-api:prod",
     "docker:deploy:api:prod": "node scripts/check-branch.js main && npm run docker:build:api:prod && npm run docker:push:api:prod"
   },
   "devDependencies": {
