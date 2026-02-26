@@ -10,7 +10,13 @@
     "db:push:dev": "dotenv -e .env.development -- prisma db push",
     "db:push:prod": "dotenv -e .env.production -- prisma db push",
     "serve:dev": "nx serve api --configuration=development",
-    "serve:prod": "nx serve api --configuration=production"
+    "serve:prod": "nx serve api --configuration=production",
+    "docker:build:api:dev": "docker build -f apps/api/Dockerfile -t amirulbiz/dev-the-boring-invoice-api:latest .",
+    "docker:push:api:dev": "docker push amirulbiz/dev-the-boring-invoice-api:latest",
+    "docker:deploy:api:dev": "bash -c '[ $(git branch --show-current) = development ] || (echo ERROR: switch to development branch first && exit 1) && npm run docker:build:api:dev && npm run docker:push:api:dev'",
+    "docker:build:api:prod": "docker build -f apps/api/Dockerfile -t amirulbiz/the-boring-invoice-api:latest .",
+    "docker:push:api:prod": "docker push amirulbiz/the-boring-invoice-api:latest",
+    "docker:deploy:api:prod": "bash -c '[ $(git branch --show-current) = main ] || (echo ERROR: switch to main branch first && exit 1) && npm run docker:build:api:prod && npm run docker:push:api:prod'"
   },
   "devDependencies": {
     "@angular-devkit/core": "~21.0.0",
