@@ -40,9 +40,9 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/prisma ./prisma
 
 ENV NODE_ENV=production
-ENV PORT=8080
+ENV PORT=3000
 
-EXPOSE 8080
+EXPOSE 3000
 
 # Run migrations then start the server (exec hands PID 1 to node for signal handling)
 CMD ["sh", "-c", "node_modules/.bin/prisma migrate deploy && exec node main.js"]
