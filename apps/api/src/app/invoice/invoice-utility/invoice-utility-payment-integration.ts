@@ -24,7 +24,7 @@ export async function processPaymentIntegration(
 
     // Get environment URLs
     const returnUrl = process.env.PAYMENT_RETURN_URL;
-    const callbackUrl = `${process.env.NG_APP_API_URL}/invoice/callback`;
+    const callbackUrl = `${process.env.API_URL}/invoice/callback`;
 
     if (!returnUrl || !callbackUrl) {
       throw new HttpException(

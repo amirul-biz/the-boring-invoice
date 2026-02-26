@@ -2,7 +2,7 @@
 # Deploy with:
 #   gcloud run services replace apps/client/cloud.yaml --region=YOUR_REGION
 #
-# Build & push image first (NG_APP_API_URL is baked in at build time):
+# Build & push image first (API_URL is baked in at build time as NG_APP_API_URL for @ngx-env/builder):
 #   docker build -t YOUR_REGION-docker.pkg.dev/YOUR_PROJECT_ID/YOUR_REPO/client:latest \
 #     --build-arg NG_APP_API_URL=https://the-boring-invoice-api-YOUR_HASH-YOUR_REGION.a.run.app \
 #     -f apps/client/Dockerfile .

@@ -17,7 +17,7 @@ services:
       - SMTP_MAILER_SERVER_PASSWORD=${SMTP_MAILER_SERVER_PASSWORD}
       - SMTP_MAILER_HOST=${SMTP_MAILER_HOST}
       - RBBIT_MQ_QUE_URL=${RBBIT_MQ_QUE_URL}
-      - NG_APP_API_URL=${NG_APP_API_URL}
+      - API_URL=${API_URL}
       - PAYMENT_RETURN_URL=${PAYMENT_RETURN_URL}
     depends_on:
       - rabbitmq
@@ -28,6 +28,8 @@ services:
     build:
       context: .
       dockerfile: apps/client/Dockerfile
+      args:
+        - NG_APP_API_URL=${API_URL}
     ports:
       - "80:80"
     depends_on:
