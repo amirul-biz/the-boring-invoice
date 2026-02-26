@@ -18,7 +18,7 @@ import { GoogleStrategy } from './auth-google.strategy';
       useFactory: (configService: ConfigService): OAuthGoogleConfig => ({
         clientID: configService.get<string>('OAUTH_CLIENT_ID'),
         clientSecret: configService.get<string>('OAUTH_SECRET'),
-        callbackURL: configService.get<string>('OAUTH_CALLBACK_URL'),
+        callbackURL: `${configService.get<string>('API_URL')}/auth/google/callback`,
       }),
     },
     AuthService,
