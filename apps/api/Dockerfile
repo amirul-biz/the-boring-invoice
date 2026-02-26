@@ -36,8 +36,9 @@ COPY --from=builder /app/dist/api ./
 # Copy full node_modules — preserves Prisma linux binaries and prisma CLI
 COPY --from=builder /app/node_modules ./node_modules
 
-# Copy Prisma schema and migrations for runtime migrations
+# Copy Prisma schema, migrations, and config for runtime migrations
 COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 
 ENV NODE_ENV=production
 ENV PORT=3000
