@@ -11,6 +11,7 @@ import { BusinessInfoService } from './business-info-service';
   selector: 'app-business-info',
   imports: [BusinessInfoFormComponent, NgxSpinnerModule],
   templateUrl: './business-info.html',
+  styleUrl: './business-info.scss',
 })
 export class BusinessInfo implements OnInit {
   private route = inject(ActivatedRoute);

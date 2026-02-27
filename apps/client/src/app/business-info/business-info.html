@@ -1,12 +1,24 @@
-<div class="container py-4">
-  <h2 class="mb-4">{{ mode === 'edit' ? 'Edit' : 'Create' }} Business Information</h2>
+<div class="bi-page">
 
-  <ngx-spinner bdColor="rgba(0, 0, 0, 0.8)" size="large" color="#fff" type="ball-scale-multiple" [fullScreen]="true">
-    <p style="color: white">{{ mode === 'edit' ? 'Loading...' : 'Saving...' }}</p>
+  <ngx-spinner bdColor="rgba(246,245,240,0.9)" size="medium" color="#0D0D0D" type="ball-clip-rotate" [fullScreen]="true">
+    <p class="bi-spinner-label">{{ mode === 'edit' ? 'Loading...' : 'Saving...' }}</p>
   </ngx-spinner>
 
-  <app-business-info-form
-    [form]="form"
-    [mode]="mode"
-    (save)="onSave()" />
+  <!-- Page Header -->
+  <div class="bi-header">
+    <div class="bi-header-inner">
+      <div class="bi-title-block">
+        <h1 class="bi-title">{{ mode === 'edit' ? 'Edit Business' : 'New Business' }}</h1>
+        <p class="bi-subtitle">
+          {{ mode === 'edit' ? 'Update your business information' : 'Register a new business entity' }}
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div class="bi-content">
+    <app-business-info-form [form]="form" [mode]="mode" (save)="onSave()" />
+  </div>
+
 </div>

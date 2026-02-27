@@ -14,6 +14,7 @@ import { PAGE_SIZES, INVOICE_TYPES, INVOICE_STATUSES } from '../invoice/invoice-
   selector: 'app-invoice-listing',
   imports: [CommonModule, NgxSpinnerModule, ReactiveFormsModule, InvoiceListingTableComponent],
   templateUrl: './invoice-listing.html',
+  styleUrl: './invoice-listing.scss',
 })
 export class InvoiceListing implements OnInit, OnDestroy {
   private invoiceListingService = inject(InvoiceListingService);
