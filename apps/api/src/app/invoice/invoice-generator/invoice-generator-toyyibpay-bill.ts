@@ -123,11 +123,11 @@ export class ToyyibPayUtil {
 
   constructor(config?: Partial<ToyyibPayConfig>) {
     this.config = {
-      secretKey: config?.secretKey || process.env.PAYMENT_API_SECRET_URL || '',
-      categoryCode: config?.categoryCode || process.env.PAYMENT_API_CATEGORY_CODE || '',
+      secretKey: config?.secretKey || '',
+      categoryCode: config?.categoryCode || '',
       baseUrl: config?.baseUrl || process.env.PAYMENT_API_BASE_URL || 'https://toyyibpay.com',
-      returnUrl: config?.returnUrl || process.env.PAYMENT_API_RETURN_URL || '',
-      callbackUrl: config?.callbackUrl || process.env.PAYMENT_API_CALLBACK_URL || '',
+      returnUrl: config?.returnUrl || process.env.PAYMENT_RETURN_URL || '',
+      callbackUrl: config?.callbackUrl || '',
     };
 
     this.validateConfig();
