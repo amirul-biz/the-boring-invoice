@@ -26,7 +26,7 @@ export async function processPaymentIntegration(
     const returnUrl = process.env.PAYMENT_RETURN_URL;
     const callbackUrl = `${process.env.API_URL}/invoice/callback`;
 
-    if (!returnUrl || !callbackUrl) {
+    if (!returnUrl || !process.env.API_URL) {
       throw new HttpException(
         'Payment gateway configuration missing',
         HttpStatus.INTERNAL_SERVER_ERROR,

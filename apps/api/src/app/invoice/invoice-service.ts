@@ -429,8 +429,7 @@ export class InvoiceService {
 
     const match = transactions.find(t => t.billExternalReferenceNo === invoiceNo);
     if (!match) {
-      this.logger.warn(`[Callback] No matching transaction for invoiceNo=${invoiceNo} in billCode=${callbackData.billcode}`);
-      return;
+      throw new Error(`No matching transaction for invoiceNo=${invoiceNo} in billCode=${callbackData.billcode}`);
     }
 
     this.logger.log(`[Callback] Matched transaction — billpaymentStatus: ${match.billpaymentStatus}`);
