@@ -1,0 +1,228 @@
+// ─── Variables ───────────────────────────────────────────────────────────────
+
+$font-family:          'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+
+$color-card:           #FFFFFF;
+$color-border:         rgba(0, 0, 0, 0.07);
+$color-border-btn:     rgba(0, 0, 0, 0.12);
+
+$color-text-primary:   #0D0D0D;
+$color-text-secondary: #6B6B6B;
+$color-text-muted:     #ADADAD;
+
+$radius-card:          16px;
+$radius-btn:           10px;
+$radius-avatar:        10px;
+
+// ─── Card ────────────────────────────────────────────────────────────────────
+
+.bec-card {
+  font-family: $font-family;
+  background: $color-card;
+  border: 1px solid $color-border;
+  border-radius: $radius-card;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.04),
+    0 4px 16px rgba(0, 0, 0, 0.04),
+    0 16px 40px rgba(0, 0, 0, 0.02);
+  padding: 1.5rem;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  transition:
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+
+  &:hover {
+    box-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.04),
+      0 8px 24px rgba(0, 0, 0, 0.08),
+      0 24px 48px rgba(0, 0, 0, 0.04);
+    transform: translateY(-2px);
+  }
+}
+
+// ─── Card Header ─────────────────────────────────────────────────────────────
+
+.bec-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.875rem;
+  margin-bottom: 1.25rem;
+}
+
+.bec-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: $radius-avatar;
+  background: $color-text-primary;
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.bec-header-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.bec-name {
+  font-size: 0.925rem;
+  font-weight: 600;
+  color: $color-text-primary;
+  letter-spacing: -0.02em;
+  margin: 0 0 0.2rem;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bec-email {
+  font-size: 0.775rem;
+  color: $color-text-secondary;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// ─── Edit Button ─────────────────────────────────────────────────────────────
+
+.bec-edit-btn {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  background: transparent;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: $color-text-muted;
+  padding: 0;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+
+  &:hover {
+    background: $color-text-primary;
+    color: #FFFFFF;
+    border-color: $color-text-primary;
+  }
+}
+
+// ─── Info Rows ───────────────────────────────────────────────────────────────
+
+.bec-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.bec-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.bec-label {
+  font-size: 0.7rem;
+  color: $color-text-muted;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.bec-value {
+  font-size: 0.775rem;
+  color: $color-text-secondary;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// ─── Separator ───────────────────────────────────────────────────────────────
+
+.bec-separator {
+  height: 1px;
+  background: $color-border;
+  margin: 1.25rem 0;
+}
+
+// ─── Action Buttons ──────────────────────────────────────────────────────────
+
+.bec-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.bec-btn {
+  flex: 1;
+  padding: 0.575rem 0.75rem;
+  border-radius: $radius-btn;
+  font-family: $font-family;
+  font-size: 0.785rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  border: 1px solid transparent;
+  white-space: nowrap;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.15s ease;
+
+  &:hover {
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+.bec-btn--primary {
+  background: $color-text-primary;
+  color: #FFFFFF;
+  border-color: $color-text-primary;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+
+  &:hover {
+    background: #2A2A2A;
+    border-color: #2A2A2A;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.16);
+  }
+}
+
+.bec-btn--outline {
+  background: transparent;
+  color: $color-text-primary;
+  border-color: $color-border-btn;
+
+  &:hover {
+    background: $color-text-primary;
+    color: #FFFFFF;
+    border-color: $color-text-primary;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.14);
+  }
+}

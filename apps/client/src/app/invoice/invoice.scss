@@ -1,0 +1,380 @@
+// ─── Variables ───────────────────────────────────────────────────────────────
+
+$font-family:          'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+
+$color-bg:             #F6F5F0;
+$color-card:           #FFFFFF;
+$color-sub-card:       #FAFAF8;
+$color-border:         rgba(0, 0, 0, 0.07);
+$color-border-input:   rgba(0, 0, 0, 0.12);
+
+$color-text-primary:   #0D0D0D;
+$color-text-secondary: #6B6B6B;
+$color-text-muted:     #ADADAD;
+
+$radius-card:          16px;
+$radius-sub-card:      12px;
+$radius-input:         8px;
+$radius-btn:           10px;
+
+// ─── Page ────────────────────────────────────────────────────────────────────
+
+.inv-page {
+  font-family: $font-family;
+  min-height: 100vh;
+  background-color: $color-bg;
+}
+
+// ─── Header ──────────────────────────────────────────────────────────────────
+
+.inv-header {
+  background: $color-card;
+  border-bottom: 1px solid $color-border;
+  padding: 1.25rem 0;
+}
+
+.inv-header-inner {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.inv-title-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.inv-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: $color-text-primary;
+  letter-spacing: -0.025em;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.inv-subtitle {
+  font-size: 0.775rem;
+  color: $color-text-muted;
+  font-weight: 400;
+  letter-spacing: -0.005em;
+  margin: 0;
+}
+
+.inv-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.inv-header-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.875rem;
+  background: transparent;
+  color: $color-text-secondary;
+  border: 1px solid $color-border-input;
+  border-radius: $radius-btn;
+  font-family: $font-family;
+  font-size: 0.775rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+
+  &:hover {
+    background: $color-text-primary;
+    color: #FFFFFF;
+    border-color: $color-text-primary;
+  }
+}
+
+// ─── Content ─────────────────────────────────────────────────────────────────
+
+.inv-content {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2.5rem 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+// ─── Section Card ────────────────────────────────────────────────────────────
+
+.inv-card {
+  background: $color-card;
+  border: 1px solid $color-border;
+  border-radius: $radius-card;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.04),
+    0 4px 16px rgba(0, 0, 0, 0.04),
+    0 16px 40px rgba(0, 0, 0, 0.02);
+  padding: 2rem 2.25rem;
+}
+
+// ─── Section Header ──────────────────────────────────────────────────────────
+
+.inv-section-header {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: $color-text-muted;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  margin-bottom: 1.25rem;
+}
+
+.inv-separator {
+  height: 1px;
+  background: $color-border;
+  margin: 1.5rem 0;
+}
+
+// ─── Labels ──────────────────────────────────────────────────────────────────
+
+.inv-label {
+  display: block;
+  font-size: 0.775rem;
+  font-weight: 500;
+  color: $color-text-secondary;
+  letter-spacing: -0.01em;
+  margin-bottom: 0.4rem;
+}
+
+.inv-label-note {
+  font-size: 0.7rem;
+  font-weight: 400;
+  color: $color-text-muted;
+  margin-left: 0.25rem;
+}
+
+// ─── Form Controls ───────────────────────────────────────────────────────────
+
+.inv-input.form-control,
+.inv-select.form-select {
+  font-family: $font-family;
+  font-size: 0.875rem;
+  color: $color-text-primary;
+  background: $color-card;
+  border: 1px solid $color-border-input;
+  border-radius: $radius-input;
+  padding: 0.6rem 0.875rem;
+  box-shadow: none;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+
+  &::placeholder {
+    color: $color-text-muted;
+    font-weight: 400;
+  }
+
+  &:focus {
+    border-color: $color-text-primary;
+    box-shadow: 0 0 0 3px rgba(13, 13, 13, 0.08);
+    outline: none;
+  }
+
+  &.is-invalid {
+    border-color: #DC3545;
+    box-shadow: none;
+
+    &:focus {
+      box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1);
+    }
+  }
+}
+
+// Sub-card inputs use a slightly different bg to stand out
+.inv-sub-card {
+  .inv-input.form-control,
+  .inv-select.form-select {
+    background: $color-card;
+  }
+}
+
+// Input inside input-group (datepicker)
+.input-group {
+  .inv-input.form-control {
+    border-radius: $radius-input 0 0 $radius-input;
+  }
+}
+
+.inv-datepicker-btn {
+  font-family: $font-family;
+  background: transparent;
+  border: 1px solid $color-border-input;
+  border-left: none;
+  border-radius: 0 $radius-input $radius-input 0;
+  padding: 0 0.875rem;
+  color: $color-text-secondary;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+
+  &.border-danger {
+    border-color: #DC3545;
+  }
+
+  &:hover {
+    background: $color-text-primary;
+    color: #FFFFFF;
+    border-color: $color-text-primary;
+  }
+}
+
+// ─── Validation Feedback ─────────────────────────────────────────────────────
+
+.invalid-feedback {
+  font-size: 0.72rem;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  margin-top: 0.3rem;
+}
+
+// ─── Sub-card (Recipient / Item) ─────────────────────────────────────────────
+
+.inv-sub-card {
+  background: $color-sub-card;
+  border: 1px solid $color-border;
+  border-radius: $radius-sub-card;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 0.875rem;
+
+  &:last-of-type {
+    margin-bottom: 0;
+  }
+}
+
+.inv-sub-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.1rem;
+}
+
+.inv-sub-title {
+  font-size: 0.775rem;
+  font-weight: 600;
+  color: $color-text-primary;
+  letter-spacing: -0.015em;
+}
+
+.inv-remove-btn {
+  font-family: $font-family;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: #B91C1C;
+  background: transparent;
+  border: 1px solid rgba(185, 28, 28, 0.25);
+  border-radius: 7px;
+  padding: 0.25rem 0.625rem;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+
+  &:hover:not(:disabled) {
+    background: #B91C1C;
+    color: #FFFFFF;
+    border-color: #B91C1C;
+  }
+
+  &:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+}
+
+.inv-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 1rem;
+  padding: 0.575rem 1rem;
+  background: transparent;
+  color: $color-text-primary;
+  border: 1px solid $color-border-input;
+  border-radius: $radius-btn;
+  font-family: $font-family;
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+
+  &:hover {
+    background: $color-text-primary;
+    color: #FFFFFF;
+    border-color: $color-text-primary;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.14);
+  }
+}
+
+// ─── Footer + Submit ─────────────────────────────────────────────────────────
+
+.inv-footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.inv-submit-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.7rem 2.25rem;
+  background: $color-text-primary;
+  color: #FFFFFF;
+  border: 1px solid $color-text-primary;
+  border-radius: $radius-btn;
+  font-family: $font-family;
+  font-size: 0.9rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.15s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+
+  &:hover {
+    background: #2A2A2A;
+    border-color: #2A2A2A;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16);
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+}
+
+// ─── Spinner Label ───────────────────────────────────────────────────────────
+
+.inv-spinner-label {
+  font-family: $font-family;
+  font-size: 0.8rem;
+  color: $color-text-secondary;
+  margin-top: 0.5rem;
+}

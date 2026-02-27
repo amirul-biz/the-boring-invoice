@@ -1,0 +1,187 @@
+// ─── Variables ───────────────────────────────────────────────────────────────
+
+$font-family:          'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+
+$color-card:           #FFFFFF;
+$color-border:         rgba(0, 0, 0, 0.07);
+$color-border-input:   rgba(0, 0, 0, 0.12);
+
+$color-text-primary:   #0D0D0D;
+$color-text-secondary: #6B6B6B;
+$color-text-muted:     #ADADAD;
+
+$radius-card:          16px;
+$radius-input:         8px;
+$radius-btn:           10px;
+
+// ─── Card ────────────────────────────────────────────────────────────────────
+
+.bif-card {
+  background: $color-card;
+  border: 1px solid $color-border;
+  border-radius: $radius-card;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.04),
+    0 4px 16px rgba(0, 0, 0, 0.04),
+    0 16px 40px rgba(0, 0, 0, 0.02);
+  padding: 2rem 2.25rem;
+  font-family: $font-family;
+}
+
+// ─── Section Header ──────────────────────────────────────────────────────────
+
+.bif-section-header {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: $color-text-muted;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  margin-bottom: 1.25rem;
+}
+
+// ─── Section Separator ───────────────────────────────────────────────────────
+
+.bif-separator {
+  height: 1px;
+  background: $color-border;
+  margin: 1.75rem 0;
+}
+
+// ─── Labels ──────────────────────────────────────────────────────────────────
+
+.bif-label {
+  display: block;
+  font-size: 0.775rem;
+  font-weight: 500;
+  color: $color-text-secondary;
+  letter-spacing: -0.01em;
+  margin-bottom: 0.4rem;
+}
+
+.bif-optional {
+  font-size: 0.7rem;
+  font-weight: 400;
+  color: $color-text-muted;
+  margin-left: 0.3rem;
+  letter-spacing: 0;
+}
+
+// ─── Form Controls ───────────────────────────────────────────────────────────
+
+.bif-input.form-control,
+.bif-select.form-select {
+  font-family: $font-family;
+  font-size: 0.875rem;
+  color: $color-text-primary;
+  background: $color-card;
+  border: 1px solid $color-border-input;
+  border-radius: $radius-input;
+  padding: 0.6rem 0.875rem;
+  box-shadow: none;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+
+  &::placeholder {
+    color: $color-text-muted;
+    font-weight: 400;
+  }
+
+  &:focus {
+    border-color: $color-text-primary;
+    box-shadow: 0 0 0 3px rgba(13, 13, 13, 0.08);
+    outline: none;
+  }
+
+  &.is-invalid {
+    border-color: #DC3545;
+    box-shadow: none;
+
+    &:focus {
+      box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1);
+    }
+  }
+}
+
+// Input inside input-group — square right edge
+.input-group {
+  .bif-input.form-control {
+    border-radius: $radius-input 0 0 $radius-input;
+  }
+}
+
+// ─── Toggle Button (secret key) ──────────────────────────────────────────────
+
+.bif-toggle-btn {
+  font-family: $font-family;
+  font-size: 0.775rem;
+  font-weight: 500;
+  color: $color-text-secondary;
+  background: transparent;
+  border: 1px solid $color-border-input;
+  border-left: none;
+  border-radius: 0 $radius-input $radius-input 0;
+  padding: 0 1rem;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+
+  &:hover {
+    background: $color-text-primary;
+    color: #FFFFFF;
+    border-color: $color-text-primary;
+  }
+}
+
+// ─── Validation Feedback ─────────────────────────────────────────────────────
+
+.invalid-feedback {
+  font-size: 0.72rem;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  margin-top: 0.3rem;
+}
+
+// ─── Footer / Submit ─────────────────────────────────────────────────────────
+
+.bif-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 1.5rem;
+  margin-top: 0.25rem;
+  border-top: 1px solid $color-border;
+}
+
+.bif-submit-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.65rem 1.75rem;
+  background: $color-text-primary;
+  color: #FFFFFF;
+  border: 1px solid $color-text-primary;
+  border-radius: $radius-btn;
+  font-family: $font-family;
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.15s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+
+  &:hover {
+    background: #2A2A2A;
+    border-color: #2A2A2A;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16);
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+}

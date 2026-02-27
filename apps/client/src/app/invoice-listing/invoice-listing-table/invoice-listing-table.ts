@@ -8,6 +8,7 @@ import { INVOICE_TYPE_LABEL } from '../../invoice/invoice-constants';
   selector: 'app-invoice-listing-table',
   imports: [CommonModule, NgbPaginationModule],
   templateUrl: './invoice-listing-table.html',
+  styleUrl: './invoice-listing-table.scss',
 })
 export class InvoiceListingTableComponent {
   invoiceTypeLabel = INVOICE_TYPE_LABEL;
@@ -25,10 +26,10 @@ export class InvoiceListingTableComponent {
 
   getStatusBadgeClass(status: string): string {
     switch (status) {
-      case 'PAID': return 'bg-success';
-      case 'PENDING': return 'bg-warning text-dark';
-      case 'CANCELLED': return 'bg-danger';
-      default: return 'bg-secondary';
+      case 'PAID': return 'ilt-badge--paid';
+      case 'PENDING': return 'ilt-badge--pending';
+      case 'CANCELLED': return 'ilt-badge--cancelled';
+      default: return 'ilt-badge--default';
     }
   }
 

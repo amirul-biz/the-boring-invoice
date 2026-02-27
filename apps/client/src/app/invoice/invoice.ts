@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-import { ReactiveFormsModule, FormGroup, Validators } from '@angular/forms';
+import { ReactiveFormsModule, FormGroup, AbstractControl, Validators } from '@angular/forms';
 import { NgbDatepickerModule } from '@ng-bootstrap/ng-bootstrap';
 import { NgxSpinnerModule, NgxSpinnerService } from 'ngx-spinner';
 import {
@@ -63,6 +63,27 @@ export class Invoice implements OnInit {
       }
       ctrl.updateValueAndValidity();
     });
+
+    this.items.controls.forEach(item => this.setupTaxTypeWatcher(item));
+  }
+
+  private setupTaxTypeWatcher(itemGroup: AbstractControl): void {
+    const group = itemGroup as FormGroup;
+    const taxTypeCtrl = group.get('taxType');
+    const taxRateCtrl = group.get('taxRate');
+    if (!taxTypeCtrl || !taxRateCtrl) return;
+
+    const applyTaxState = (type: string | null) => {
+      if (type === 'NOT_APPLICABLE') {
+        taxRateCtrl.setValue(0, { emitEvent: false });
+        taxRateCtrl.disable({ emitEvent: false });
+      } else {
+        taxRateCtrl.enable({ emitEvent: false });
+      }
+    };
+
+    applyTaxState(taxTypeCtrl.value);
+    taxTypeCtrl.valueChanges.subscribe(applyTaxState);
   }
 
   private getSupplierInfo(businessId: string): void {
@@ -106,6 +127,7 @@ export class Invoice implements OnInit {
 
   addItem() {
     addInvoiceItemForm(this.invoiceForm);
+    this.setupTaxTypeWatcher(this.items.at(this.items.length - 1));
   }
 
   removeItem(index: number) {
@@ -154,6 +176,7 @@ export class Invoice implements OnInit {
       const data = parseInvoiceTemplate(buffer);
       console.log(data)
       patchExcelDataToInvoiceForm(this.invoiceForm, data.recipients, data.items);
+      this.items.controls.forEach(item => this.setupTaxTypeWatcher(item));
       input.value = '';
     };
     reader.readAsArrayBuffer(file);

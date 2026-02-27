@@ -1,0 +1,148 @@
+// ─── Variables ───────────────────────────────────────────────────────────────
+
+$font-family:          'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+
+$color-bg:             #F6F5F0;
+$color-card:           #FFFFFF;
+$color-border:         rgba(0, 0, 0, 0.07);
+
+$color-text-primary:   #0D0D0D;
+$color-text-secondary: #6B6B6B;
+$color-text-muted:     #ADADAD;
+
+$radius-btn:           10px;
+
+// ─── Page ────────────────────────────────────────────────────────────────────
+
+.be-page {
+  font-family: $font-family;
+  min-height: 100vh;
+  background-color: $color-bg;
+}
+
+// ─── Header ──────────────────────────────────────────────────────────────────
+
+.be-header {
+  background: $color-card;
+  border-bottom: 1px solid $color-border;
+  padding: 1.25rem 0;
+}
+
+.be-header-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.be-title-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.be-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: $color-text-primary;
+  letter-spacing: -0.025em;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.be-subtitle {
+  font-size: 0.775rem;
+  color: $color-text-muted;
+  font-weight: 400;
+  letter-spacing: -0.005em;
+  margin: 0;
+}
+
+// ─── Create Button ───────────────────────────────────────────────────────────
+
+.be-create-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.6rem 1.1rem;
+  background: $color-text-primary;
+  color: #FFFFFF;
+  border: 1px solid $color-text-primary;
+  border-radius: $radius-btn;
+  font-family: $font-family;
+  font-size: 0.835rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.15s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+
+  &:hover {
+    background: #2A2A2A;
+    border-color: #2A2A2A;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16);
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+}
+
+// ─── Content ─────────────────────────────────────────────────────────────────
+
+.be-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2.5rem 2rem;
+}
+
+// ─── Empty State ─────────────────────────────────────────────────────────────
+
+.be-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 6rem 2rem;
+  gap: 0.6rem;
+}
+
+.be-empty-icon {
+  width: 52px;
+  height: 52px;
+  background: $color-card;
+  border: 1px solid $color-border;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.625rem;
+  color: $color-text-muted;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.be-empty-title {
+  font-size: 0.975rem;
+  font-weight: 600;
+  color: $color-text-primary;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.be-empty-subtitle {
+  font-size: 0.835rem;
+  color: $color-text-secondary;
+  margin: 0 0 0.75rem;
+  max-width: 300px;
+  line-height: 1.6;
+  letter-spacing: -0.01em;
+}

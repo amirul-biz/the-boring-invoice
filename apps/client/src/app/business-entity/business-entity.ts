@@ -10,6 +10,7 @@ import { BusinessEntityCardComponent } from './business-entity-card/business-ent
   selector: 'app-business-entity',
   imports: [BusinessEntityCardComponent, NgxSpinnerModule],
   templateUrl: './business-entity.html',
+  styleUrl: './business-entity.scss',
 })
 export class BusinessEntity implements OnInit {
   private businessInfoService = inject(BusinessInfoService);

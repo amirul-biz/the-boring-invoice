@@ -1,48 +1,55 @@
-<div class="container py-4">
-  <ngx-spinner bdColor="rgba(0, 0, 0, 0.8)" size="large" color="#fff" type="ball-scale-multiple" [fullScreen]="true">
-    <p style="color: white">Loading...</p>
+<div class="il-page">
+
+  <ngx-spinner bdColor="rgba(246,245,240,0.9)" size="medium" color="#0D0D0D" type="ball-clip-rotate" [fullScreen]="true">
+    <p class="il-spinner-label">Loading...</p>
   </ngx-spinner>
 
-  <h2 class="mb-4">Invoice Listing</h2>
-
-  <div class="row mb-4">
-    <div class="col-12 col-md-3">
-      <div class="card">
-        <div class="card-body">
-          <h6 class="card-subtitle mb-2 text-muted">Pending Amount</h6>
-          <h3 class="card-title mb-1">MYR {{ summary.pendingAmount | number:'1.2-2' }}</h3>
-          <small class="text-muted">{{ summary.pendingCount }} invoice(s)</small>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-12 col-md-3 mt-3 mt-md-0">
-      <div class="card">
-        <div class="card-body">
-          <h6 class="card-subtitle mb-2 text-muted">Total Paid</h6>
-          <h3 class="card-title mb-1 text-success">MYR {{ summary.totalPaid | number:'1.2-2' }}</h3>
-          <small class="text-muted">{{ summary.paidCount }} invoice(s)</small>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-12 col-md-3 mt-3 mt-md-0">
-      <div class="card">
-        <div class="card-body">
-          <h6 class="card-subtitle mb-2 text-muted">Total Invoices</h6>
-          <h3 class="card-title mb-1">{{ totalItems }}</h3>
-          <small class="text-muted">All statuses</small>
-        </div>
+  <!-- Page Header -->
+  <div class="il-header">
+    <div class="il-header-inner">
+      <div class="il-title-block">
+        <h1 class="il-title">Invoices</h1>
+        <p class="il-subtitle">{{ totalItems }} {{ totalItems === 1 ? 'invoice' : 'invoices' }} total</p>
       </div>
     </div>
   </div>
 
-  <div class="card mb-4">
-    <div class="card-body">
+  <!-- Content -->
+  <div class="il-content">
+
+    <!-- Summary Stats -->
+    <div class="row g-3 mb-4">
+      <div class="col-12 col-md-4">
+        <div class="il-stat-card">
+          <p class="il-stat-label">Pending Amount</p>
+          <p class="il-stat-value">MYR {{ summary.pendingAmount | number:'1.2-2' }}</p>
+          <p class="il-stat-sub">{{ summary.pendingCount }} invoice(s)</p>
+        </div>
+      </div>
+      <div class="col-12 col-md-4">
+        <div class="il-stat-card">
+          <p class="il-stat-label">Total Paid</p>
+          <p class="il-stat-value il-stat-value--paid">MYR {{ summary.totalPaid | number:'1.2-2' }}</p>
+          <p class="il-stat-sub">{{ summary.paidCount }} invoice(s)</p>
+        </div>
+      </div>
+      <div class="col-12 col-md-4">
+        <div class="il-stat-card">
+          <p class="il-stat-label">Total Invoices</p>
+          <p class="il-stat-value">{{ totalItems }}</p>
+          <p class="il-stat-sub">All statuses</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="il-filter-card mb-4">
+      <div class="il-filter-header">Filters</div>
       <div class="row g-3 align-items-end" [formGroup]="filterForm">
+
         <div class="col-6 col-md-2">
-          <label class="form-label">Page Size</label>
-          <select class="form-select" formControlName="pageSize">
+          <label class="il-label">Page Size</label>
+          <select class="il-select form-select" formControlName="pageSize">
             @for (size of pageSizes; track size) {
               <option [ngValue]="size">{{ size }}</option>
             }
@@ -50,18 +57,18 @@
         </div>
 
         <div class="col-6 col-md-2">
-          <label class="form-label">Date From</label>
-          <input type="date" class="form-control" formControlName="dateFrom">
+          <label class="il-label">Date From</label>
+          <input type="date" class="il-input form-control" formControlName="dateFrom">
         </div>
 
         <div class="col-6 col-md-2">
-          <label class="form-label">Date To</label>
-          <input type="date" class="form-control" formControlName="dateTo">
+          <label class="il-label">Date To</label>
+          <input type="date" class="il-input form-control" formControlName="dateTo">
         </div>
 
         <div class="col-6 col-md-2">
-          <label class="form-label">Invoice Type</label>
-          <select class="form-select" formControlName="invoiceType">
+          <label class="il-label">Invoice Type</label>
+          <select class="il-select form-select" formControlName="invoiceType">
             <option [ngValue]="null">All</option>
             @for (type of invoiceTypes; track type.value) {
               <option [ngValue]="type.value">{{ type.label }}</option>
@@ -70,8 +77,8 @@
         </div>
 
         <div class="col-6 col-md-2">
-          <label class="form-label">Status</label>
-          <select class="form-select" formControlName="status">
+          <label class="il-label">Status</label>
+          <select class="il-select form-select" formControlName="status">
             <option [ngValue]="null">All</option>
             @for (s of invoiceStatuses; track s.value) {
               <option [ngValue]="s.value">{{ s.label }}</option>
@@ -79,21 +86,25 @@
           </select>
         </div>
 
-        <div class="col-6 col-md-1">
-          <button type="button" class="btn btn-primary w-100" (click)="onSearch()">Search</button>
+        <div class="col-12 col-md-auto">
+          <div class="il-filter-actions">
+            <button type="button" class="il-btn il-btn--primary" (click)="onSearch()">Search</button>
+            <button type="button" class="il-btn il-btn--ghost" (click)="onReset()">Reset</button>
+          </div>
         </div>
-        <div class="col-6 col-md-1">
-          <button type="button" class="btn btn-outline-secondary w-100" (click)="onReset()">Reset</button>
-        </div>
+
       </div>
     </div>
+
+    <!-- Table -->
+    <app-invoice-listing-table
+      [invoices]="invoices"
+      [page]="page"
+      [pageSize]="filterForm.controls.pageSize.value"
+      [totalItems]="totalItems"
+      (pageChange)="onPageChange($event)"
+      (action)="onAction($event)" />
+
   </div>
 
-  <app-invoice-listing-table
-    [invoices]="invoices"
-    [page]="page"
-    [pageSize]="filterForm.controls.pageSize.value"
-    [totalItems]="totalItems"
-    (pageChange)="onPageChange($event)"
-    (action)="onAction($event)" />
 </div>

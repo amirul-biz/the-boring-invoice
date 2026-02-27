@@ -4,6 +4,7 @@ import { IBusinessInfo } from '../../business-info/business-info-interface';
 @Component({
   selector: 'app-business-entity-card',
   templateUrl: './business-entity-card.html',
+  styleUrl: './business-entity-card.scss',
 })
 export class BusinessEntityCardComponent {
   @Input({ required: true }) business!: IBusinessInfo;

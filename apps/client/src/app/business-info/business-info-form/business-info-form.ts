@@ -7,6 +7,7 @@ import { BusinessInfoForm } from './business-info-form.config';
   selector: 'app-business-info-form',
   imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './business-info-form.html',
+  styleUrl: './business-info-form.scss',
 })
 export class BusinessInfoFormComponent {
   @Input({ required: true }) form!: FormGroup<BusinessInfoForm>;

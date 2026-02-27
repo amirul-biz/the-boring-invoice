@@ -1,33 +1,53 @@
-<div class="container py-4">
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2 class="mb-0">Create Invoice</h2>
-    <div class="d-flex gap-2">
-      <button type="button" class="btn btn-outline-primary btn-sm" (click)="onDownloadTemplate()">
-        Download Excel Template
-      </button>
-      <button type="button" class="btn btn-outline-success btn-sm" (click)="fileInput.click()">
-        Upload Excel
-      </button>
-      <input #fileInput type="file" accept=".xlsx,.xls" (change)="onUploadTemplate($event)" hidden>
+<div class="inv-page">
+
+  <ngx-spinner bdColor="rgba(246,245,240,0.9)" size="medium" color="#0D0D0D" type="ball-clip-rotate" [fullScreen]="true">
+    <p class="inv-spinner-label">Generating Invoice...</p>
+  </ngx-spinner>
+
+  <!-- Page Header -->
+  <div class="inv-header">
+    <div class="inv-header-inner">
+      <div class="inv-title-block">
+        <h1 class="inv-title">Create Invoice</h1>
+        <p class="inv-subtitle">Fill in the details below to generate your invoice</p>
+      </div>
+      <div class="inv-header-actions">
+        <button type="button" class="inv-header-btn" (click)="onDownloadTemplate()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Download Template
+        </button>
+        <button type="button" class="inv-header-btn" (click)="fileInput.click()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          Upload Excel
+        </button>
+        <input #fileInput type="file" accept=".xlsx,.xls" (change)="onUploadTemplate($event)" hidden>
+      </div>
     </div>
   </div>
 
-  <ngx-spinner bdColor="rgba(0, 0, 0, 0.8)" size="large" color="#fff" type="ball-scale-multiple" [fullScreen]="true">
-    <p style="color: white">Generating Invoice...</p>
-  </ngx-spinner>
+  <!-- Content -->
+  <div class="inv-content">
+    <form [formGroup]="invoiceForm">
+      <div class="inv-card">
 
-  <form [formGroup]="invoiceForm">
-    <!-- Invoice Basic Info -->
-    <div class="card mb-3">
-      <div class="card-header">
-        <h5 class="mb-0">Invoice Details</h5>
-      </div>
-      <div class="card-body">
+        <!-- ── Invoice Details ───────────────────────────────────────────────── -->
+        <div class="inv-section-header">Invoice Details</div>
         <div class="row g-3">
+
           <div class="col-12 col-md-3">
-            <label for="invoiceType" class="form-label">Invoice Type</label>
+            <label class="inv-label" for="invoiceType">Invoice Type</label>
             <select
-              class="form-select"
+              class="inv-select form-select"
               [ngClass]="{'is-invalid': isFieldInvalid(invoiceForm.controls.invoiceType)}"
               id="invoiceType"
               formControlName="invoiceType">
@@ -39,11 +59,14 @@
           </div>
 
           @if (invoiceForm.controls.invoiceType.value === 'CREDIT_NOTE' || invoiceForm.controls.invoiceType.value === 'DEBIT_NOTE') {
-            <div class="col-12 col-md-3">
-              <label for="originalInvoiceRef" class="form-label">Original Invoice Ref <span class="text-danger">*</span></label>
+            <div class="col-12 col-md-4">
+              <label class="inv-label" for="originalInvoiceRef">
+                Original Invoice Ref
+                <span class="inv-label-note">(required)</span>
+              </label>
               <input
                 type="text"
-                class="form-control"
+                class="inv-input form-control"
                 [ngClass]="{'is-invalid': isFieldInvalid(invoiceForm.controls.originalInvoiceRef)}"
                 id="originalInvoiceRef"
                 formControlName="originalInvoiceRef"
@@ -52,11 +75,11 @@
             </div>
           }
 
-          <div class="col-12 col-md-3">
-            <label for="currency" class="form-label">Currency</label>
+          <div class="col-12 col-md-2">
+            <label class="inv-label" for="currency">Currency</label>
             <input
               type="text"
-              class="form-control"
+              class="inv-input form-control"
               [ngClass]="{'is-invalid': isFieldInvalid(invoiceForm.controls.currency)}"
               id="currency"
               formControlName="currency">
@@ -64,10 +87,10 @@
           </div>
 
           <div class="col-12 col-md-3">
-            <label for="dueDate" class="form-label">Due Date</label>
+            <label class="inv-label" for="dueDate">Due Date</label>
             <div class="input-group">
               <input
-                class="form-control"
+                class="inv-input form-control"
                 [ngClass]="{'is-invalid': isFieldInvalid(invoiceForm.controls.dueDate)}"
                 placeholder="yyyy-mm-dd"
                 id="dueDate"
@@ -75,32 +98,36 @@
                 ngbDatepicker
                 #datepicker="ngbDatepicker">
               <button
-                class="btn btn-outline-secondary"
+                class="inv-datepicker-btn"
                 [ngClass]="{'border-danger': isFieldInvalid(invoiceForm.controls.dueDate)}"
                 (click)="datepicker.toggle()"
                 type="button">
-                <i class="bi bi-calendar"></i>
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                  <line x1="16" y1="2" x2="16" y2="6"/>
+                  <line x1="8" y1="2" x2="8" y2="6"/>
+                  <line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
               </button>
               <div class="invalid-feedback">Due date is required</div>
             </div>
           </div>
-        </div>
-      </div>
-    </div>
 
-    <!-- Supplier Card (Full Width) -->
-    <div class="card mb-3">
-      <div class="card-header">
-        <h5 class="mb-0">Supplier Information</h5>
-      </div>
-      <div class="card-body">
+        </div>
+
+        <div class="inv-separator"></div>
+
+        <!-- ── Supplier Information ──────────────────────────────────────────── -->
+        <div class="inv-section-header">Supplier Information</div>
         <div formGroupName="supplier">
           <div class="row g-3">
+
             <div class="col-12 col-md-6">
-              <label for="supplierName" class="form-label">Name</label>
+              <label class="inv-label" for="supplierName">Name</label>
               <input
                 type="text"
-                class="form-control"
+                class="inv-input form-control"
                 [ngClass]="{'is-invalid': isFieldInvalid(supplier.controls.name)}"
                 id="supplierName"
                 formControlName="name">
@@ -108,30 +135,30 @@
             </div>
 
             <div class="col-12 col-md-6">
-              <label for="supplierEmail" class="form-label">Email</label>
+              <label class="inv-label" for="supplierEmail">Email</label>
               <input
                 type="email"
-                class="form-control"
+                class="inv-input form-control"
                 [ngClass]="{'is-invalid': isFieldInvalid(supplier.controls.email)}"
                 id="supplierEmail"
                 formControlName="email">
               <div class="invalid-feedback">Valid email is required</div>
             </div>
 
-            <div class="col-12 col-md-6">
-              <label for="supplierContactNumber" class="form-label">Contact Number</label>
+            <div class="col-12 col-md-4">
+              <label class="inv-label" for="supplierContactNumber">Contact Number</label>
               <input
                 type="tel"
-                class="form-control"
+                class="inv-input form-control"
                 id="supplierContactNumber"
                 formControlName="contactNumber">
             </div>
 
             <div class="col-12 col-md-4">
-              <label for="supplierTin" class="form-label">TIN</label>
+              <label class="inv-label" for="supplierTin">TIN</label>
               <input
                 type="text"
-                class="form-control"
+                class="inv-input form-control"
                 [ngClass]="{'is-invalid': isFieldInvalid(supplier.controls.tin)}"
                 id="supplierTin"
                 formControlName="tin">
@@ -139,10 +166,10 @@
             </div>
 
             <div class="col-12 col-md-4">
-              <label for="supplierRegNum" class="form-label">Registration Number</label>
+              <label class="inv-label" for="supplierRegNum">Registration Number</label>
               <input
                 type="text"
-                class="form-control"
+                class="inv-input form-control"
                 [ngClass]="{'is-invalid': isFieldInvalid(supplier.controls.registrationNumber)}"
                 id="supplierRegNum"
                 formControlName="registrationNumber">
@@ -150,10 +177,10 @@
             </div>
 
             <div class="col-12 col-md-4">
-              <label for="supplierMsic" class="form-label">MSIC Code</label>
+              <label class="inv-label" for="supplierMsic">MSIC Code</label>
               <input
                 type="text"
-                class="form-control"
+                class="inv-input form-control"
                 [ngClass]="{'is-invalid': isFieldInvalid(supplier.controls.msicCode)}"
                 id="supplierMsic"
                 formControlName="msicCode"
@@ -163,48 +190,46 @@
             </div>
 
             <div class="col-12">
-              <label for="supplierActivity" class="form-label">Business Activity Description</label>
+              <label class="inv-label" for="supplierActivity">Business Activity Description</label>
               <textarea
-                class="form-control"
+                class="inv-input form-control"
                 [ngClass]="{'is-invalid': isFieldInvalid(supplier.controls.businessActivityDescription)}"
                 id="supplierActivity"
                 formControlName="businessActivityDescription"
                 rows="2"></textarea>
               <div class="invalid-feedback">Business activity description is required</div>
             </div>
+
           </div>
         </div>
-      </div>
-    </div>
 
-    <!-- Recipients Card (Full Width with FormArray) -->
-    <div class="card mb-3">
-      <div class="card-header">
-        <h5 class="mb-0">Recipient Information</h5>
-      </div>
-      <div class="card-body">
+        <div class="inv-separator"></div>
+
+        <!-- ── Recipients ────────────────────────────────────────────────────── -->
+        <div class="inv-section-header">Recipients</div>
         <div formArrayName="recipients">
+
           @for (recipient of recipients.controls; track recipient) {
-            <div class="card mb-3">
-              <div class="card-header d-flex justify-content-between align-items-center">
-                <h6 class="mb-0">Recipient #{{ $index + 1 }}</h6>
+            <div class="inv-sub-card">
+              <div class="inv-sub-header">
+                <span class="inv-sub-title">Recipient #{{ $index + 1 }}</span>
                 <button
                   type="button"
-                  class="btn btn-danger btn-sm"
+                  class="inv-remove-btn"
                   (click)="removeRecipient($index)"
                   [disabled]="!canRemoveRecipient()">
                   Remove
                 </button>
               </div>
-              <div class="card-body">
-                <div [formGroupName]="$index">
 
+              <div [formGroupName]="$index">
                 <div class="row g-3">
+
                   <div class="col-12 col-md-6">
-                    <label [for]="'recipientName' + $index" class="form-label">Name</label>
+                    <label class="inv-label" [for]="'recipientName' + $index">Name</label>
                     <input
                       type="text"
-                      class="form-control"
+                      class="inv-input form-control"
                       [ngClass]="{'is-invalid': isFieldInvalid(recipient.get('name'))}"
                       [id]="'recipientName' + $index"
                       formControlName="name"
@@ -213,10 +238,10 @@
                   </div>
 
                   <div class="col-12 col-md-6">
-                    <label [for]="'recipientEmail' + $index" class="form-label">Email</label>
+                    <label class="inv-label" [for]="'recipientEmail' + $index">Email</label>
                     <input
                       type="email"
-                      class="form-control"
+                      class="inv-input form-control"
                       [ngClass]="{'is-invalid': isFieldInvalid(recipient.get('email'))}"
                       [id]="'recipientEmail' + $index"
                       formControlName="email"
@@ -225,10 +250,10 @@
                   </div>
 
                   <div class="col-12 col-md-4">
-                    <label [for]="'recipientPhone' + $index" class="form-label">Phone</label>
+                    <label class="inv-label" [for]="'recipientPhone' + $index">Phone</label>
                     <input
                       type="text"
-                      class="form-control"
+                      class="inv-input form-control"
                       [ngClass]="{'is-invalid': isFieldInvalid(recipient.get('phone'))}"
                       [id]="'recipientPhone' + $index"
                       formControlName="phone"
@@ -237,12 +262,15 @@
                   </div>
 
                   <div class="col-12 col-md-4">
-                    <label [for]="'recipientTin' + $index" class="form-label">
-                      TIN{{ !recipient.get('tin')?.hasValidator(Validators.required) ? ' (required for B2B)' : '' }}
+                    <label class="inv-label" [for]="'recipientTin' + $index">
+                      TIN
+                      @if (!recipient.get('tin')?.hasValidator(Validators.required)) {
+                        <span class="inv-label-note">(required for B2B)</span>
+                      }
                     </label>
                     <input
                       type="text"
-                      class="form-control"
+                      class="inv-input form-control"
                       [ngClass]="{'is-invalid': isFieldInvalid(recipient.get('tin'))}"
                       [id]="'recipientTin' + $index"
                       formControlName="tin"
@@ -250,10 +278,10 @@
                     <div class="invalid-feedback">TIN is required</div>
                   </div>
 
-                  <div class="col-12 col-md-2">
-                    <label [for]="'recipientIdType' + $index" class="form-label">ID Type</label>
+                  <div class="col-12 col-md-4">
+                    <label class="inv-label" [for]="'recipientIdType' + $index">ID Type</label>
                     <select
-                      class="form-select"
+                      class="inv-select form-select"
                       [ngClass]="{'is-invalid': isFieldInvalid(recipient.get('idType'))}"
                       [id]="'recipientIdType' + $index"
                       formControlName="idType">
@@ -266,12 +294,15 @@
                   </div>
 
                   <div class="col-12 col-md-6">
-                    <label [for]="'recipientRegNum' + $index" class="form-label">
-                      Registration Number{{ !recipient.get('registrationNumber')?.hasValidator(Validators.required) ? ' (required for B2B)' : '' }}
+                    <label class="inv-label" [for]="'recipientRegNum' + $index">
+                      Registration Number
+                      @if (!recipient.get('registrationNumber')?.hasValidator(Validators.required)) {
+                        <span class="inv-label-note">(required for B2B)</span>
+                      }
                     </label>
                     <input
                       type="text"
-                      class="form-control"
+                      class="inv-input form-control"
                       [ngClass]="{'is-invalid': isFieldInvalid(recipient.get('registrationNumber'))}"
                       [id]="'recipientRegNum' + $index"
                       formControlName="registrationNumber"
@@ -280,10 +311,10 @@
                   </div>
 
                   <div class="col-12">
-                    <label [for]="'recipientAddress' + $index" class="form-label">Address Line 1</label>
+                    <label class="inv-label" [for]="'recipientAddress' + $index">Address Line 1</label>
                     <input
                       type="text"
-                      class="form-control"
+                      class="inv-input form-control"
                       [ngClass]="{'is-invalid': isFieldInvalid(recipient.get('addressLine1'))}"
                       [id]="'recipientAddress' + $index"
                       formControlName="addressLine1"
@@ -292,10 +323,10 @@
                   </div>
 
                   <div class="col-12 col-md-3">
-                    <label [for]="'recipientPostcode' + $index" class="form-label">Postcode</label>
+                    <label class="inv-label" [for]="'recipientPostcode' + $index">Postcode</label>
                     <input
                       type="text"
-                      class="form-control"
+                      class="inv-input form-control"
                       [ngClass]="{'is-invalid': isFieldInvalid(recipient.get('postcode'))}"
                       [id]="'recipientPostcode' + $index"
                       formControlName="postcode"
@@ -304,10 +335,10 @@
                   </div>
 
                   <div class="col-12 col-md-3">
-                    <label [for]="'recipientCity' + $index" class="form-label">City</label>
+                    <label class="inv-label" [for]="'recipientCity' + $index">City</label>
                     <input
                       type="text"
-                      class="form-control"
+                      class="inv-input form-control"
                       [ngClass]="{'is-invalid': isFieldInvalid(recipient.get('city'))}"
                       [id]="'recipientCity' + $index"
                       formControlName="city"
@@ -316,9 +347,9 @@
                   </div>
 
                   <div class="col-12 col-md-3">
-                    <label [for]="'recipientState' + $index" class="form-label">State</label>
+                    <label class="inv-label" [for]="'recipientState' + $index">State</label>
                     <select
-                      class="form-select"
+                      class="inv-select form-select"
                       [ngClass]="{'is-invalid': isFieldInvalid(recipient.get('state'))}"
                       [id]="'recipientState' + $index"
                       formControlName="state">
@@ -330,56 +361,60 @@
                   </div>
 
                   <div class="col-12 col-md-3">
-                    <label [for]="'recipientCountry' + $index" class="form-label">Country Code</label>
+                    <label class="inv-label" [for]="'recipientCountry' + $index">Country Code</label>
                     <input
                       type="text"
-                      class="form-control"
+                      class="inv-input form-control"
                       [ngClass]="{'is-invalid': isFieldInvalid(recipient.get('countryCode'))}"
                       [id]="'recipientCountry' + $index"
                       formControlName="countryCode"
                       autocomplete="off">
                     <div class="invalid-feedback">Country code is required</div>
                   </div>
-                </div>
+
                 </div>
               </div>
             </div>
           }
-          <button type="button" class="btn btn-primary" (click)="addRecipient()">
+
+          <button type="button" class="inv-add-btn" (click)="addRecipient()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
             Add Recipient
           </button>
-        </div>
-      </div>
-    </div>
 
-    <!-- Items Card -->
-    <div class="card mb-3">
-      <div class="card-header">
-        <h5 class="mb-0">Invoice Items</h5>
-      </div>
-      <div class="card-body">
+        </div>
+
+        <div class="inv-separator"></div>
+
+        <!-- ── Invoice Items ─────────────────────────────────────────────────── -->
+        <div class="inv-section-header">Invoice Items</div>
         <div formArrayName="items">
+
           @for (item of items.controls; track item) {
-            <div class="card mb-3">
-              <div class="card-header d-flex justify-content-between align-items-center">
-                <h6 class="mb-0">Item #{{ $index + 1 }}</h6>
+            <div class="inv-sub-card">
+              <div class="inv-sub-header">
+                <span class="inv-sub-title">Item #{{ $index + 1 }}</span>
                 <button
                   type="button"
-                  class="btn btn-danger btn-sm"
+                  class="inv-remove-btn"
                   (click)="removeItem($index)"
                   [disabled]="!canRemoveItem()">
                   Remove
                 </button>
               </div>
-              <div class="card-body">
-                <div [formGroupName]="$index">
 
+              <div [formGroupName]="$index">
                 <div class="row g-3">
-                  <div class="col-12 col-md-4">
-                    <label [for]="'itemName' + $index" class="form-label">Item Name</label>
+
+                  <div class="col-12 col-md-5">
+                    <label class="inv-label" [for]="'itemName' + $index">Item Name</label>
                     <input
                       type="text"
-                      class="form-control"
+                      class="inv-input form-control"
                       [ngClass]="{'is-invalid': isFieldInvalid(item.get('itemName'))}"
                       [id]="'itemName' + $index"
                       formControlName="itemName">
@@ -387,47 +422,32 @@
                   </div>
 
                   <div class="col-12 col-md-2">
-                    <label [for]="'quantity' + $index" class="form-label">Quantity</label>
+                    <label class="inv-label" [for]="'quantity' + $index">Quantity</label>
                     <input
                       type="number"
-                      class="form-control"
+                      class="inv-input form-control"
                       [ngClass]="{'is-invalid': isFieldInvalid(item.get('quantity'))}"
                       [id]="'quantity' + $index"
                       formControlName="quantity">
                     <div class="invalid-feedback">Quantity must be at least 1</div>
                   </div>
 
-                  <div class="col-12 col-md-3">
-                    <label [for]="'unitPrice' + $index" class="form-label">Unit Price</label>
+                  <div class="col-12 col-md-2">
+                    <label class="inv-label" [for]="'unitPrice' + $index">Unit Price</label>
                     <input
                       type="number"
                       step="0.01"
-                      class="form-control"
+                      class="inv-input form-control"
                       [ngClass]="{'is-invalid': isFieldInvalid(item.get('unitPrice'))}"
                       [id]="'unitPrice' + $index"
                       formControlName="unitPrice">
                     <div class="invalid-feedback">Unit price must be 0 or greater</div>
                   </div>
 
-                  <div class="col-12 col-md-3">
-                    <label [for]="'classificationCode' + $index" class="form-label">Classification Code</label>
-                    <select
-                      class="form-select"
-                      [ngClass]="{'is-invalid': isFieldInvalid(item.get('classificationCode'))}"
-                      [id]="'classificationCode' + $index"
-                      formControlName="classificationCode">
-                      <option value="">Select a classification</option>
-                      @for (classification of classificationCodes; track classification.code) {
-                        <option [value]="classification.code">{{ classification.code }} - {{ classification.description }}</option>
-                      }
-                    </select>
-                    <div class="invalid-feedback">Classification code is required</div>
-                  </div>
-
                   <div class="col-12 col-md-2">
-                    <label [for]="'taxType' + $index" class="form-label">Tax Type</label>
+                    <label class="inv-label" [for]="'taxType' + $index">Tax Type</label>
                     <select
-                      class="form-select"
+                      class="inv-select form-select"
                       [ngClass]="{'is-invalid': isFieldInvalid(item.get('taxType'))}"
                       [id]="'taxType' + $index"
                       formControlName="taxType">
@@ -439,11 +459,11 @@
                   </div>
 
                   <div class="col-12 col-md-2">
-                    <label [for]="'taxRate' + $index" class="form-label">Tax Rate (%)</label>
+                    <label class="inv-label" [for]="'taxRate' + $index">Tax Rate (%)</label>
                     <input
                       type="number"
                       step="0.01"
-                      class="form-control"
+                      class="inv-input form-control"
                       [ngClass]="{'is-invalid': isFieldInvalid(item.get('taxRate'))}"
                       [id]="'taxRate' + $index"
                       formControlName="taxRate">
@@ -451,36 +471,61 @@
                   </div>
 
                   <div class="col-12 col-md-2">
-                    <label [for]="'discountRate' + $index" class="form-label">Discount (%)</label>
+                    <label class="inv-label" [for]="'discountRate' + $index">Discount (%)</label>
                     <input
                       type="number"
                       step="0.01"
                       min="0"
                       max="100"
-                      class="form-control"
+                      class="inv-input form-control"
                       [ngClass]="{'is-invalid': isFieldInvalid(item.get('discountRate'))}"
                       [id]="'discountRate' + $index"
                       formControlName="discountRate"
                       placeholder="0">
                     <div class="invalid-feedback">Discount must be 0–100</div>
                   </div>
-                </div>
+
+                  <div class="col-12 col-md-8">
+                    <label class="inv-label" [for]="'classificationCode' + $index">Classification Code</label>
+                    <select
+                      class="inv-select form-select"
+                      [ngClass]="{'is-invalid': isFieldInvalid(item.get('classificationCode'))}"
+                      [id]="'classificationCode' + $index"
+                      formControlName="classificationCode">
+                      <option value="">Select a classification</option>
+                      @for (classification of classificationCodes; track classification.code) {
+                        <option [value]="classification.code">{{ classification.code }} — {{ classification.description }}</option>
+                      }
+                    </select>
+                    <div class="invalid-feedback">Classification code is required</div>
+                  </div>
+
                 </div>
               </div>
             </div>
           }
-          <button type="button" class="btn btn-primary" (click)="addItem()">
+
+          <button type="button" class="inv-add-btn" (click)="addItem()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
             Add Item
           </button>
-        </div>
-      </div>
-    </div>
 
-    <!-- Submit Button -->
-    <div class="d-flex justify-content-end">
-      <button type="submit" class="btn btn-success btn-lg" (click)="onSubmit()">
-        Generate Invoice
-      </button>
-    </div>
-  </form>
+        </div>
+
+        <!-- ── Submit ────────────────────────────────────────────────────────── -->
+        <div class="inv-separator"></div>
+        <div class="inv-footer">
+          <button type="submit" class="inv-submit-btn" (click)="onSubmit()">
+            Generate Invoice
+          </button>
+        </div>
+
+      </div>
+    </form>
+  </div>
+
 </div>
