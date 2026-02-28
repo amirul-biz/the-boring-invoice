@@ -31,6 +31,7 @@ import {
 import { findInvoiceByNumber, getInvoiceAsReceipt, getInvoiceByNumber } from './invoice-repository/invoice-repository-get';
 import { ToyyibPayUtil } from './invoice-generator/invoice-generator-toyyibpay-bill';
 import { getInvoiceList, InvoiceListQuery, PaginatedInvoiceList } from './invoice-repository/invoice-repository-list';
+import { INVOICE_QUEUE_CONFIG, INVOICE_QUEUE_PATTERNS } from './invoice.constants';
 
 export interface RetryInvoiceMessage {
   businessId: string;
@@ -61,7 +62,6 @@ export interface RetryPaymentCallbackMessage {
 @Injectable()
 export class InvoiceService {
   private readonly logger = new Logger(InvoiceService.name);
-  private readonly BATCH_DELAY_MS = 1500;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -88,9 +88,14 @@ export class InvoiceService {
 
       const businessId = this.cryptoService.decodeId(encodedBusinessId);
 
+      // Calculate BEFORE queuing — invoiceNo is stable for idempotency on re-delivery
+      const calculatedInvoiceList = await Promise.all(
+        invoiceDataList.map(invoiceData => calculateInvoiceData(invoiceData, this.logger)),
+      );
+
       await this.queueService.sendMessageQue(
-        'receiver-create-invoice',
-        { businessId, invoiceDataList },
+        INVOICE_QUEUE_PATTERNS.CREATE,
+        { businessId, calculatedInvoiceList },
       );
 
       this.logger.log('Invoice generation queued successfully');
@@ -211,14 +216,21 @@ export class InvoiceService {
         );
       }
 
-      // Step 4: Send invoice email (NON-CRITICAL — fire and forget)
-      sendInvoiceEmail(this.mailService, processedInvoice, this.logger).catch(
-        () => {
-          this.logger.warn(
-            `Email failed for ${processedInvoice.invoiceNo} — resend manually or wait for SES migration`,
-          );
-        },
-      );
+      // Step 4: Send invoice email — only if transitioning from DRAFT (first successful completion)
+      // Guard against re-sending on restart: if status was already PENDING, email was already sent
+      if (existingInvoice.status === InvoiceStatus.DRAFT) {
+        sendInvoiceEmail(this.mailService, processedInvoice, this.logger).catch(
+          () => {
+            this.logger.warn(
+              `Email failed for ${processedInvoice.invoiceNo} — resend manually or wait for SES migration`,
+            );
+          },
+        );
+      } else {
+        this.logger.log(
+          `Invoice ${processedInvoice.invoiceNo} already ${existingInvoice.status} — skipping email (already sent)`,
+        );
+      }
 
       this.logger.log(
         `Invoice creation completed: ${processedInvoice.invoiceNo}`,
@@ -236,24 +248,21 @@ export class InvoiceService {
 
   /**
    * Process multiple invoices from queue consumer
-   * Calculates each invoice first (generates invoiceNo), then attempts creation once.
+   * Receives pre-calculated invoices (invoiceNo already stable from queue time).
    * On failure, emits to retry-invoice queue immediately — does NOT block the batch.
    */
   async processInvoiceBatch(
     businessId: string,
-    invoiceDataList: CreateInvoiceInputDTO[],
+    calculatedInvoiceList: CalculatedInvoiceDto[],
   ): Promise<void> {
     this.logger.log(
-      `Processing batch of ${invoiceDataList.length} invoice(s)`,
+      `Processing batch of ${calculatedInvoiceList.length} invoice(s)`,
     );
 
     const paymentIntegrationCredential = await this.businessInfoService.getPaymentIntegrationCredential(businessId);
 
-    for (let i = 0; i < invoiceDataList.length; i++) {
-      const invoiceData = invoiceDataList[i];
-
-      // Calculate first (pure computation, generates invoiceNo) — invoiceNo is stable for retries
-      const calculatedInvoice = await calculateInvoiceData(invoiceData, this.logger);
+    for (let i = 0; i < calculatedInvoiceList.length; i++) {
+      const calculatedInvoice = calculatedInvoiceList[i];
 
       try {
         await this.processInvoiceCreation(calculatedInvoice, paymentIntegrationCredential, businessId);
@@ -262,11 +271,15 @@ export class InvoiceService {
           `Invoice ${calculatedInvoice.invoiceNo} failed — emitting to retry queue: ${error.message}`,
           error.stack,
         );
-        this.sendToRetryQueue({ businessId, calculatedInvoice, attemptNo: 1 });
+        try {
+          await this.sendToRetryQueue({ businessId, calculatedInvoice, attemptNo: INVOICE_QUEUE_CONFIG.INITIAL_RETRY_ATTEMPT });
+        } catch (queueError) {
+          this.logger.error(`CRITICAL: Failed to queue retry for ${calculatedInvoice.invoiceNo} — message lost: ${queueError.message}`);
+        }
       }
 
-      if (i < invoiceDataList.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, this.BATCH_DELAY_MS));
+      if (i < calculatedInvoiceList.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, INVOICE_QUEUE_CONFIG.BATCH_DELAY_MS));
       }
     }
 
@@ -283,7 +296,7 @@ export class InvoiceService {
       `Retry attempt ${msg.attemptNo}/5 for invoice ${msg.calculatedInvoice.invoiceNo} — waiting 1 minute`,
     );
 
-    await new Promise(resolve => setTimeout(resolve, 60_000));
+    await new Promise(resolve => setTimeout(resolve, INVOICE_QUEUE_CONFIG.RETRY_DELAY_MS));
 
     const paymentIntegrationCredential = await this.businessInfoService.getPaymentIntegrationCredential(msg.businessId);
 
@@ -302,35 +315,43 @@ export class InvoiceService {
         error.stack,
       );
 
-      if (msg.attemptNo < 5) {
-        this.sendToRetryQueue({ ...msg, attemptNo: msg.attemptNo + 1 });
+      if (msg.attemptNo < INVOICE_QUEUE_CONFIG.MAX_RETRY_ATTEMPTS) {
+        try {
+          await this.sendToRetryQueue({ ...msg, attemptNo: msg.attemptNo + 1 });
+        } catch (queueError) {
+          this.logger.error(`CRITICAL: Failed to re-queue retry for ${msg.calculatedInvoice.invoiceNo}: ${queueError.message}`);
+        }
       } else {
-        this.sendToFailedQueue(msg.businessId, msg.calculatedInvoice, error);
+        try {
+          await this.sendToFailedQueue(msg.businessId, msg.calculatedInvoice, error);
+        } catch (queueError) {
+          this.logger.error(`CRITICAL: Failed to queue failed-invoice for ${msg.calculatedInvoice.invoiceNo}: ${queueError.message}`);
+        }
       }
     }
   }
 
-  private sendToRetryQueue(msg: RetryInvoiceMessage): void {
-    this.queueService.sendMessageQue('retry-invoice', msg);
+  private async sendToRetryQueue(msg: RetryInvoiceMessage): Promise<void> {
+    await this.queueService.sendMessageQue(INVOICE_QUEUE_PATTERNS.RETRY, msg);
     this.logger.log(
-      `Invoice ${msg.calculatedInvoice.invoiceNo} emitted to retry-invoice (attempt ${msg.attemptNo}/5)`,
+      `Invoice ${msg.calculatedInvoice.invoiceNo} emitted to retry-invoice (attempt ${msg.attemptNo}/${INVOICE_QUEUE_CONFIG.MAX_RETRY_ATTEMPTS})`,
     );
   }
 
-  private sendToFailedQueue(
+  private async sendToFailedQueue(
     businessId: string,
     calculatedInvoice: CalculatedInvoiceDto,
     error: Error,
-  ): void {
+  ): Promise<void> {
     // TODO: decide whether to delete the DRAFT invoice or mark as CANCELLED — KIV
-    this.queueService.sendMessageQue('failed-invoice', {
+    await this.queueService.sendMessageQue(INVOICE_QUEUE_PATTERNS.FAILED, {
       businessId,
       calculatedInvoice,
       error: error.message,
       failedAt: new Date().toISOString(),
     });
     this.logger.error(
-      `Invoice ${calculatedInvoice.invoiceNo} permanently failed after 5 attempts — moved to failed-invoice queue`,
+      `Invoice ${calculatedInvoice.invoiceNo} permanently failed after ${INVOICE_QUEUE_CONFIG.MAX_RETRY_ATTEMPTS} attempts — moved to failed-invoice queue`,
     );
   }
 
@@ -343,8 +364,8 @@ export class InvoiceService {
         `Queueing payment callback for invoice: ${callbackData.order_id}`,
       );
 
-      this.queueService.sendMessageQue(
-        'receiver-update-invoice',
+      await this.queueService.sendMessageQue(
+        INVOICE_QUEUE_PATTERNS.CALLBACK,
         callbackData,
       );
 
@@ -372,7 +393,11 @@ export class InvoiceService {
         `Payment callback failed for ${callbackData.order_id} — emitting to retry queue: ${error.message}`,
         error.stack,
       );
-      this.sendToPaymentRetryQueue({ callbackData, attemptNo: 1 });
+      try {
+        await this.sendToPaymentRetryQueue({ callbackData, attemptNo: INVOICE_QUEUE_CONFIG.INITIAL_RETRY_ATTEMPT });
+      } catch (queueError) {
+        this.logger.error(`CRITICAL: Failed to queue payment retry for ${callbackData.order_id} — message lost: ${queueError.message}`);
+      }
     }
   }
 
@@ -385,7 +410,7 @@ export class InvoiceService {
       `Payment callback retry attempt ${msg.attemptNo}/5 for invoice ${msg.callbackData.order_id} — waiting 1 minute`,
     );
 
-    await new Promise(resolve => setTimeout(resolve, 60_000));
+    await new Promise(resolve => setTimeout(resolve, INVOICE_QUEUE_CONFIG.RETRY_DELAY_MS));
 
     try {
       await this.executePaymentCallbackCore(msg.callbackData);
@@ -398,10 +423,18 @@ export class InvoiceService {
         error.stack,
       );
 
-      if (msg.attemptNo < 5) {
-        this.sendToPaymentRetryQueue({ ...msg, attemptNo: msg.attemptNo + 1 });
+      if (msg.attemptNo < INVOICE_QUEUE_CONFIG.MAX_RETRY_ATTEMPTS) {
+        try {
+          await this.sendToPaymentRetryQueue({ ...msg, attemptNo: msg.attemptNo + 1 });
+        } catch (queueError) {
+          this.logger.error(`CRITICAL: Failed to re-queue payment retry for ${msg.callbackData.order_id}: ${queueError.message}`);
+        }
       } else {
-        this.sendToPaymentFailedQueue(msg.callbackData, error);
+        try {
+          await this.sendToPaymentFailedQueue(msg.callbackData, error);
+        } catch (queueError) {
+          this.logger.error(`CRITICAL: Failed to queue failed-payment-callback for ${msg.callbackData.order_id}: ${queueError.message}`);
+        }
       }
     }
   }
@@ -483,21 +516,21 @@ export class InvoiceService {
     this.logger.log(`Payment callback processed successfully: ${invoiceNo}`);
   }
 
-  private sendToPaymentRetryQueue(msg: RetryPaymentCallbackMessage): void {
-    this.queueService.sendMessageQue('retry-payment-callback', msg);
+  private async sendToPaymentRetryQueue(msg: RetryPaymentCallbackMessage): Promise<void> {
+    await this.queueService.sendMessageQue(INVOICE_QUEUE_PATTERNS.CALLBACK_RETRY, msg);
     this.logger.log(
-      `Payment callback for ${msg.callbackData.order_id} emitted to retry-payment-callback (attempt ${msg.attemptNo}/5)`,
+      `Payment callback for ${msg.callbackData.order_id} emitted to retry-payment-callback (attempt ${msg.attemptNo}/${INVOICE_QUEUE_CONFIG.MAX_RETRY_ATTEMPTS})`,
     );
   }
 
-  private sendToPaymentFailedQueue(callbackData: ToyyibPayCallbackData, error: Error): void {
-    this.queueService.sendMessageQue('failed-payment-callback', {
+  private async sendToPaymentFailedQueue(callbackData: ToyyibPayCallbackData, error: Error): Promise<void> {
+    await this.queueService.sendMessageQue(INVOICE_QUEUE_PATTERNS.CALLBACK_FAILED, {
       callbackData,
       error: error.message,
       failedAt: new Date().toISOString(),
     });
     this.logger.error(
-      `Payment callback for ${callbackData.order_id} permanently failed after 5 attempts — moved to failed-payment-callback queue`,
+      `Payment callback for ${callbackData.order_id} permanently failed after ${INVOICE_QUEUE_CONFIG.MAX_RETRY_ATTEMPTS} attempts — moved to failed-payment-callback queue`,
     );
   }
 
