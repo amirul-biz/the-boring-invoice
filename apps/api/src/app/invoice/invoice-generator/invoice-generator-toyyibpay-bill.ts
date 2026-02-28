@@ -509,21 +509,37 @@ From: ${invoiceOutput.supplier.name}
     const formData = new URLSearchParams();
     formData.append('billCode', billCode);
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: formData.toString(),
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10_000);
 
-    if (!response.ok) {
-      throw new HttpException(
-        `ToyyibPay getBillTransactions error: ${response.statusText}`,
-        HttpStatus.BAD_GATEWAY,
-      );
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: formData.toString(),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        throw new HttpException(
+          `ToyyibPay getBillTransactions error: ${response.statusText}`,
+          HttpStatus.BAD_GATEWAY,
+        );
+      }
+
+      const text = await response.text();
+      return JSON.parse(text) as ToyyibPayTransaction[];
+    } catch (error) {
+      if (error.name === 'AbortError') {
+        throw new HttpException(
+          'ToyyibPay getBillTransactions timed out after 10s',
+          HttpStatus.GATEWAY_TIMEOUT,
+        );
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeoutId);
     }
-
-    const text = await response.text();
-    return JSON.parse(text) as ToyyibPayTransaction[];
   }
 }
 

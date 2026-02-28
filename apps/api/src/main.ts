@@ -2,7 +2,8 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app/app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { rabbitMQOptionsConfig } from './app/rabbit-mq/rabbit-mq-options.config';
+import { rabbitMQInvoiceConfig } from './app/rabbit-mq/rabbit-mq-invoice.config';
+import { rabbitMQPaymentConfig } from './app/rabbit-mq/rabbit-mq-payment.config';
 import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
@@ -62,9 +63,10 @@ async function bootstrap() {
   app.use(require('express').urlencoded({ extended: true, limit: '10mb' }));
   app.use(require('express').json({ limit: '10mb' }));
 
-  // Connect microservice but don't let it block startup
+  // Connect microservices but don't let it block startup
   try {
-    app.connectMicroservice(rabbitMQOptionsConfig());
+    app.connectMicroservice(rabbitMQInvoiceConfig());
+    app.connectMicroservice(rabbitMQPaymentConfig());
   } catch (err) {
     console.error('Failed to connect microservice:', err.message);
   }
