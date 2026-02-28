@@ -88,9 +88,14 @@ export class InvoiceService {
 
       const businessId = this.cryptoService.decodeId(encodedBusinessId);
 
+      // Calculate BEFORE queuing — invoiceNo is stable for idempotency on re-delivery
+      const calculatedInvoiceList = await Promise.all(
+        invoiceDataList.map(invoiceData => calculateInvoiceData(invoiceData, this.logger)),
+      );
+
       await this.queueService.sendMessageQue(
         INVOICE_QUEUE_PATTERNS.CREATE,
-        { businessId, invoiceDataList },
+        { businessId, calculatedInvoiceList },
       );
 
       this.logger.log('Invoice generation queued successfully');
@@ -211,14 +216,21 @@ export class InvoiceService {
         );
       }
 
-      // Step 4: Send invoice email (NON-CRITICAL — fire and forget)
-      sendInvoiceEmail(this.mailService, processedInvoice, this.logger).catch(
-        () => {
-          this.logger.warn(
-            `Email failed for ${processedInvoice.invoiceNo} — resend manually or wait for SES migration`,
-          );
-        },
-      );
+      // Step 4: Send invoice email — only if transitioning from DRAFT (first successful completion)
+      // Guard against re-sending on restart: if status was already PENDING, email was already sent
+      if (existingInvoice.status === InvoiceStatus.DRAFT) {
+        sendInvoiceEmail(this.mailService, processedInvoice, this.logger).catch(
+          () => {
+            this.logger.warn(
+              `Email failed for ${processedInvoice.invoiceNo} — resend manually or wait for SES migration`,
+            );
+          },
+        );
+      } else {
+        this.logger.log(
+          `Invoice ${processedInvoice.invoiceNo} already ${existingInvoice.status} — skipping email (already sent)`,
+        );
+      }
 
       this.logger.log(
         `Invoice creation completed: ${processedInvoice.invoiceNo}`,
@@ -236,24 +248,21 @@ export class InvoiceService {
 
   /**
    * Process multiple invoices from queue consumer
-   * Calculates each invoice first (generates invoiceNo), then attempts creation once.
+   * Receives pre-calculated invoices (invoiceNo already stable from queue time).
    * On failure, emits to retry-invoice queue immediately — does NOT block the batch.
    */
   async processInvoiceBatch(
     businessId: string,
-    invoiceDataList: CreateInvoiceInputDTO[],
+    calculatedInvoiceList: CalculatedInvoiceDto[],
   ): Promise<void> {
     this.logger.log(
-      `Processing batch of ${invoiceDataList.length} invoice(s)`,
+      `Processing batch of ${calculatedInvoiceList.length} invoice(s)`,
     );
 
     const paymentIntegrationCredential = await this.businessInfoService.getPaymentIntegrationCredential(businessId);
 
-    for (let i = 0; i < invoiceDataList.length; i++) {
-      const invoiceData = invoiceDataList[i];
-
-      // Calculate first (pure computation, generates invoiceNo) — invoiceNo is stable for retries
-      const calculatedInvoice = await calculateInvoiceData(invoiceData, this.logger);
+    for (let i = 0; i < calculatedInvoiceList.length; i++) {
+      const calculatedInvoice = calculatedInvoiceList[i];
 
       try {
         await this.processInvoiceCreation(calculatedInvoice, paymentIntegrationCredential, businessId);
@@ -269,7 +278,7 @@ export class InvoiceService {
         }
       }
 
-      if (i < invoiceDataList.length - 1) {
+      if (i < calculatedInvoiceList.length - 1) {
         await new Promise(resolve => setTimeout(resolve, INVOICE_QUEUE_CONFIG.BATCH_DELAY_MS));
       }
     }
@@ -355,7 +364,7 @@ export class InvoiceService {
         `Queueing payment callback for invoice: ${callbackData.order_id}`,
       );
 
-      this.queueService.sendMessageQue(
+      await this.queueService.sendMessageQue(
         INVOICE_QUEUE_PATTERNS.CALLBACK,
         callbackData,
       );

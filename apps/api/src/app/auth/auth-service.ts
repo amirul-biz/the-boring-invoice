@@ -5,6 +5,7 @@ import { User } from '@prisma/client';
 import { Response } from 'express';
 import { GoogleUser, JwtPayload } from './auth-interface';
 import { findUserByEmail, createUser, getUserJwtPayload } from './auth-repository';
+import { AUTH_DURATION } from './auth.constants';
 
 @Injectable()
 export class AuthService {
@@ -48,40 +49,53 @@ export class AuthService {
     return user;
   }
 
+  // ── private helpers ───────────────────────────────────────────────────────
+
+  private get isSecure(): boolean {
+    return process.env.COOKIE_SECURE === 'true';
+  }
+
+  private get cookieOptions() {
+    return {
+      httpOnly: true,
+      secure: this.isSecure,
+      sameSite: this.isSecure ? 'none' as const : 'lax' as const,
+    };
+  }
+
+  // ── cookie setters ────────────────────────────────────────────────────────
+
   setAccessTokenCookie(res: Response, token: string): void {
     res.cookie('access_token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-      maxAge: 15 * 60 * 1000, 
+      ...this.cookieOptions,
+      maxAge: AUTH_DURATION.ACCESS_TOKEN_MS,
     });
   }
 
   setRefreshTokenCookie(res: Response, token: string): void {
     res.cookie('refresh_token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      ...this.cookieOptions,
+      maxAge: AUTH_DURATION.REFRESH_TOKEN_MS,
     });
   }
 
+  // ── token generators ──────────────────────────────────────────────────────
 
   generateAccessToken(payload: JwtPayload): string {
     return this.jwtService.sign(payload, {
       secret: process.env.JWT_ACCESS_SECRET,
-      expiresIn: '15m', 
+      expiresIn: AUTH_DURATION.ACCESS_TOKEN_JWT,
     });
   }
-
 
   generateRefreshToken(payload: JwtPayload): string {
     return this.jwtService.sign(payload, {
       secret: process.env.JWT_REFRESH_SECRET,
-      expiresIn: '3h', 
+      expiresIn: AUTH_DURATION.REFRESH_TOKEN_JWT,
     });
   }
 
+  // ── token validation ──────────────────────────────────────────────────────
 
   isAccessTokenValid(token: string): boolean {
     try {
@@ -117,10 +131,14 @@ export class AuthService {
     return decoded.exp * 1000 < Date.now();
   }
 
+  // ── revoke ────────────────────────────────────────────────────────────────
+
   revokeTokens(res: Response): void {
-    res.clearCookie('access_token');
-    res.clearCookie('refresh_token');
+    res.clearCookie('access_token', { ...this.cookieOptions, path: '/' });
+    res.clearCookie('refresh_token', { ...this.cookieOptions, path: '/' });
   }
+
+  // ── decode ────────────────────────────────────────────────────────────────
 
   decodeToken(token: string): JwtPayload & { exp: number; iat: number } {
     return this.jwtService.decode(token) as JwtPayload & {

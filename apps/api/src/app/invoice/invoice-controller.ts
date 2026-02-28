@@ -20,7 +20,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { CreateInvoiceInputDTO, InvoiceListQueryDTO } from './invoice-dto';
+import { CreateInvoiceInputDTO, CalculatedInvoiceDto, InvoiceListQueryDTO } from './invoice-dto';
 import { InvoiceService, RetryInvoiceMessage, RetryPaymentCallbackMessage } from './invoice-service';
 import { EventPattern } from '@nestjs/microservices';
 import { generateInvoiceTemplate } from './invoice-template-generator';
@@ -150,9 +150,9 @@ export class InvoiceController {
    */
   @EventPattern(INVOICE_QUEUE_PATTERNS.CREATE)
   async receiverCreateInvoice(
-    data: { businessId: string; invoiceDataList: CreateInvoiceInputDTO[] },
+    data: { businessId: string; calculatedInvoiceList: CalculatedInvoiceDto[] },
   ): Promise<void> {
-    await this.invoiceService.processInvoiceBatch(data.businessId, data.invoiceDataList);
+    await this.invoiceService.processInvoiceBatch(data.businessId, data.calculatedInvoiceList);
   }
 
   /**
