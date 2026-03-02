@@ -209,173 +209,188 @@
         <div class="inv-section-header">Recipients</div>
         <div formArrayName="recipients">
 
-          @for (recipient of recipients.controls; track recipient) {
-            <div class="inv-sub-card">
-              <div class="inv-sub-header">
-                <span class="inv-sub-title">Recipient #{{ $index + 1 }}</span>
-                <button
-                  type="button"
-                  class="inv-remove-btn"
-                  (click)="removeRecipient($index)"
-                  [disabled]="!canRemoveRecipient()">
-                  Remove
-                </button>
-              </div>
-
-              <div [formGroupName]="$index">
-                <div class="row g-3">
-
-                  <div class="col-12 col-md-6">
-                    <label class="inv-label" [for]="'recipientName' + $index">Name</label>
-                    <input
-                      type="text"
-                      class="inv-input form-control"
-                      [ngClass]="{'is-invalid': isFieldInvalid(recipient.get('name'))}"
-                      [id]="'recipientName' + $index"
-                      formControlName="name"
-                      autocomplete="off">
-                    <div class="invalid-feedback">Recipient name is required</div>
-                  </div>
-
-                  <div class="col-12 col-md-6">
-                    <label class="inv-label" [for]="'recipientEmail' + $index">Email</label>
-                    <input
-                      type="email"
-                      class="inv-input form-control"
-                      [ngClass]="{'is-invalid': isFieldInvalid(recipient.get('email'))}"
-                      [id]="'recipientEmail' + $index"
-                      formControlName="email"
-                      autocomplete="off">
-                    <div class="invalid-feedback">Valid email is required</div>
-                  </div>
-
-                  <div class="col-12 col-md-4">
-                    <label class="inv-label" [for]="'recipientPhone' + $index">Phone</label>
-                    <input
-                      type="text"
-                      class="inv-input form-control"
-                      [ngClass]="{'is-invalid': isFieldInvalid(recipient.get('phone'))}"
-                      [id]="'recipientPhone' + $index"
-                      formControlName="phone"
-                      autocomplete="off">
-                    <div class="invalid-feedback">Phone is required</div>
-                  </div>
-
-                  <div class="col-12 col-md-4">
-                    <label class="inv-label" [for]="'recipientTin' + $index">
-                      TIN
-                      @if (!recipient.get('tin')?.hasValidator(Validators.required)) {
-                        <span class="inv-label-note">(required for B2B)</span>
+          <div ngbAccordion class="inv-recipients-accordion">
+            @for (recipient of recipients.controls; track recipient) {
+              <div ngbAccordionItem [collapsed]="recipients.length > 1 && $index > 0">
+                <h2 ngbAccordionHeader>
+                  <button ngbAccordionButton [class.inv-acc-error]="isRecipientInvalid($index)">
+                    <div class="inv-acc-header">
+                      <span class="inv-acc-title">Recipient #{{ $index + 1 }}</span>
+                      @if (isRecipientInvalid($index)) {
+                        <span class="inv-acc-error-badge">Check fields</span>
                       }
-                    </label>
-                    <input
-                      type="text"
-                      class="inv-input form-control"
-                      [ngClass]="{'is-invalid': isFieldInvalid(recipient.get('tin'))}"
-                      [id]="'recipientTin' + $index"
-                      formControlName="tin"
-                      autocomplete="off">
-                    <div class="invalid-feedback">TIN is required</div>
-                  </div>
+                    </div>
+                  </button>
+                </h2>
+                <div ngbAccordionCollapse>
+                  <div ngbAccordionBody>
+                    <ng-template>
+                    <div [formGroupName]="$index">
+                      <div class="row g-3">
 
-                  <div class="col-12 col-md-4">
-                    <label class="inv-label" [for]="'recipientIdType' + $index">ID Type</label>
-                    <select
-                      class="inv-select form-select"
-                      [ngClass]="{'is-invalid': isFieldInvalid(recipient.get('idType'))}"
-                      [id]="'recipientIdType' + $index"
-                      formControlName="idType">
-                      <option value="BRN">BRN</option>
-                      <option value="NRIC">NRIC</option>
-                      <option value="PASSPORT">PASSPORT</option>
-                      <option value="ARMY">ARMY</option>
-                    </select>
-                    <div class="invalid-feedback">ID type is required</div>
-                  </div>
+                        <div class="col-12 col-md-6">
+                          <label class="inv-label" [for]="'recipientName' + $index">Name</label>
+                          <input
+                            type="text"
+                            class="inv-input form-control"
+                            [ngClass]="{'is-invalid': isFieldInvalid(recipient.get('name'))}"
+                            [id]="'recipientName' + $index"
+                            formControlName="name"
+                            autocomplete="off">
+                          <div class="invalid-feedback">Recipient name is required</div>
+                        </div>
 
-                  <div class="col-12 col-md-6">
-                    <label class="inv-label" [for]="'recipientRegNum' + $index">
-                      Registration Number
-                      @if (!recipient.get('registrationNumber')?.hasValidator(Validators.required)) {
-                        <span class="inv-label-note">(required for B2B)</span>
-                      }
-                    </label>
-                    <input
-                      type="text"
-                      class="inv-input form-control"
-                      [ngClass]="{'is-invalid': isFieldInvalid(recipient.get('registrationNumber'))}"
-                      [id]="'recipientRegNum' + $index"
-                      formControlName="registrationNumber"
-                      autocomplete="off">
-                    <div class="invalid-feedback">Registration number is required</div>
-                  </div>
+                        <div class="col-12 col-md-6">
+                          <label class="inv-label" [for]="'recipientEmail' + $index">Email</label>
+                          <input
+                            type="email"
+                            class="inv-input form-control"
+                            [ngClass]="{'is-invalid': isFieldInvalid(recipient.get('email'))}"
+                            [id]="'recipientEmail' + $index"
+                            formControlName="email"
+                            autocomplete="off">
+                          <div class="invalid-feedback">Valid email is required</div>
+                        </div>
 
-                  <div class="col-12">
-                    <label class="inv-label" [for]="'recipientAddress' + $index">Address Line 1</label>
-                    <input
-                      type="text"
-                      class="inv-input form-control"
-                      [ngClass]="{'is-invalid': isFieldInvalid(recipient.get('addressLine1'))}"
-                      [id]="'recipientAddress' + $index"
-                      formControlName="addressLine1"
-                      autocomplete="off">
-                    <div class="invalid-feedback">Address is required</div>
-                  </div>
+                        <div class="col-12 col-md-4">
+                          <label class="inv-label" [for]="'recipientPhone' + $index">Phone</label>
+                          <input
+                            type="text"
+                            class="inv-input form-control"
+                            [ngClass]="{'is-invalid': isFieldInvalid(recipient.get('phone'))}"
+                            [id]="'recipientPhone' + $index"
+                            formControlName="phone"
+                            autocomplete="off">
+                          <div class="invalid-feedback">Phone is required</div>
+                        </div>
 
-                  <div class="col-12 col-md-3">
-                    <label class="inv-label" [for]="'recipientPostcode' + $index">Postcode</label>
-                    <input
-                      type="text"
-                      class="inv-input form-control"
-                      [ngClass]="{'is-invalid': isFieldInvalid(recipient.get('postcode'))}"
-                      [id]="'recipientPostcode' + $index"
-                      formControlName="postcode"
-                      autocomplete="off">
-                    <div class="invalid-feedback">Postcode is required</div>
-                  </div>
+                        <div class="col-12 col-md-4">
+                          <label class="inv-label" [for]="'recipientTin' + $index">
+                            TIN
+                            @if (!recipient.get('tin')?.hasValidator(Validators.required)) {
+                              <span class="inv-label-note">(required for B2B)</span>
+                            }
+                          </label>
+                          <input
+                            type="text"
+                            class="inv-input form-control"
+                            [ngClass]="{'is-invalid': isFieldInvalid(recipient.get('tin'))}"
+                            [id]="'recipientTin' + $index"
+                            formControlName="tin"
+                            autocomplete="off">
+                          <div class="invalid-feedback">TIN is required</div>
+                        </div>
 
-                  <div class="col-12 col-md-3">
-                    <label class="inv-label" [for]="'recipientCity' + $index">City</label>
-                    <input
-                      type="text"
-                      class="inv-input form-control"
-                      [ngClass]="{'is-invalid': isFieldInvalid(recipient.get('city'))}"
-                      [id]="'recipientCity' + $index"
-                      formControlName="city"
-                      autocomplete="off">
-                    <div class="invalid-feedback">City is required</div>
-                  </div>
+                        <div class="col-12 col-md-4">
+                          <label class="inv-label" [for]="'recipientIdType' + $index">ID Type</label>
+                          <select
+                            class="inv-select form-select"
+                            [ngClass]="{'is-invalid': isFieldInvalid(recipient.get('idType'))}"
+                            [id]="'recipientIdType' + $index"
+                            formControlName="idType">
+                            <option value="BRN">BRN</option>
+                            <option value="NRIC">NRIC</option>
+                            <option value="PASSPORT">PASSPORT</option>
+                            <option value="ARMY">ARMY</option>
+                          </select>
+                          <div class="invalid-feedback">ID type is required</div>
+                        </div>
 
-                  <div class="col-12 col-md-3">
-                    <label class="inv-label" [for]="'recipientState' + $index">State</label>
-                    <select
-                      class="inv-select form-select"
-                      [ngClass]="{'is-invalid': isFieldInvalid(recipient.get('state'))}"
-                      [id]="'recipientState' + $index"
-                      formControlName="state">
-                      @for (state of malaysianStates; track state.code) {
-                        <option [value]="state.code">{{ state.name }}</option>
-                      }
-                    </select>
-                    <div class="invalid-feedback">State is required</div>
-                  </div>
+                        <div class="col-12 col-md-6">
+                          <label class="inv-label" [for]="'recipientRegNum' + $index">
+                            Registration Number
+                            @if (!recipient.get('registrationNumber')?.hasValidator(Validators.required)) {
+                              <span class="inv-label-note">(required for B2B)</span>
+                            }
+                          </label>
+                          <input
+                            type="text"
+                            class="inv-input form-control"
+                            [ngClass]="{'is-invalid': isFieldInvalid(recipient.get('registrationNumber'))}"
+                            [id]="'recipientRegNum' + $index"
+                            formControlName="registrationNumber"
+                            autocomplete="off">
+                          <div class="invalid-feedback">Registration number is required</div>
+                        </div>
 
-                  <div class="col-12 col-md-3">
-                    <label class="inv-label" [for]="'recipientCountry' + $index">Country Code</label>
-                    <input
-                      type="text"
-                      class="inv-input form-control"
-                      [ngClass]="{'is-invalid': isFieldInvalid(recipient.get('countryCode'))}"
-                      [id]="'recipientCountry' + $index"
-                      formControlName="countryCode"
-                      autocomplete="off">
-                    <div class="invalid-feedback">Country code is required</div>
-                  </div>
+                        <div class="col-12">
+                          <label class="inv-label" [for]="'recipientAddress' + $index">Address Line 1</label>
+                          <input
+                            type="text"
+                            class="inv-input form-control"
+                            [ngClass]="{'is-invalid': isFieldInvalid(recipient.get('addressLine1'))}"
+                            [id]="'recipientAddress' + $index"
+                            formControlName="addressLine1"
+                            autocomplete="off">
+                          <div class="invalid-feedback">Address is required</div>
+                        </div>
 
+                        <div class="col-12 col-md-3">
+                          <label class="inv-label" [for]="'recipientPostcode' + $index">Postcode</label>
+                          <input
+                            type="text"
+                            class="inv-input form-control"
+                            [ngClass]="{'is-invalid': isFieldInvalid(recipient.get('postcode'))}"
+                            [id]="'recipientPostcode' + $index"
+                            formControlName="postcode"
+                            autocomplete="off">
+                          <div class="invalid-feedback">Postcode is required</div>
+                        </div>
+
+                        <div class="col-12 col-md-3">
+                          <label class="inv-label" [for]="'recipientCity' + $index">City</label>
+                          <input
+                            type="text"
+                            class="inv-input form-control"
+                            [ngClass]="{'is-invalid': isFieldInvalid(recipient.get('city'))}"
+                            [id]="'recipientCity' + $index"
+                            formControlName="city"
+                            autocomplete="off">
+                          <div class="invalid-feedback">City is required</div>
+                        </div>
+
+                        <div class="col-12 col-md-3">
+                          <label class="inv-label" [for]="'recipientState' + $index">State</label>
+                          <select
+                            class="inv-select form-select"
+                            [ngClass]="{'is-invalid': isFieldInvalid(recipient.get('state'))}"
+                            [id]="'recipientState' + $index"
+                            formControlName="state">
+                            @for (state of malaysianStates; track state.code) {
+                              <option [value]="state.code">{{ state.name }}</option>
+                            }
+                          </select>
+                          <div class="invalid-feedback">State is required</div>
+                        </div>
+
+                        <div class="col-12 col-md-3">
+                          <label class="inv-label" [for]="'recipientCountry' + $index">Country Code</label>
+                          <input
+                            type="text"
+                            class="inv-input form-control"
+                            [ngClass]="{'is-invalid': isFieldInvalid(recipient.get('countryCode'))}"
+                            [id]="'recipientCountry' + $index"
+                            formControlName="countryCode"
+                            autocomplete="off">
+                          <div class="invalid-feedback">Country code is required</div>
+                        </div>
+
+                      </div>
+                    </div>
+
+                    @if (canRemoveRecipient()) {
+                      <div class="inv-acc-remove-row">
+                        <button type="button" class="inv-remove-btn" (click)="removeRecipient($index)">
+                          Remove
+                        </button>
+                      </div>
+                    }
+                    </ng-template>
+                  </div>
                 </div>
               </div>
-            </div>
-          }
+            }
+          </div>
 
           <button type="button" class="inv-add-btn" (click)="addRecipient()">
             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"

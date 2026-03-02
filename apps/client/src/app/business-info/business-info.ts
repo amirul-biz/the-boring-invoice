@@ -1,11 +1,12 @@
 import { Component, inject, OnInit } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { FormGroup } from '@angular/forms';
 import { NgxSpinnerModule, NgxSpinnerService } from 'ngx-spinner';
 import { tap, finalize } from 'rxjs';
 import { BusinessInfoFormComponent } from './business-info-form/business-info-form';
 import { BusinessInfoForm, getBusinessInfoForm } from './business-info-form/business-info-form.config';
 import { BusinessInfoService } from './business-info-service';
+import { confirmModal, successModal, errorModal } from '../shared/modal.util';
 
 @Component({
   selector: 'app-business-info',
@@ -15,6 +16,7 @@ import { BusinessInfoService } from './business-info-service';
 })
 export class BusinessInfo implements OnInit {
   private route = inject(ActivatedRoute);
+  private router = inject(Router);
   private businessInfoService = inject(BusinessInfoService);
   private spinner = inject(NgxSpinnerService);
 
@@ -60,11 +62,22 @@ export class BusinessInfo implements OnInit {
     ).subscribe();
   }
 
-  onSave(): void {
+  async onSave(): Promise<void> {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
+      await errorModal(
+        'Invalid Form',
+        'Please fill in all required fields before submitting.',
+      );
       return;
     }
+
+    const isEdit = this.mode === 'edit';
+    const confirmed = await confirmModal(
+      isEdit ? 'Update Business?' : 'Create Business?',
+      `Are you sure you want to ${isEdit ? 'update' : 'create'} this business?`,
+    );
+    if (!confirmed) return;
 
     this.spinner.show();
     const formValue = this.form.getRawValue();
@@ -91,16 +104,32 @@ export class BusinessInfo implements OnInit {
       },
     };
 
-    const request$ = this.mode === 'edit'
+    const request$ = isEdit
       ? this.businessInfoService.update(this.editId, data)
       : this.businessInfoService.create(data);
 
     request$.pipe(
-      tap(() => {
-        const action = this.mode === 'edit' ? 'updated' : 'created';
-        alert(`Business info ${action} successfully`);
+      tap(async () => {
+        await successModal(
+          'Saved!',
+          `Business info ${isEdit ? 'updated' : 'created'} successfully.`,
+        );
       }),
       finalize(() => this.spinner.hide()),
     ).subscribe();
+  }
+
+  async onCancel(): Promise<void> {
+    const confirmed = await confirmModal(
+      'Discard Changes?',
+      'Your unsaved changes will be lost. Are you sure you want to cancel?',
+    );
+    if (!confirmed) return;
+
+    await errorModal(
+      'Changes Discarded',
+      'Your changes have been discarded.',
+    );
+    this.router.navigate(['/business-entity']);
   }
 }

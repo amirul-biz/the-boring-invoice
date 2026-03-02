@@ -225,6 +225,9 @@
 
     <!-- ── Footer ────────────────────────────────────────────────────────── -->
     <div class="bif-footer">
+      <button type="button" class="bif-cancel-btn" (click)="onCancel()">
+        Cancel
+      </button>
       <button type="submit" class="bif-submit-btn" (click)="onSubmit()">
         {{ mode === 'edit' ? 'Update Business' : 'Create Business' }}
       </button>

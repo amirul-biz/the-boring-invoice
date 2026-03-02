@@ -1,1 +1,56 @@
 @use 'bootstrap/scss/bootstrap';
+
+// ── SweetAlert2 overrides ──────────────────────────────────────────────────
+.swal2-popup {
+  font-family: 'Inter', sans-serif !important;
+  border-radius: 16px !important;
+  padding: 2rem !important;
+}
+
+.swal2-title {
+  font-size: 1.05rem !important;
+  font-weight: 600 !important;
+  color: #0D0D0D !important;
+}
+
+.swal2-html-container {
+  font-size: 0.875rem !important;
+  color: #6B6B6B !important;
+}
+
+.swal2-actions {
+  gap: 0.5rem !important;
+}
+
+.swal2-confirm {
+  background-color: #0D0D0D !important;
+  border-radius: 10px !important;
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+  padding: 0.55rem 1.25rem !important;
+  box-shadow: none !important;
+
+  &:focus {
+    box-shadow: none !important;
+  }
+}
+
+.swal2-cancel {
+  background-color: transparent !important;
+  color: #0D0D0D !important;
+  border: 1.5px solid rgba(0, 0, 0, 0.15) !important;
+  border-radius: 10px !important;
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+  padding: 0.55rem 1.25rem !important;
+  box-shadow: none !important;
+
+  &:focus {
+    box-shadow: none !important;
+  }
+}
+
+.swal2-icon {
+  transform: scale(0.75);
+  margin-bottom: 0 !important;
+}
