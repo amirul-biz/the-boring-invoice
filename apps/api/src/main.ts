@@ -100,6 +100,7 @@ async function bootstrap() {
   // Log database connection info for debugging
   console.log('Starting server with database pooling enabled');
 
+  app.enableShutdownHooks();
   await app.listen(port);
 }
 bootstrap();

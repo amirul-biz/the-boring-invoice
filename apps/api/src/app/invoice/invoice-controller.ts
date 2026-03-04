@@ -21,8 +21,8 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { CreateInvoiceInputDTO, CalculatedInvoiceDto, InvoiceListQueryDTO } from './invoice-dto';
-import { InvoiceService, RetryInvoiceMessage, RetryPaymentCallbackMessage } from './invoice-service';
-import { EventPattern } from '@nestjs/microservices';
+import { InvoiceService, RetryInvoiceMessage, RetryPaymentCallbackMessage, FailedInvoiceMessage } from './invoice-service';
+import { Ctx, EventPattern, Payload, RmqContext } from '@nestjs/microservices';
 import { generateInvoiceTemplate } from './invoice-template-generator';
 import { UserById } from '../decorator/user.decorator';
 import { INVOICE_QUEUE_PATTERNS } from './invoice.constants';
@@ -150,9 +150,13 @@ export class InvoiceController {
    */
   @EventPattern(INVOICE_QUEUE_PATTERNS.CREATE)
   async receiverCreateInvoice(
-    data: { businessId: string; calculatedInvoiceList: CalculatedInvoiceDto[] },
+    @Payload() data: { businessId: string; calculatedInvoiceList: CalculatedInvoiceDto[] },
+    @Ctx() context: RmqContext,
   ): Promise<void> {
+    const channel = context.getChannelRef();
+    const originalMsg = context.getMessage();
     await this.invoiceService.processInvoiceBatch(data.businessId, data.calculatedInvoiceList);
+    channel.ack(originalMsg);
   }
 
   /**
@@ -161,8 +165,14 @@ export class InvoiceController {
    * Re-emits with incremented attemptNo or routes to failed-invoice after 5 attempts
    */
   @EventPattern(INVOICE_QUEUE_PATTERNS.RETRY)
-  async receiverRetryInvoice(data: RetryInvoiceMessage): Promise<void> {
+  async receiverRetryInvoice(
+    @Payload() data: RetryInvoiceMessage,
+    @Ctx() context: RmqContext,
+  ): Promise<void> {
+    const channel = context.getChannelRef();
+    const originalMsg = context.getMessage();
     await this.invoiceService.processInvoiceRetry(data);
+    channel.ack(originalMsg);
   }
 
   /**
@@ -172,9 +182,13 @@ export class InvoiceController {
    */
   @EventPattern(INVOICE_QUEUE_PATTERNS.CALLBACK)
   async receiverUpdateInvoice(
-    callbackData: ToyyibPayCallback,
+    @Payload() callbackData: ToyyibPayCallback,
+    @Ctx() context: RmqContext,
   ): Promise<void> {
+    const channel = context.getChannelRef();
+    const originalMsg = context.getMessage();
     await this.invoiceService.processPaymentCallbackFromQueue(callbackData);
+    channel.ack(originalMsg);
   }
 
   /**
@@ -183,7 +197,41 @@ export class InvoiceController {
    * Re-emits with incremented attemptNo or routes to failed-payment-callback after 5 attempts
    */
   @EventPattern(INVOICE_QUEUE_PATTERNS.CALLBACK_RETRY)
-  async receiverRetryPaymentCallback(data: RetryPaymentCallbackMessage): Promise<void> {
+  async receiverRetryPaymentCallback(
+    @Payload() data: RetryPaymentCallbackMessage,
+    @Ctx() context: RmqContext,
+  ): Promise<void> {
+    const channel = context.getChannelRef();
+    const originalMsg = context.getMessage();
     await this.invoiceService.processPaymentCallbackRetry(data);
+    channel.ack(originalMsg);
+  }
+
+  /**
+   * Event consumer for permanently failed invoices
+   * Cancels invoice status and deactivates ToyyibPay bill
+   */
+  @EventPattern(INVOICE_QUEUE_PATTERNS.FAILED)
+  async receiverFailedInvoice(
+    @Payload() data: FailedInvoiceMessage,
+    @Ctx() context: RmqContext,
+  ): Promise<void> {
+    const channel = context.getChannelRef();
+    const originalMsg = context.getMessage();
+    await this.invoiceService.processFailedInvoice(data);
+    channel.ack(originalMsg);
+  }
+
+  /**
+   * Event consumer for permanently failed payment callbacks
+   * Acks to clear the queue — revisit handling later
+   */
+  @EventPattern(INVOICE_QUEUE_PATTERNS.CALLBACK_FAILED)
+  async receiverFailedPaymentCallback(
+    @Payload() _data: unknown,
+    @Ctx() context: RmqContext,
+  ): Promise<void> {
+    this.logger.warn('Payment callback permanently failed — acking to clear queue');
+    context.getChannelRef().ack(context.getMessage());
   }
 }

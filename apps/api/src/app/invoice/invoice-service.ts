@@ -27,6 +27,7 @@ import {
   UpdateInvoiceStatusData,
   saveBillUrl,
   setPendingStatus,
+  cancelInvoice,
 } from './invoice-repository/invoice-repository-update-status';
 import { findInvoiceByNumber, getInvoiceAsReceipt, getInvoiceByNumber } from './invoice-repository/invoice-repository-get';
 import { ToyyibPayUtil } from './invoice-generator/invoice-generator-toyyibpay-bill';
@@ -57,6 +58,13 @@ export interface ToyyibPayCallbackData {
 export interface RetryPaymentCallbackMessage {
   callbackData: ToyyibPayCallbackData;
   attemptNo: number;
+}
+
+export interface FailedInvoiceMessage {
+  businessId: string;
+  calculatedInvoice: CalculatedInvoiceDto;
+  error: string;
+  failedAt: string;
 }
 
 @Injectable()
@@ -338,12 +346,44 @@ export class InvoiceService {
     );
   }
 
+  /**
+   * Process a permanently failed invoice from the failed-invoice queue
+   * Sets status to CANCELLED and deactivates the ToyyibPay bill
+   */
+  async processFailedInvoice(msg: FailedInvoiceMessage): Promise<void> {
+    const { businessId, calculatedInvoice } = msg;
+    const invoiceNo = calculatedInvoice.invoiceNo;
+
+    this.logger.error(
+      `Processing permanently failed invoice ${invoiceNo} — original error: ${msg.error}`,
+    );
+
+    try {
+      const paymentCredential = await this.businessInfoService.getPaymentIntegrationCredential(businessId);
+      const invoice = await findInvoiceByNumber(this.prisma, invoiceNo, this.logger);
+
+      if (invoice?.billCode) {
+        ToyyibPayUtil.deactivateBill(invoice.billCode, paymentCredential.userSecretKey).catch(err =>
+          this.logger.warn(`deactivateBill failed for ${invoiceNo}: ${err.message}`),
+        );
+      }
+
+      await cancelInvoice(this.prisma, invoiceNo, this.logger);
+      this.logger.log(`Invoice ${invoiceNo} cancelled and bill deactivated`);
+    } catch (error) {
+      this.logger.error(
+        `Failed to process failed invoice ${invoiceNo}: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
+
   private async sendToFailedQueue(
     businessId: string,
     calculatedInvoice: CalculatedInvoiceDto,
     error: Error,
   ): Promise<void> {
-    // TODO: decide whether to delete the DRAFT invoice or mark as CANCELLED — KIV
     await this.queueService.sendMessageQue(INVOICE_QUEUE_PATTERNS.FAILED, {
       businessId,
       calculatedInvoice,
