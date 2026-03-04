@@ -13,6 +13,7 @@ export class BusinessInfoFormComponent {
   @Input({ required: true }) form!: FormGroup<BusinessInfoForm>;
   @Input({ required: true }) mode!: string;
   @Output() save = new EventEmitter<void>();
+  @Output() cancel = new EventEmitter<void>();
 
   showSecretKey = false;
 
@@ -24,11 +25,11 @@ export class BusinessInfoFormComponent {
     return control?.invalid && (control?.dirty || control?.touched);
   }
 
+  onCancel() {
+    this.cancel.emit();
+  }
+
   onSubmit() {
-    if (this.form.valid) {
-      this.save.emit();
-    } else {
-      this.form.markAllAsTouched();
-    }
+    this.save.emit();
   }
 }

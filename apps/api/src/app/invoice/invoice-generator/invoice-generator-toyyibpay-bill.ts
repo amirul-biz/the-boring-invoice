@@ -496,6 +496,53 @@ From: ${invoiceOutput.supplier.name}
   }
 
   /**
+   * Deactivate a ToyyibPay bill so the payment link stops working
+   * @param billCode - Bill code to deactivate
+   * @param secretKey - Business ToyyibPay secret key
+   * @param baseUrl - ToyyibPay base URL (defaults to env or production URL)
+   */
+  static async deactivateBill(
+    billCode: string,
+    secretKey: string,
+    baseUrl = process.env.PAYMENT_API_BASE_URL || 'https://toyyibpay.com',
+  ): Promise<void> {
+    const url = `${baseUrl}/index.php/api/inactiveBill`;
+    const formData = new URLSearchParams();
+    formData.append('secretKey', secretKey);
+    formData.append('billCode', billCode);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10_000);
+
+    const logger = new Logger(ToyyibPayUtil.name);
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: formData.toString(),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        logger.warn(`deactivateBill HTTP error for ${billCode}: ${response.statusText}`);
+        return;
+      }
+
+      const text = await response.text();
+      logger.log(`deactivateBill response for ${billCode}: ${text}`);
+    } catch (error) {
+      if (error.name === 'AbortError') {
+        logger.warn(`deactivateBill timed out for ${billCode}`);
+        return;
+      }
+      logger.warn(`deactivateBill failed for ${billCode}: ${error.message}`);
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
+  /**
    * Fetch bill transactions directly from ToyyibPay API (no authentication required)
    * Use this to verify payment status authoritatively instead of trusting callback hash
    * @param billCode - Bill code from callback

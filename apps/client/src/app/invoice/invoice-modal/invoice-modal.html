@@ -1,0 +1,262 @@
+@if (shared) {
+
+  <!-- Modal Header -->
+  <div class="im-header">
+    <div class="im-header-inner">
+      <div>
+        <h4 class="im-header-title">Invoice Preview</h4>
+        <p class="im-header-subtitle">
+          {{ invoices.length === 1 ? '1 invoice' : invoices.length + ' invoices' }} ready to generate
+        </p>
+      </div>
+      <button type="button" class="im-close-btn" (click)="dismiss()" aria-label="Close">
+        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Modal Body -->
+  <div class="im-body">
+
+    <!-- ── Shared Card ─────────────────────────────────────────────────────── -->
+    <div class="im-card">
+
+      <!-- Top: Type badge + meta -->
+      <div class="im-card-top">
+        <span class="im-type-badge">{{ getInvoiceTypeLabel(shared.invoiceType) }}</span>
+        <div class="im-meta">
+          <span class="im-meta-item">
+            <span class="im-meta-label">Currency</span>
+            <span class="im-meta-value">{{ shared.currency }}</span>
+          </span>
+          <span class="im-meta-divider">·</span>
+          <span class="im-meta-item">
+            <span class="im-meta-label">Due Date</span>
+            <span class="im-meta-value">{{ shared.dueDate }}</span>
+          </span>
+        </div>
+      </div>
+
+      @if (shared.originalInvoiceRef) {
+        <div class="im-ref-row">
+          <span class="im-ref-label">Original Invoice Ref</span>
+          <span class="im-ref-value">{{ shared.originalInvoiceRef }}</span>
+        </div>
+      }
+
+      <div class="im-separator"></div>
+
+      <!-- Supplier -->
+      <div class="im-section-header">Supplier</div>
+      <div class="row g-3">
+        <div class="col-12 col-md-6">
+          <div class="im-info-grid">
+            <div class="im-info-row">
+              <span class="im-label">Name</span>
+              <span class="im-value">{{ shared.supplier.name }}</span>
+            </div>
+            @if (shared.supplier.email) {
+              <div class="im-info-row">
+                <span class="im-label">Email</span>
+                <span class="im-value">{{ shared.supplier.email }}</span>
+              </div>
+            }
+            <div class="im-info-row">
+              <span class="im-label">TIN</span>
+              <span class="im-value im-mono">{{ shared.supplier.tin }}</span>
+            </div>
+            <div class="im-info-row">
+              <span class="im-label">Reg No.</span>
+              <span class="im-value im-mono">{{ shared.supplier.registrationNumber }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="col-12 col-md-6">
+          <div class="im-info-grid">
+            <div class="im-info-row">
+              <span class="im-label">MSIC</span>
+              <span class="im-value im-mono">{{ shared.supplier.msicCode }}</span>
+            </div>
+            @if (shared.supplier.contactNumber) {
+              <div class="im-info-row">
+                <span class="im-label">Contact</span>
+                <span class="im-value">{{ shared.supplier.contactNumber }}</span>
+              </div>
+            }
+            <div class="im-info-row">
+              <span class="im-label">Address</span>
+              <span class="im-value">
+                {{ shared.supplier.addressLine1 }}, {{ shared.supplier.postcode }} {{ shared.supplier.city }}, {{ getStateLabel(shared.supplier.state) }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="im-separator"></div>
+
+      <!-- Line Items -->
+      <div class="im-section-header">Line Items</div>
+      <div class="im-table-wrap">
+        <table class="im-table">
+          <thead class="im-thead">
+            <tr>
+              <th class="im-th">#</th>
+              <th class="im-th">Item</th>
+              <th class="im-th im-th--num">Qty</th>
+              <th class="im-th im-th--num">Unit Price</th>
+              <th class="im-th im-th--num">Discount</th>
+              <th class="im-th im-th--num">Tax</th>
+              <th class="im-th im-th--num">Amount</th>
+            </tr>
+          </thead>
+          <tbody class="im-tbody">
+            @for (item of shared.items; track $index) {
+              <tr class="im-tr">
+                <td class="im-td im-td--muted">{{ $index + 1 }}</td>
+                <td class="im-td">
+                  <span class="im-item-name">{{ item.itemName }}</span>
+                  <span class="im-item-class">{{ getClassificationLabel(item.classificationCode) }}</span>
+                </td>
+                <td class="im-td im-td--num">{{ item.quantity }}</td>
+                <td class="im-td im-td--num">{{ item.unitPrice | number:'1.2-2' }}</td>
+                <td class="im-td im-td--num">
+                  @if (item.discountRate > 0) {
+                    {{ item.discountRate }}%
+                  } @else {
+                    <span class="im-td--muted">—</span>
+                  }
+                </td>
+                <td class="im-td im-td--num">
+                  @if (item.taxRate > 0) {
+                    {{ getTaxTypeLabel(item.taxType) }} {{ item.taxRate }}%
+                  } @else {
+                    <span class="im-td--muted">{{ getTaxTypeLabel(item.taxType) }}</span>
+                  }
+                </td>
+                <td class="im-td im-td--num im-td--amount">
+                  {{ currency }} {{ getItemAmount(item.unitPrice, item.quantity, item.discountRate) | number:'1.2-2' }}
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Totals (per invoice) -->
+      <div class="im-totals">
+        <div class="im-total-row">
+          <span class="im-total-label">Subtotal</span>
+          <span class="im-total-value">{{ currency }} {{ getSubtotal() | number:'1.2-2' }}</span>
+        </div>
+        <div class="im-total-row">
+          <span class="im-total-label">Tax</span>
+          <span class="im-total-value">{{ currency }} {{ getTaxTotal() | number:'1.2-2' }}</span>
+        </div>
+        <div class="im-total-row im-total-row--grand">
+          <span class="im-total-label">Per Invoice</span>
+          <span class="im-total-value im-grand-total">{{ currency }} {{ getGrandTotal() | number:'1.2-2' }}</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ── Recipients Accordion ────────────────────────────────────────────── -->
+    <div class="im-recipients-label">
+      <span class="im-section-header" style="margin-bottom: 0">Recipients</span>
+      <span class="im-recipients-count">{{ invoices.length }}</span>
+    </div>
+
+    <div ngbAccordion>
+      @for (invoice of invoices; track $index) {
+        <div ngbAccordionItem [collapsed]="invoices.length > 1">
+          <h2 ngbAccordionHeader>
+            <button ngbAccordionButton>
+              <div class="im-acc-title">
+                <div class="im-acc-left">
+                  <span class="im-acc-index">{{ $index + 1 }}</span>
+                  <span class="im-acc-name">{{ invoice.recipient.name }}</span>
+                </div>
+                <span class="im-acc-amount">{{ currency }} {{ getGrandTotal() | number:'1.2-2' }}</span>
+              </div>
+            </button>
+          </h2>
+          <div ngbAccordionCollapse>
+            <div ngbAccordionBody>
+              <ng-template>
+                <div class="im-recipient-detail">
+                  <div class="row g-3">
+                    @if (invoice.recipient.email) {
+                      <div class="col-12">
+                        <div class="im-info-row">
+                          <span class="im-label">Email</span>
+                          <span class="im-value">{{ invoice.recipient.email }}</span>
+                        </div>
+                      </div>
+                    }
+                    <div class="col-6">
+                      <div class="im-info-grid">
+                        <div class="im-info-row">
+                          <span class="im-label">Phone</span>
+                          <span class="im-value">{{ invoice.recipient.phone }}</span>
+                        </div>
+                        <div class="im-info-row">
+                          <span class="im-label">TIN</span>
+                          <span class="im-value im-mono">{{ invoice.recipient.tin }}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-6">
+                      <div class="im-info-grid">
+                        <div class="im-info-row">
+                          <span class="im-label">ID Type</span>
+                          <span class="im-value">{{ invoice.recipient.idType }}</span>
+                        </div>
+                        <div class="im-info-row">
+                          <span class="im-label">Reg No.</span>
+                          <span class="im-value im-mono">{{ invoice.recipient.registrationNumber }}</span>
+                        </div>
+                        <div class="im-info-row">
+                          <span class="im-label">Address</span>
+                          <span class="im-value">
+                            {{ invoice.recipient.addressLine1 }}, {{ invoice.recipient.postcode }} {{ invoice.recipient.city }}, {{ getStateLabel(invoice.recipient.state) }}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </ng-template>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- ── Summary bar ─────────────────────────────────────────────────────── -->
+    <div class="im-summary">
+      <span class="im-summary-label">
+        {{ invoices.length }} {{ invoices.length === 1 ? 'invoice' : 'invoices' }}
+      </span>
+      <span class="im-summary-total">{{ currency }} {{ getTotalAmount() | number:'1.2-2' }}</span>
+    </div>
+
+  </div>
+
+  <!-- Modal Footer -->
+  <div class="im-footer">
+    <button type="button" class="im-cancel-btn" (click)="dismiss()">Cancel</button>
+    <button type="button" class="im-confirm-btn" (click)="confirm()">
+      <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="20 6 9 17 4 12"/>
+      </svg>
+      Generate {{ invoices.length === 1 ? 'Invoice' : invoices.length + ' Invoices' }}
+    </button>
+  </div>
+
+}

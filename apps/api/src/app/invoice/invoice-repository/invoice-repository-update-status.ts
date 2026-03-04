@@ -140,6 +140,40 @@ export async function setPendingStatus(
   }
 }
 
+export async function cancelInvoice(
+  prisma: PrismaService,
+  invoiceNo: string,
+  logger: Logger,
+): Promise<void> {
+  try {
+    logger.log(`Cancelling invoice ${invoiceNo}`);
+
+    await prisma.invoice.update({
+      where: { invoiceNo },
+      data: { status: InvoiceStatus.CANCELLED },
+    });
+
+    logger.log(`Invoice ${invoiceNo} status set to CANCELLED`);
+  } catch (error) {
+    logger.error(
+      `Failed to cancel invoice ${invoiceNo}: ${error.message}`,
+      error.stack,
+    );
+
+    if (error.code === 'P2025') {
+      throw new HttpException(
+        `Invoice ${invoiceNo} not found`,
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    throw new HttpException(
+      'Failed to cancel invoice',
+      HttpStatus.INTERNAL_SERVER_ERROR,
+    );
+  }
+}
+
 export async function updateInvoiceStatus(
   prisma: PrismaService,
   data: UpdateInvoiceStatusData,

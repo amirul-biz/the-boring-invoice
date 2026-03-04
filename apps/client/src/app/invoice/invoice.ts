@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, inject, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { ReactiveFormsModule, FormGroup, AbstractControl, Validators } from '@angular/forms';
-import { NgbDatepickerModule } from '@ng-bootstrap/ng-bootstrap';
+import { NgbAccordionModule, NgbDatepickerModule, NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { NgxSpinnerModule, NgxSpinnerService } from 'ngx-spinner';
 import {
   getInvoiceForm,
@@ -18,13 +18,16 @@ import {
 import { InvoiceService } from './invoice-service';
 import { BusinessInfoService } from '../business-info/business-info-service';
 import { MALAYSIAN_STATES, CLASSIFICATION_CODES, INVOICE_TYPES, TAX_TYPES } from './invoice-constants';
+import { ICreateInvoice } from './invoice-interface';
+import { InvoiceModalComponent } from './invoice-modal/invoice-modal';
 import { parseInvoiceTemplate } from './invoice-template-parser';
+import { errorModal, successModal } from '../shared/modal.util';
 import { tap, finalize } from 'rxjs';
 import { saveAs } from 'file-saver';
 
 @Component({
   selector: 'app-invoice',
-  imports: [CommonModule, ReactiveFormsModule, NgbDatepickerModule, NgxSpinnerModule],
+  imports: [CommonModule, ReactiveFormsModule, NgbAccordionModule, NgbDatepickerModule, NgxSpinnerModule],
   templateUrl: './invoice.html',
   styleUrl: './invoice.scss',
 })
@@ -34,6 +37,7 @@ export class Invoice implements OnInit {
   businessInfoService = inject(BusinessInfoService);
   spinner = inject(NgxSpinnerService);
   private route = inject(ActivatedRoute);
+  private modalService = inject(NgbModal);
   invoiceTypes = INVOICE_TYPES;
   taxTypes = TAX_TYPES;
   malaysianStates = MALAYSIAN_STATES;
@@ -150,20 +154,37 @@ export class Invoice implements OnInit {
     return this.recipients.length > 1;
   }
 
+  isRecipientInvalid(index: number): boolean {
+    const ctrl = this.recipients.at(index);
+    return ctrl.invalid && ctrl.touched;
+  }
+
   isFieldInvalid(control: any): boolean {
     return control?.invalid && (control?.dirty || control?.touched);
   }
 
-  onSubmit() {
-    if (this.invoiceForm.valid) {
-      console.log('Form submitted:', this.invoiceForm.getRawValue());
-      this.generateInvoice()
-    } else {
-      alert('Please fill up all required fields')
+  async onSubmit(): Promise<void> {
+    if (this.invoiceForm.invalid) {
       this.invoiceForm.markAllAsTouched();
+      await errorModal('Invalid Form', 'Please fill in all required fields before generating.');
+      return;
     }
-  }
 
+    const invoicesData = getInvoicesData(this.invoiceForm, this.invoiceVersion);
+    const modalRef = this.modalService.open(InvoiceModalComponent, {
+      size: 'xl',
+      scrollable: true,
+      centered: true,
+      backdrop: 'static',
+      keyboard: false,
+    });
+    modalRef.componentInstance.invoices = invoicesData;
+
+    modalRef.result.then(
+      (result) => { if (result === 'confirm') this.generateInvoice(invoicesData); },
+      () => {},
+    );
+  }
 
   onUploadTemplate(event: Event): void {
     const input = event.target as HTMLInputElement;
@@ -188,33 +209,28 @@ export class Invoice implements OnInit {
     });
   }
 
-  generateInvoice(): void {
-    if (this.invoiceForm.invalid) {
-      this.invoiceForm.markAllAsTouched();
-      return;
-    }
-
+  generateInvoice(invoicesData: ICreateInvoice[]): void {
     this.spinner.show();
 
-    const invoicesData = getInvoicesData(this.invoiceForm, this.invoiceVersion);
     this.invoiceService.generateInvoicePdf(invoicesData, this.businessId).pipe(
-      tap(() => {
+      tap(async () => {
         const count = invoicesData.length;
-        const message = count === 1
-          ? 'Invoice created successfully'
-          : `${count} invoices created successfully`;
-        alert(message);
+        await successModal(
+          `Processing ${count} ${count === 1 ? 'Invoice' : 'Invoices'}`,
+          count === 1 ? 'Your invoice is being processed.' : `Your ${count} invoices are being processed.`,
+        );
       }),
-      finalize(() => {
-        this.spinner.hide();
-      })
+      finalize(() => this.spinner.hide()),
     ).subscribe({
       next: () => {
         const recipients = this.invoiceForm.controls.recipients;
         recipients.controls.forEach(control => control.reset());
         recipients.clear();
         recipients.push(recipientForm());
-      }
+      },
+      error: async () => {
+        await errorModal('Generation Failed', 'Something went wrong. Please try again.');
+      },
     });
   }
 }

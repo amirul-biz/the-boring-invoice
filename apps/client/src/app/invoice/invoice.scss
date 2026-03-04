@@ -370,6 +370,83 @@ $radius-btn:           10px;
   }
 }
 
+// ─── Recipients Accordion ────────────────────────────────────────────────────
+
+.inv-recipients-accordion {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+:host ::ng-deep .inv-recipients-accordion {
+  .accordion-item {
+    border: 1px solid $color-border !important;
+    border-radius: $radius-sub-card !important;
+    overflow: hidden;
+    background: $color-sub-card;
+  }
+
+  .accordion-button {
+    font-family: $font-family;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: $color-text-primary;
+    background: $color-sub-card;
+    box-shadow: none !important;
+    padding: 0.875rem 1rem;
+
+    &:not(.collapsed) {
+      background: $color-sub-card;
+      box-shadow: none !important;
+    }
+
+    &::after {
+      filter: brightness(0);
+      opacity: 0.4;
+    }
+
+    &:focus { box-shadow: none !important; }
+
+    &.inv-acc-error {
+      color: #B91C1C;
+    }
+  }
+
+  .accordion-body {
+    padding: 0.25rem 1rem 1rem;
+    background: $color-sub-card;
+    border-top: 1px solid $color-border;
+  }
+}
+
+.inv-acc-header {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  width: 100%;
+}
+
+.inv-acc-title {
+  flex: 1;
+}
+
+.inv-acc-error-badge {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: #B91C1C;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.inv-acc-remove-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid $color-border;
+}
+
 // ─── Spinner Label ───────────────────────────────────────────────────────────
 
 .inv-spinner-label {
