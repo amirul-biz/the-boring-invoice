@@ -4,6 +4,7 @@ import { ReactiveFormsModule, FormGroup } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { NgxSpinnerModule, NgxSpinnerService } from 'ngx-spinner';
 import { tap, finalize, Subject, takeUntil } from 'rxjs';
+import { confirmModal, successModal, errorModal } from '../shared/modal.util';
 import { InvoiceListingService } from './invoice-listing-service';
 import { IInvoiceListItem, IInvoiceSummary } from './invoice-listing-interface';
 import { InvoiceListingTableComponent } from './invoice-listing-table/invoice-listing-table';
@@ -90,13 +91,61 @@ export class InvoiceListing implements OnInit, OnDestroy {
     this.getInvoiceList();
   }
 
+  async onNotifyInvoiceByEmail(invoice: IInvoiceListItem): Promise<void> {
+    const confirmed = await confirmModal(
+      'Send Notification?',
+      `Re-send the invoice email for ${invoice.invoiceNo} to the recipient?`,
+    );
+    if (!confirmed) return;
+
+    this.spinner.show();
+    this.invoiceListingService
+      .notifyInvoiceByEmail(this.businessId, [invoice.invoiceNo])
+      .pipe(finalize(() => this.spinner.hide()))
+      .subscribe({
+        next: async () => {
+          await successModal('Queued', `Notification email for ${invoice.invoiceNo} has been queued.`);
+        },
+        error: async (err) => {
+          const message = err?.error?.message || 'Failed to queue notification email.';
+          await errorModal('Error', message);
+        },
+      });
+  }
+
+  async onDeactivateInvoice(invoice: IInvoiceListItem): Promise<void> {
+    const confirmed = await confirmModal(
+      'Deactivate Invoice?',
+      `Invoice ${invoice.invoiceNo} will be cancelled and its payment link deactivated. This cannot be undone.`,
+    );
+    if (!confirmed) return;
+
+    this.spinner.show();
+    this.invoiceListingService
+      .deactivateInvoice(this.businessId, invoice.invoiceNo)
+      .pipe(finalize(() => this.spinner.hide()))
+      .subscribe({
+        next: async () => {
+          await successModal('Deactivated', `Invoice ${invoice.invoiceNo} has been deactivated.`);
+          this.getInvoiceList();
+        },
+        error: async (err) => {
+          const message = err?.error?.message || 'Failed to deactivate invoice.';
+          await errorModal('Error', message);
+        },
+      });
+  }
+
   onAction(event: { type: string; invoice: IInvoiceListItem }): void {
     switch (event.type) {
-      case 'notify':
-        alert(`Notify again: ${event.invoice.invoiceNo}`);
+      case 'notify-email':
+        this.onNotifyInvoiceByEmail(event.invoice);
+        break;
+      case 'notify-whatsapp':
+        alert(`Notify via WhatsApp: ${event.invoice.invoiceNo}`);
         break;
       case 'deactivate':
-        alert(`Deactivate: ${event.invoice.invoiceNo}`);
+        this.onDeactivateInvoice(event.invoice);
         break;
       case 'download':
         alert(`Download: ${event.invoice.invoiceNo}`);

@@ -1,5 +1,5 @@
 // Third-party / framework
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
 import { MailerService } from '@nestjs-modules/mailer';
 import { InvoiceStatus } from '@prisma/client';
 
@@ -18,6 +18,7 @@ import {
   RecipientDTO,
   SupplierDTO,
   ReceiptDTO,
+  InvoiceItemDTO,
 } from './invoice-dto';
 
 // Local — Utilities
@@ -77,6 +78,12 @@ export interface FailedInvoiceMessage {
   calculatedInvoice: CalculatedInvoiceDto;
   error: string;
   failedAt: string;
+}
+
+export interface NotifyEmailMessage {
+  rawBusinessId: string;
+  invoiceNumbers: string[];
+  userId: string;
 }
 
 @Injectable()
@@ -353,6 +360,139 @@ export class InvoiceService {
     await this.businessInfoService.verifyOwnership(encodedBusinessId, userId);
     const businessId = this.cryptoService.decodeId(encodedBusinessId);
     return getInvoiceList(this.prisma, { ...query, businessId }, this.logger);
+  }
+
+  async deactivateInvoice(encodedBusinessId: string, invoiceNo: string, userId: string): Promise<void> {
+    // 1. Verify ownership (throws 401 if user doesn't own business)
+    await this.businessInfoService.verifyOwnership(encodedBusinessId, userId);
+
+    // 2. Decode to raw UUID for DB comparisons and credential lookup
+    const rawBusinessId = this.cryptoService.decodeId(encodedBusinessId);
+
+    // 3. Get invoice
+    const invoice = await findInvoiceByNumber(this.prisma, invoiceNo, this.logger);
+    if (!invoice) {
+      throw new HttpException(`Invoice ${invoiceNo} not found`, HttpStatus.NOT_FOUND);
+    }
+
+    // 4. Check invoice belongs to this business
+    if (invoice.businessId !== rawBusinessId) {
+      throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
+    }
+
+    // 5. Block deactivation of paid invoices
+    if (invoice.status === InvoiceStatus.PAID) {
+      throw new HttpException('Cannot deactivate a paid invoice', HttpStatus.BAD_REQUEST);
+    }
+
+    // 6. Get payment credential with decrypted userSecretKey (requires raw UUID)
+    const paymentCredential = await this.businessInfoService.getPaymentIntegrationCredential(rawBusinessId);
+
+    // 7. Deactivate ToyyibPay bill first — await so DB update only happens after
+    if (invoice.billCode) {
+      await ToyyibPayUtil.deactivateBill(invoice.billCode, paymentCredential.userSecretKey);
+      this.logger.log(`ToyyibPay bill deactivated for ${invoiceNo}`);
+    }
+
+    // 8. Update DB status to CANCELLED
+    await cancelInvoice(this.prisma, invoiceNo, this.logger);
+    this.logger.log(`Invoice ${invoiceNo} deactivated by user ${userId}`);
+  }
+
+  /**
+   * Queue a batch of invoice notification emails for async processing.
+   * Verifies ownership at HTTP time; consumer processes with 1.5 s gap between sends.
+   */
+  async queueNotifyEmailBatch(
+    encodedBusinessId: string,
+    invoiceNumbers: string[],
+    userId: string,
+  ): Promise<void> {
+    this.logger.log(`[NotifyEmail:1] Verifying ownership for user ${userId}`);
+    await this.businessInfoService.verifyOwnership(encodedBusinessId, userId);
+
+    this.logger.log(`[NotifyEmail:2] Ownership verified — decoding businessId`);
+    const rawBusinessId = this.cryptoService.decodeId(encodedBusinessId);
+
+    this.logger.log(`[NotifyEmail:3] Emitting batch to queue — invoices: [${invoiceNumbers.join(', ')}]`);
+    const message: NotifyEmailMessage = { rawBusinessId, invoiceNumbers, userId };
+    await this.queueService.sendMessageQue(INVOICE_QUEUE_PATTERNS.NOTIFY_EMAIL, message);
+    this.logger.log(`[NotifyEmail:4] Batch queued successfully — ${invoiceNumbers.length} invoice(s) by user ${userId}`);
+  }
+
+  /**
+   * Process a batch of notification emails from the queue.
+   * Sends each email with a 1.5 s delay; continues batch on individual failure.
+   */
+  async processNotifyEmailBatch(data: NotifyEmailMessage): Promise<void> {
+    const { rawBusinessId, invoiceNumbers, userId } = data;
+    const total = invoiceNumbers.length;
+
+    this.logger.log(`[NotifyEmail:Consumer:1] Batch processing started — ${total} invoice(s): [${invoiceNumbers.join(', ')}]`);
+
+    for (let i = 0; i < total; i++) {
+      const invoiceNo = invoiceNumbers[i];
+      this.logger.log(`[NotifyEmail:Consumer:2] Processing ${i + 1}/${total} — ${invoiceNo}`);
+      try {
+        await this.sendSingleInvoiceEmail(rawBusinessId, invoiceNo, userId);
+        this.logger.log(`[NotifyEmail:Consumer:3] ${invoiceNo} — email sent successfully`);
+      } catch (err) {
+        this.logger.error(`[NotifyEmail:Consumer:3] ${invoiceNo} — failed: ${err.message}`);
+      }
+
+      if (i < total - 1) {
+        this.logger.log(`[NotifyEmail:Consumer:4] Waiting ${INVOICE_QUEUE_CONFIG.BATCH_DELAY_MS}ms before next email`);
+        await this.delay(INVOICE_QUEUE_CONFIG.BATCH_DELAY_MS);
+      }
+    }
+
+    this.logger.log(`[NotifyEmail:Consumer:5] Batch processing complete — ${total} invoice(s) processed`);
+  }
+
+  /**
+   * Send notification email for a single invoice.
+   * Throws if invoice not found, belongs to different business, or is PAID/CANCELLED.
+   * @private
+   */
+  private async sendSingleInvoiceEmail(rawBusinessId: string, invoiceNo: string, userId: string): Promise<void> {
+    this.logger.log(`[NotifyEmail:Send:1] Fetching invoice ${invoiceNo} from DB`);
+    const invoice = await getInvoiceByNumber(this.prisma, invoiceNo, this.logger);
+    this.logger.log(`[NotifyEmail:Send:2] Invoice found — status: ${invoice.status}, businessId: ${invoice.businessId}`);
+
+    if (invoice.businessId !== rawBusinessId) {
+      this.logger.warn(`[NotifyEmail:Send:X] BusinessId mismatch — invoice belongs to ${invoice.businessId}, expected ${rawBusinessId}`);
+      throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
+    }
+
+    if (invoice.status === InvoiceStatus.PAID || invoice.status === InvoiceStatus.CANCELLED) {
+      this.logger.warn(`[NotifyEmail:Send:X] Skipping ${invoiceNo} — status is ${invoice.status}`);
+      throw new HttpException('Cannot send notification for a paid or cancelled invoice', HttpStatus.BAD_REQUEST);
+    }
+
+    this.logger.log(`[NotifyEmail:Send:3] Decrypting recipient/supplier fields`);
+    const processedInvoice: ProcessedInvoiceDto = {
+      invoiceNo: invoice.invoiceNo,
+      invoiceType: invoice.invoiceType,
+      originalInvoiceRef: invoice.originalInvoiceRef ?? undefined,
+      currency: invoice.currency,
+      status: invoice.status,
+      issuedDate: invoice.issuedDate.toISOString(),
+      dueDate: invoice.dueDate.toISOString(),
+      supplier: this.decryptSupplier(invoice.supplier as unknown as SupplierDTO),
+      recipient: this.decryptRecipient(invoice.recipient as unknown as RecipientDTO),
+      items: invoice.items as any as InvoiceItemDTO[],
+      totalNetAmount: parseFloat(invoice.totalNetAmount.toString()),
+      totalTaxAmount: parseFloat(invoice.totalTaxAmount.toString()),
+      totalDiscountAmount: parseFloat(invoice.totalDiscountAmount.toString()),
+      totalPayableAmount: parseFloat(invoice.totalPayableAmount.toString()),
+      billCode: invoice.billCode ?? undefined,
+      billUrl: invoice.billUrl ?? undefined,
+      invoiceVersion: invoice.invoiceVersion,
+    };
+
+    this.logger.log(`[NotifyEmail:Send:4] Calling sendInvoiceEmail for ${invoiceNo} → recipient: ${processedInvoice.recipient.email}`);
+    await sendInvoiceEmail(this.mailService, processedInvoice, this.logger);
+    this.logger.log(`[NotifyEmail:Send:5] Email dispatched for ${invoiceNo} (triggered by user ${userId})`);
   }
 
   // ─── Private helpers ─────────────────────────────────────────────────────────

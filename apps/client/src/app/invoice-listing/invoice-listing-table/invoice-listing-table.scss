@@ -164,6 +164,7 @@ $radius-btn:           7px;
 .ilt-action-btn {
   display: inline-flex;
   align-items: center;
+  gap: 0.3rem;
   padding: 0.3rem 0.625rem;
   border-radius: $radius-btn;
   font-family: $font-family;

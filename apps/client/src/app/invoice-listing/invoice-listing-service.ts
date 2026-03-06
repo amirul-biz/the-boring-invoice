@@ -42,4 +42,18 @@ export class InvoiceListingService {
       { params },
     );
   }
+
+  notifyInvoiceByEmail(businessId: string, invoiceNumbers: string[]): Observable<void> {
+    return this.http.post<void>(
+      `${this.apiUrl}/invoice/notify-email/${businessId}`,
+      { invoiceNumbers },
+    );
+  }
+
+  deactivateInvoice(businessId: string, invoiceNo: string): Observable<void> {
+    return this.http.post<void>(
+      `${this.apiUrl}/invoice/deactivate/${businessId}/${invoiceNo}`,
+      {},
+    );
+  }
 }

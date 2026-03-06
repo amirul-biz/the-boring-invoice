@@ -21,13 +21,14 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { CreateInvoiceInputDTO, InvoiceListQueryDTO } from './invoice-dto';
+import { CreateInvoiceInputDTO, InvoiceListQueryDTO, NotifyEmailBatchDTO } from './invoice-dto';
 import {
   InvoiceService,
   CreateInvoiceMessage,
   RetryInvoiceMessage,
   RetryPaymentCallbackMessage,
   FailedInvoiceMessage,
+  NotifyEmailMessage,
   ToyyibPayCallbackData,
 } from './invoice-service';
 import { Ctx, EventPattern, Payload, RmqContext } from '@nestjs/microservices';
@@ -93,6 +94,41 @@ export class InvoiceController {
   }
 
   /**
+   * Queue a batch of invoice notification emails for async processing
+   */
+  @Post('notify-email/:businessId')
+  @HttpCode(HttpStatus.ACCEPTED)
+  @ApiOperation({ summary: 'Queue batch invoice notification emails' })
+  @ApiParam({ name: 'businessId', type: String })
+  @ApiBody({ type: NotifyEmailBatchDTO })
+  @ApiResponse({ status: 202, description: 'Notification batch queued' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async queueNotifyEmailBatch(
+    @Param('businessId') businessId: string,
+    @Body() body: NotifyEmailBatchDTO,
+    @UserById() userId: string,
+  ): Promise<void> {
+    await this.invoiceService.queueNotifyEmailBatch(businessId, body.invoiceNumbers, userId);
+  }
+
+  @Post('deactivate/:businessId/:invoiceNo')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Deactivate invoice and cancel ToyyibPay bill' })
+  @ApiParam({ name: 'businessId', type: String })
+  @ApiParam({ name: 'invoiceNo', type: String })
+  @ApiResponse({ status: 200, description: 'Invoice deactivated successfully' })
+  @ApiResponse({ status: 400, description: 'Invoice is already paid' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Invoice not found' })
+  async deactivateInvoice(
+    @Param('businessId') businessId: string,
+    @Param('invoiceNo') invoiceNo: string,
+    @UserById() userId: string,
+  ): Promise<void> {
+    await this.invoiceService.deactivateInvoice(businessId, invoiceNo, userId);
+  }
+
+  /**
    * Handle payment callback from ToyyibPay
    * Queue for async processing to avoid serverless timeout
    * Always returns 200 OK to ToyyibPay regardless of processing result
@@ -134,6 +170,23 @@ export class InvoiceController {
     const channel = context.getChannelRef();
     const originalMsg = context.getMessage();
     await this.invoiceService.processInvoiceBatch(data.businessId, data.calculatedInvoiceList);
+    channel.ack(originalMsg);
+  }
+
+  /**
+   * Event consumer for notify-email batch queue
+   * Sends each email with a 1.5 s gap between sends
+   */
+  @EventPattern(INVOICE_QUEUE_PATTERNS.NOTIFY_EMAIL)
+  async receiverNotifyEmail(
+    @Payload() data: NotifyEmailMessage,
+    @Ctx() context: RmqContext,
+  ): Promise<void> {
+    this.logger.log(`[Queue] Notify-email consumer triggered — ${data.invoiceNumbers.length} invoice(s): [${data.invoiceNumbers.join(', ')}]`);
+    const channel = context.getChannelRef();
+    const originalMsg = context.getMessage();
+    await this.invoiceService.processNotifyEmailBatch(data);
+    this.logger.log(`[Queue] Notify-email batch complete — acking message`);
     channel.ack(originalMsg);
   }
 

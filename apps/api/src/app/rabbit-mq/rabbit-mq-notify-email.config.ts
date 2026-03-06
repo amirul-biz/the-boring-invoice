@@ -1,10 +1,10 @@
 import { Transport, RmqOptions } from '@nestjs/microservices';
 
-export const rabbitMQPaymentConfig = (noAck = false): RmqOptions => ({
+export const rabbitMQNotifyEmailConfig = (noAck = false): RmqOptions => ({
   transport: Transport.RMQ,
   options: {
     urls: [process.env.RBBIT_MQ_QUE_URL],
-    queue: 'payment_callback_queue',
+    queue: 'notify_email_queue',
     queueOptions: {
       durable: true,
     },
@@ -13,6 +13,6 @@ export const rabbitMQPaymentConfig = (noAck = false): RmqOptions => ({
       reconnectTimeInSeconds: 5,
     },
     noAck,
-    prefetchCount: 5,
+    prefetchCount: 3,
   },
 });
