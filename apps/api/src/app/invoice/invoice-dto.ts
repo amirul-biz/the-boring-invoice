@@ -261,17 +261,17 @@ export class InvoiceListQueryDTO {
 
   @ApiProperty({ required: false, enum: ['DRAFT', 'PENDING', 'PAID', 'CANCELLED'] })
   @IsOptional()
-  @IsString()
+  @IsEnum(['DRAFT', 'PENDING', 'PAID', 'CANCELLED'])
   status?: string;
 
   @ApiProperty({ required: false, example: '2025-01-01' })
   @IsOptional()
-  @IsString()
+  @IsDateString()
   dateFrom?: string;
 
   @ApiProperty({ required: false, example: '2025-12-31' })
   @IsOptional()
-  @IsString()
+  @IsDateString()
   dateTo?: string;
 }
 

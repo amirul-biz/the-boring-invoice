@@ -7,10 +7,14 @@ const INVOICE_TYPE_LABEL: Record<string, string> = {
   DEBIT_NOTE: 'Debit Note',
 };
 
-function generateInvoiceEmailHtml(invoice: ProcessedInvoiceDto): string {
-  const formatCurrency = (amount: number) =>
-    `RM ${amount.toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+function formatCurrency(amount: number): string {
+  return `RM ${amount.toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
 
+/**
+ * Generate HTML body for invoice email.
+ */
+function generateInvoiceEmailHtml(invoice: ProcessedInvoiceDto): string {
   const itemsHtml = invoice.items
     .map(
       (item) => `
@@ -36,7 +40,7 @@ function generateInvoiceEmailHtml(invoice: ProcessedInvoiceDto): string {
     <tr>
       <td style="padding: 40px 20px;">
         <table role="presentation" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-          
+
           <!-- Header -->
           <tr>
             <td style="background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%); padding: 32px 40px;">
@@ -202,10 +206,10 @@ function generateInvoiceEmailHtml(invoice: ProcessedInvoiceDto): string {
 </html>`.trim();
 }
 
+/**
+ * Generate plain-text body for invoice email.
+ */
 function generateInvoiceEmailText(invoice: ProcessedInvoiceDto): string {
-  const formatCurrency = (amount: number) =>
-    `RM ${amount.toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
   const itemsList = invoice.items
     .map((item) => `  • ${item.itemName} (x${item.quantity}) - ${formatCurrency(item.unitPrice * item.quantity)}`)
     .join('\n');

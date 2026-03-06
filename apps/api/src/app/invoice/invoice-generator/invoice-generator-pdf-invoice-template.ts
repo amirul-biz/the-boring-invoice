@@ -1,39 +1,6 @@
 import PDFDocument from 'pdfkit';
 import { ProcessedInvoiceDto } from '../invoice-dto';
-import { createQRCodeUtil, QRCodeUtil } from './invoice-generator-qr-code';
-
-/**
- * Format number as currency
- */
-function formatCurrency(amount: number | null | undefined, currency: string = 'RM'): string {
-  if (amount === null || amount === undefined) return '';
-  return `${currency} ${amount.toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
-
-/**
- * Format address from recipient DTO
- */
-function formatAddress(recipient: ProcessedInvoiceDto['recipient']): string {
-  const parts = [
-    recipient?.addressLine1,
-    recipient?.postcode,
-    recipient?.city,
-    recipient?.state,
-    recipient?.countryCode,
-  ].filter(Boolean);
-  return parts.join(', ');
-}
-
-/**
- * Format date for display
- */
-function formatDate(dateString: string): string {
-  if (!dateString) return '';
-  if (dateString.includes('T')) {
-    return dateString.split('T')[0];
-  }
-  return dateString;
-}
+import { generateQrCode } from './invoice-generator-qr-code';
 
 // Colors
 const COLORS = {
@@ -47,8 +14,33 @@ const COLORS = {
   success: '#38a169',
 };
 
+const INVOICE_TYPE_LABEL: Record<string, string> = {
+  INVOICE: 'Invoice',
+  CREDIT_NOTE: 'Credit Note',
+  DEBIT_NOTE: 'Debit Note',
+};
+
 /**
- * Generate invoice PDF using PDFKit with QR code and payment button
+ * Format number as currency.
+ */
+function formatCurrency(amount: number | null | undefined, currency: string = 'RM'): string {
+  if (amount === null || amount === undefined) return '';
+  return `${currency} ${amount.toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+/**
+ * Format date for display.
+ */
+function formatDate(dateString: string): string {
+  if (!dateString) return '';
+  if (dateString.includes('T')) {
+    return dateString.split('T')[0];
+  }
+  return dateString;
+}
+
+/**
+ * Generate invoice PDF using PDFKit with QR code and payment button.
  * @param invoiceData - The processed invoice data (ProcessedInvoiceDto)
  * @returns Promise<Buffer> containing the PDF data
  */
@@ -58,7 +50,7 @@ export async function generatePdfInvoiceTemplate(
   // Generate QR code if billUrl exists
   let qrBuffer: Buffer | null = null;
   if (invoiceData.billUrl) {
-    const qrCodeUtil = createQRCodeUtil();
+    const qrCodeUtil = generateQrCode();
     qrBuffer = await qrCodeUtil.generatePaymentQR(invoiceData.billUrl, 100);
   }
 
@@ -111,7 +103,6 @@ export async function generatePdfInvoiceTemplate(
         .text(businessName, margin, 45, { width: 300 });
 
       // Invoice type badge
-      const INVOICE_TYPE_LABEL: Record<string, string> = { INVOICE: 'Invoice', CREDIT_NOTE: 'Credit Note', DEBIT_NOTE: 'Debit Note' };
       const invoiceType = (INVOICE_TYPE_LABEL[invoiceData.invoiceType] ?? invoiceData.invoiceType).toUpperCase();
       const badgeWidth = doc.widthOfString(invoiceType) + 14;
       doc.roundedRect(margin, 70, badgeWidth, 16, 3)
@@ -202,7 +193,7 @@ export async function generatePdfInvoiceTemplate(
 
       yPos += 18;
 
-      // Address - split into separate lines to avoid overlap
+      // Address — split into separate lines to avoid overlap
       doc.font('Helvetica')
         .fontSize(10)
         .fillColor(COLORS.textDark);
@@ -605,7 +596,7 @@ export async function generatePdfInvoiceTemplate(
 }
 
 /**
- * Generate invoice PDF and save to file
+ * Generate invoice PDF and save to file.
  * @param invoiceData - The processed invoice data (ProcessedInvoiceDto)
  * @param outputPath - Path to save the PDF file
  */

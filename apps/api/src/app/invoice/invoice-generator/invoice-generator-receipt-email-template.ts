@@ -1,23 +1,26 @@
 import { MailerService } from '@nestjs-modules/mailer';
 import { ReceiptDTO } from '../invoice-dto';
 
+function formatCurrency(amount: number): string {
+  return `RM ${amount.toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function formatDateTime(dateTimeStr: string): string {
+  return new Date(dateTimeStr).toLocaleString('en-MY', {
+    timeZone: 'Asia/Kuala_Lumpur',
+    year: 'numeric',
+    month: 'short',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+}
+
+/**
+ * Generate HTML body for receipt email.
+ */
 function generateReceiptEmailHtml(receipt: ReceiptDTO): string {
-  const formatCurrency = (amount: number) =>
-    `RM ${amount.toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
-  const formatDateTime = (dateTimeStr: string) => {
-    const date = new Date(dateTimeStr);
-    return date.toLocaleString('en-MY', {
-      timeZone: 'Asia/Kuala_Lumpur',
-      year: 'numeric',
-      month: 'short',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    });
-  };
-
   const itemsHtml = receipt.items
     .map(
       (item) => `
@@ -43,7 +46,7 @@ function generateReceiptEmailHtml(receipt: ReceiptDTO): string {
     <tr>
       <td style="padding: 40px 20px;">
         <table role="presentation" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-          
+
           <!-- Header -->
           <tr>
             <td style="background: linear-gradient(135deg, #065f46 0%, #059669 100%); padding: 32px 40px;">
@@ -242,23 +245,10 @@ function generateReceiptEmailHtml(receipt: ReceiptDTO): string {
 </html>`.trim();
 }
 
+/**
+ * Generate plain-text body for receipt email.
+ */
 function generateReceiptEmailText(receipt: ReceiptDTO): string {
-  const formatCurrency = (amount: number) =>
-    `RM ${amount.toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
-  const formatDateTime = (dateTimeStr: string) => {
-    const date = new Date(dateTimeStr);
-    return date.toLocaleString('en-MY', {
-      timeZone: 'Asia/Kuala_Lumpur',
-      year: 'numeric',
-      month: 'short',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    });
-  };
-
   const itemsList = receipt.items
     .map((item) => `  • ${item.itemName} (x${item.quantity}) - ${formatCurrency(item.unitPrice * item.quantity)}`)
     .join('\n');
@@ -330,5 +320,4 @@ export async function generateReceiptEmailTemplate(
   return { status: 'Success', message: 'Receipt email sent' };
 }
 
-// Export individual functions for flexibility
 export { generateReceiptEmailHtml, generateReceiptEmailText };

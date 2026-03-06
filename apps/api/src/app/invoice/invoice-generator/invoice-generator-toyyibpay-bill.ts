@@ -1,52 +1,11 @@
 import { createHash } from 'crypto';
 import { HttpException, HttpStatus, Logger } from '@nestjs/common';
-
-// Import your DTO (adjust path as needed)
-// import { CalculatedInvoiceDto } from './dto/create-invoice.dto';
-
-// Re-declare for standalone use - replace with actual import
-interface InvoiceItemDTO {
-  itemName: string;
-  quantity: number;
-  unitPrice: number;
-  classificationCode: string;
-}
-
-interface RecipientDTO {
-  name: string;
-  email: string;
-  phone: string;
-  tin: string;
-  registrationNumber: string;
-  addressLine1: string;
-  postcode: string;
-  city: string;
-  state: string;
-  countryCode: string;
-}
-
-interface SupplierDTO {
-  name: string;
-  tin: string;
-  registrationNumber: string;
-  msicCode: string;
-  businessActivityDescription: string;
-}
-
-interface CalculatedInvoiceDto {
-  invoiceType: string;
-  currency: string;
-  supplier: SupplierDTO;
-  recipient: RecipientDTO;
-  dueDate: string;
-  items: InvoiceItemDTO[];
-  invoiceNo: string;
-  issuedDate: string;
-  totalNetAmount: number;
-  totalTaxAmount: number;
-  totalDiscountAmount: number;
-  totalPayableAmount: number;
-}
+import {
+  CalculatedInvoiceDto,
+  InvoiceItemDTO,
+  RecipientDTO,
+  SupplierDTO,
+} from '../invoice-dto';
 
 // ToyyibPay Configuration
 interface ToyyibPayConfig {
@@ -114,8 +73,8 @@ export interface ToyyibPayTransaction {
 }
 
 /**
- * ToyyibPay Utility Class
- * Handles payment bill creation and management with ToyyibPay API
+ * ToyyibPay Utility Class.
+ * Handles payment bill creation and management with ToyyibPay API.
  */
 export class ToyyibPayUtil {
   private readonly logger = new Logger(ToyyibPayUtil.name);
@@ -133,36 +92,32 @@ export class ToyyibPayUtil {
     this.validateConfig();
   }
 
-  private validateConfig(): void {
-    if (!this.config.secretKey) {
-      throw new Error('ToyyibPay secret key is required');
-    }
-    if (!this.config.categoryCode) {
-      throw new Error('ToyyibPay category code is required');
-    }
-  }
-
   /**
-   * Create a payment bill from invoice output DTO
-   * @param invoiceOutput - The invoice output DTO containing invoice details
-   * @returns ToyyibPayCreateBillResult with bill code and payment URL
+   * Create a payment bill from invoice output DTO.
    */
   async createBillFromCalculatedInvoiceData(invoiceOutput: CalculatedInvoiceDto): Promise<ToyyibPayCreateBillResult> {
     try {
-      // Store invoice data as external reference (JSON stringified for retrieval)
       const externalReferenceData = this.createExternalReference(invoiceOutput);
-
-      // Build bill request from invoice data
       const billRequest = this.mapInvoiceToBillRequest(invoiceOutput, externalReferenceData);
+      const formData = this.buildBillRequestFormData(billRequest);
 
-      // Create bill via API
-      const response = await this.createBill(billRequest);
+      const raw = await this.postFormData<ToyyibPayBillResponse | ToyyibPayBillResponse[]>(
+        '/index.php/api/createBill',
+        formData,
+      );
 
-      if (!response || !response.BillCode) {
-        throw new HttpException(
-          'Failed to create ToyyibPay bill - Invalid response',
-          HttpStatus.BAD_GATEWAY,
-        );
+      // ToyyibPay returns array with single object
+      let response: ToyyibPayBillResponse;
+      if (Array.isArray(raw) && raw.length > 0) {
+        response = raw[0];
+      } else if ((raw as any).error) {
+        throw new HttpException(`ToyyibPay error: ${(raw as any).error}`, HttpStatus.BAD_REQUEST);
+      } else {
+        response = raw as ToyyibPayBillResponse;
+      }
+
+      if (!response?.BillCode) {
+        throw new HttpException('Failed to create ToyyibPay bill - Invalid response', HttpStatus.BAD_GATEWAY);
       }
 
       const billCode = response.BillCode;
@@ -183,215 +138,10 @@ export class ToyyibPayUtil {
   }
 
   /**
-   * Create external reference string from invoice output
-   * Uses invoice number as primary reference with encoded data
-   */
-  private createExternalReference(invoiceOutput: CalculatedInvoiceDto): string {
-    // Use invoice number as the primary external reference
-     return invoiceOutput.invoiceNo;
-  }
-
-  /**
-   * Map invoice output DTO to ToyyibPay bill request format
-   */
-  private mapInvoiceToBillRequest(
-    invoiceOutput: CalculatedInvoiceDto,
-    externalReferenceNo: string,
-  ): ToyyibPayBillRequest {
-    // Generate bill name (max 30 chars, alphanumeric + space + underscore only)
-    const billName = this.sanitizeBillName(
-      `INV ${invoiceOutput.invoiceNo.slice(-20)}`,
-    );
-
-    // Generate bill description (max 100 chars)
-    const billDescription = this.sanitizeBillDescription(
-      this.generateBillDescription(invoiceOutput),
-    );
-
-    // Convert amount to cents (ToyyibPay expects amount in cents)
-    const billAmountInCents = Math.round(invoiceOutput.totalPayableAmount * 100);
-
-    // Format phone number (remove any non-numeric characters except +)
-    const formattedPhone = this.formatPhoneNumber(invoiceOutput.recipient.phone);
-
-    return {
-      userSecretKey: this.config.secretKey,
-      categoryCode: this.config.categoryCode,
-      billName,
-      billDescription,
-      billPriceSetting: 1, // Fixed amount
-      billPayorInfo: 1, // Require payer info
-      billAmount: billAmountInCents,
-      billReturnUrl: this.config.returnUrl || '',
-      billCallbackUrl: this.config.callbackUrl || '',
-      billExternalReferenceNo: externalReferenceNo,
-      billTo: this.sanitizeCustomerName(invoiceOutput.recipient.name),
-      billEmail: invoiceOutput.recipient.email || '',
-      billPhone: formattedPhone,
-      billSplitPayment: 0, // No split payment
-      billPaymentChannel: 2, // Both FPX and Credit Card
-      billDisplayMerchant: 1, // Display merchant info
-      billContentEmail: this.generateEmailContent(invoiceOutput),
-    };
-  }
-
-  /**
-   * Generate bill description from invoice items
-   */
-  private generateBillDescription(invoiceOutput: CalculatedInvoiceDto): string {
-    const itemNames = invoiceOutput.items.map((item) => item.itemName).join(', ');
-    return `Payment for ${itemNames} - Invoice ${invoiceOutput.invoiceNo}`;
-  }
-
-  /**
-   * Generate additional email content for customer
-   */
-  private generateEmailContent(invoiceOutput: CalculatedInvoiceDto): string {
-    const itemsList = invoiceOutput.items
-      .map((item) => `${item.itemName} x${item.quantity}: ${invoiceOutput.currency} ${(item.unitPrice * item.quantity).toFixed(2)}`)
-      .join('\n');
-
-    return `
-Invoice Details:
-----------------
-Invoice No: ${invoiceOutput.invoiceNo}
-Issued Date: ${invoiceOutput.issuedDate}
-Due Date: ${invoiceOutput.dueDate}
-
-Items:
-${itemsList}
-
-Net Amount: ${invoiceOutput.currency} ${invoiceOutput.totalNetAmount.toFixed(2)}
-Total Tax: ${invoiceOutput.currency} ${invoiceOutput.totalTaxAmount.toFixed(2)}
-Total: ${invoiceOutput.currency} ${invoiceOutput.totalPayableAmount.toFixed(2)}
-
-From: ${invoiceOutput.supplier.name}
-    `.trim();
-  }
-
-  /**
-   * Sanitize bill name (max 30 chars, alphanumeric + space + underscore)
-   */
-  private sanitizeBillName(name: string): string {
-    return name
-      .replace(/[^a-zA-Z0-9\s_]/g, '')
-      .substring(0, 30)
-      .trim();
-  }
-
-  /**
-   * Sanitize bill description (max 100 chars, alphanumeric + space + underscore)
-   */
-  private sanitizeBillDescription(description: string): string {
-    return description
-      .replace(/[^a-zA-Z0-9\s_]/g, '')
-      .substring(0, 100)
-      .trim();
-  }
-
-  /**
-   * Sanitize customer name for ToyyibPay
-   */
-  private sanitizeCustomerName(name: string): string {
-    return name
-      .replace(/[^a-zA-Z0-9\s]/g, '')
-      .substring(0, 50)
-      .trim();
-  }
-
-  /**
-   * Format phone number for ToyyibPay (numeric only)
-   */
-  private formatPhoneNumber(phone: string): string {
-    // Remove all non-numeric characters except +
-    let formatted = phone.replace(/[^\d+]/g, '');
-    
-    // If starts with +60, remove the +
-    if (formatted.startsWith('+')) {
-      formatted = formatted.substring(1);
-    }
-    
-    // Ensure it starts with country code for Malaysia
-    if (formatted.startsWith('0')) {
-      formatted = '60' + formatted.substring(1);
-    }
-    
-    return formatted;
-  }
-
-  /**
-   * Make API call to create bill on ToyyibPay
-   */
-  private async createBill(billRequest: ToyyibPayBillRequest): Promise<ToyyibPayBillResponse> {
-    const url = `${this.config.baseUrl}/index.php/api/createBill`;
-
-    // Convert request to form data
-    const formData = new URLSearchParams();
-    Object.entries(billRequest).forEach(([key, value]) => {
-      if (value !== undefined && value !== null) {
-        formData.append(key, String(value));
-      }
-    });
-
-    try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: formData.toString(),
-      });
-
-      if (!response.ok) {
-        throw new HttpException(
-          `ToyyibPay API error: ${response.statusText}`,
-          HttpStatus.BAD_GATEWAY,
-        );
-      }
-
-      // Get response as text first to handle non-JSON errors
-      const responseText = await response.text();
-
-      // Try to parse as JSON
-      let data;
-      try {
-        data = JSON.parse(responseText);
-      } catch (parseError) {
-        // If parsing fails, the response is likely an error message
-        this.logger.error(`ToyyibPay API returned non-JSON response: ${responseText}`);
-        throw new HttpException(
-          `ToyyibPay API error: ${responseText}`,
-          HttpStatus.BAD_REQUEST,
-        );
-      }
-
-      // ToyyibPay returns array with single object
-      if (Array.isArray(data) && data.length > 0) {
-        return data[0] as ToyyibPayBillResponse;
-      }
-
-      // Handle error response
-      if (data.error) {
-        throw new HttpException(
-          `ToyyibPay error: ${data.error}`,
-          HttpStatus.BAD_REQUEST,
-        );
-      }
-
-      return data as ToyyibPayBillResponse;
-    } catch (error) {
-      this.logger.error(`ToyyibPay API call failed: ${error.message}`);
-      throw error;
-    }
-  }
-
-  /**
-   * Get bill transactions by bill code
-   * Useful for checking payment status
+   * Get bill transactions by bill code.
+   * Useful for checking payment status.
    */
   async getBillTransactions(billCode: string, paymentStatus?: number): Promise<ToyyibPayTransaction[]> {
-    const url = `${this.config.baseUrl}/index.php/api/getBillTransactions`;
-
     const formData = new URLSearchParams();
     formData.append('billCode', billCode);
     if (paymentStatus !== undefined) {
@@ -399,38 +149,7 @@ From: ${invoiceOutput.supplier.name}
     }
 
     try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: formData.toString(),
-      });
-
-      if (!response.ok) {
-        throw new HttpException(
-          `ToyyibPay API error: ${response.statusText}`,
-          HttpStatus.BAD_GATEWAY,
-        );
-      }
-
-      // Get response as text first to handle non-JSON errors
-      const responseText = await response.text();
-
-      // Try to parse as JSON
-      let data;
-      try {
-        data = JSON.parse(responseText);
-      } catch (parseError) {
-        // If parsing fails, the response is likely an error message
-        this.logger.error(`ToyyibPay API returned non-JSON response: ${responseText}`);
-        throw new HttpException(
-          `ToyyibPay API error: ${responseText}`,
-          HttpStatus.BAD_REQUEST,
-        );
-      }
-
-      return data as ToyyibPayTransaction[];
+      return await this.postFormData<ToyyibPayTransaction[]>('/index.php/api/getBillTransactions', formData);
     } catch (error) {
       this.logger.error(`Failed to get bill transactions: ${error.message}`);
       throw error;
@@ -438,8 +157,8 @@ From: ${invoiceOutput.supplier.name}
   }
 
   /**
-   * Parse callback/return URL parameters from ToyyibPay
-   * Call this in your callback/return endpoint
+   * Parse callback/return URL parameters from ToyyibPay.
+   * Call this in your callback/return endpoint.
    */
   parseCallbackParams(params: Record<string, string>): {
     refNo: string;
@@ -460,18 +179,14 @@ From: ${invoiceOutput.supplier.name}
       status: statusMap[params.status] || statusMap[params.status_id] || 'failed',
       reason: params.reason || '',
       billCode: params.billcode || '',
-      orderId: params.order_id || '', // This is your invoiceNo
-      amount: parseInt(params.amount || '0', 10) / 100, // Convert from cents
+      orderId: params.order_id || '',
+      amount: parseInt(params.amount || '0', 10) / 100,
     };
   }
 
   /**
-   * Verify ToyyibPay callback hash signature
+   * Verify ToyyibPay callback hash signature.
    * Formula: MD5(secretKey + billCode + status_id)
-   * @param secretKey - Business ToyyibPay secret key
-   * @param receivedHash - Hash value from callback POST data
-   * @param billCode - Bill code from callback POST data
-   * @param statusId - Status ID from callback POST data
    */
   static verifyCallbackHash(secretKey: string, receivedHash: string, billCode: string, statusId: string): boolean {
     const expected = createHash('md5')
@@ -481,7 +196,7 @@ From: ${invoiceOutput.supplier.name}
   }
 
   /**
-   * Parse return URL parameters (simpler version for redirect)
+   * Parse return URL parameters (simpler version for redirect).
    */
   parseReturnParams(params: Record<string, string>): {
     statusId: number;
@@ -491,15 +206,12 @@ From: ${invoiceOutput.supplier.name}
     return {
       statusId: parseInt(params.status_id || '0', 10),
       billCode: params.billcode || '',
-      orderId: params.order_id || '', // This is your invoiceNo
+      orderId: params.order_id || '',
     };
   }
 
   /**
-   * Deactivate a ToyyibPay bill so the payment link stops working
-   * @param billCode - Bill code to deactivate
-   * @param secretKey - Business ToyyibPay secret key
-   * @param baseUrl - ToyyibPay base URL (defaults to env or production URL)
+   * Deactivate a ToyyibPay bill so the payment link stops working.
    */
   static async deactivateBill(
     billCode: string,
@@ -543,10 +255,8 @@ From: ${invoiceOutput.supplier.name}
   }
 
   /**
-   * Fetch bill transactions directly from ToyyibPay API (no authentication required)
-   * Use this to verify payment status authoritatively instead of trusting callback hash
-   * @param billCode - Bill code from callback
-   * @param baseUrl - ToyyibPay base URL (defaults to env or production URL)
+   * Fetch bill transactions directly from ToyyibPay API (no authentication required).
+   * Use this to verify payment status authoritatively instead of trusting callback hash.
    */
   static async fetchBillTransactions(
     billCode: string,
@@ -578,25 +288,201 @@ From: ${invoiceOutput.supplier.name}
       return JSON.parse(text) as ToyyibPayTransaction[];
     } catch (error) {
       if (error.name === 'AbortError') {
-        throw new HttpException(
-          'ToyyibPay getBillTransactions timed out after 10s',
-          HttpStatus.GATEWAY_TIMEOUT,
-        );
+        throw new HttpException('ToyyibPay getBillTransactions timed out after 10s', HttpStatus.GATEWAY_TIMEOUT);
       }
       throw error;
     } finally {
       clearTimeout(timeoutId);
     }
   }
+
+  // ─── Private helpers ─────────────────────────────────────────────────────────
+
+  /**
+   * @private
+   */
+  private validateConfig(): void {
+    if (!this.config.secretKey) {
+      throw new Error('ToyyibPay secret key is required');
+    }
+    if (!this.config.categoryCode) {
+      throw new Error('ToyyibPay category code is required');
+    }
+  }
+
+  /**
+   * Shared HTTP POST helper — builds URL, posts form data, parses JSON response.
+   * @private
+   */
+  private async postFormData<T>(path: string, formData: URLSearchParams): Promise<T> {
+    const url = `${this.config.baseUrl}${path}`;
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: formData.toString(),
+    });
+
+    if (!response.ok) {
+      throw new HttpException(`ToyyibPay API error: ${response.statusText}`, HttpStatus.BAD_GATEWAY);
+    }
+
+    const responseText = await response.text();
+    try {
+      return JSON.parse(responseText) as T;
+    } catch {
+      this.logger.error(`ToyyibPay API returned non-JSON response: ${responseText}`);
+      throw new HttpException(`ToyyibPay API error: ${responseText}`, HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  /**
+   * Build URLSearchParams from a bill request object.
+   * @private
+   */
+  private buildBillRequestFormData(billRequest: ToyyibPayBillRequest): URLSearchParams {
+    const formData = new URLSearchParams();
+    Object.entries(billRequest).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        formData.append(key, String(value));
+      }
+    });
+    return formData;
+  }
+
+  /**
+   * Use invoice number as the primary external reference.
+   * @private
+   */
+  private createExternalReference(invoiceOutput: CalculatedInvoiceDto): string {
+    return invoiceOutput.invoiceNo;
+  }
+
+  /**
+   * Map invoice output DTO to ToyyibPay bill request format.
+   * @private
+   */
+  private mapInvoiceToBillRequest(
+    invoiceOutput: CalculatedInvoiceDto,
+    externalReferenceNo: string,
+  ): ToyyibPayBillRequest {
+    // Generate bill name (max 30 chars, alphanumeric + space + underscore only)
+    const billName = this.sanitizeBillName(`INV ${invoiceOutput.invoiceNo.slice(-20)}`);
+
+    // Generate bill description (max 100 chars)
+    const billDescription = this.sanitizeBillDescription(this.generateBillDescription(invoiceOutput));
+
+    // Convert amount to cents (ToyyibPay expects amount in cents)
+    const billAmountInCents = Math.round(invoiceOutput.totalPayableAmount * 100);
+
+    // Format phone number (remove any non-numeric characters except +)
+    const formattedPhone = this.formatPhoneNumber(invoiceOutput.recipient.phone);
+
+    return {
+      userSecretKey: this.config.secretKey,
+      categoryCode: this.config.categoryCode,
+      billName,
+      billDescription,
+      billPriceSetting: 1, // Fixed amount
+      billPayorInfo: 1, // Require payer info
+      billAmount: billAmountInCents,
+      billReturnUrl: this.config.returnUrl || '',
+      billCallbackUrl: this.config.callbackUrl || '',
+      billExternalReferenceNo: externalReferenceNo,
+      billTo: this.sanitizeCustomerName(invoiceOutput.recipient.name),
+      billEmail: invoiceOutput.recipient.email || '',
+      billPhone: formattedPhone,
+      billSplitPayment: 0, // No split payment
+      billPaymentChannel: 2, // Both FPX and Credit Card
+      billDisplayMerchant: 1, // Display merchant info
+      billContentEmail: this.generateEmailContent(invoiceOutput),
+    };
+  }
+
+  /**
+   * Generate bill description from invoice items.
+   * @private
+   */
+  private generateBillDescription(invoiceOutput: CalculatedInvoiceDto): string {
+    const itemNames = invoiceOutput.items.map((item) => item.itemName).join(', ');
+    return `Payment for ${itemNames} - Invoice ${invoiceOutput.invoiceNo}`;
+  }
+
+  /**
+   * Generate additional email content for customer.
+   * @private
+   */
+  private generateEmailContent(invoiceOutput: CalculatedInvoiceDto): string {
+    const itemsList = invoiceOutput.items
+      .map((item) => `${item.itemName} x${item.quantity}: ${invoiceOutput.currency} ${(item.unitPrice * item.quantity).toFixed(2)}`)
+      .join('\n');
+
+    return `
+Invoice Details:
+----------------
+Invoice No: ${invoiceOutput.invoiceNo}
+Issued Date: ${invoiceOutput.issuedDate}
+Due Date: ${invoiceOutput.dueDate}
+
+Items:
+${itemsList}
+
+Net Amount: ${invoiceOutput.currency} ${invoiceOutput.totalNetAmount.toFixed(2)}
+Total Tax: ${invoiceOutput.currency} ${invoiceOutput.totalTaxAmount.toFixed(2)}
+Total: ${invoiceOutput.currency} ${invoiceOutput.totalPayableAmount.toFixed(2)}
+
+From: ${invoiceOutput.supplier.name}
+    `.trim();
+  }
+
+  /**
+   * Sanitize bill name (max 30 chars, alphanumeric + space + underscore).
+   * @private
+   */
+  private sanitizeBillName(name: string): string {
+    return name.replace(/[^a-zA-Z0-9\s_]/g, '').substring(0, 30).trim();
+  }
+
+  /**
+   * Sanitize bill description (max 100 chars, alphanumeric + space + underscore).
+   * @private
+   */
+  private sanitizeBillDescription(description: string): string {
+    return description.replace(/[^a-zA-Z0-9\s_]/g, '').substring(0, 100).trim();
+  }
+
+  /**
+   * Sanitize customer name for ToyyibPay.
+   * @private
+   */
+  private sanitizeCustomerName(name: string): string {
+    return name.replace(/[^a-zA-Z0-9\s]/g, '').substring(0, 50).trim();
+  }
+
+  /**
+   * Format phone number for ToyyibPay (numeric only, Malaysia format).
+   * @private
+   */
+  private formatPhoneNumber(phone: string): string {
+    let formatted = phone.replace(/[^\d+]/g, '');
+
+    if (formatted.startsWith('+')) {
+      formatted = formatted.substring(1);
+    }
+
+    if (formatted.startsWith('0')) {
+      formatted = '60' + formatted.substring(1);
+    }
+
+    return formatted;
+  }
 }
 
-// Factory function for easy instantiation
+/**
+ * Factory function for easy instantiation.
+ */
 export function generateToyyibpayBill(config?: Partial<ToyyibPayConfig>): ToyyibPayUtil {
   return new ToyyibPayUtil(config);
 }
 
-// Alias for backward compatibility
-export const createToyyibPayUtil = generateToyyibpayBill;
-
-// Default export for convenience
 export default ToyyibPayUtil;

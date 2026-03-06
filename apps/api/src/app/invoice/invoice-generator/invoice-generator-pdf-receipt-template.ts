@@ -1,18 +1,31 @@
 import PDFDocument from 'pdfkit';
 import { ReceiptDTO } from '../invoice-dto';
-import { createQRCodeUtil } from './invoice-generator-qr-code';
+import { generateQrCode } from './invoice-generator-qr-code';
+
+// Colors
+const COLORS = {
+  primary: '#1a365d',
+  white: '#ffffff',
+  lightGray: '#f7fafc',
+  borderGray: '#e2e8f0',
+  textDark: '#2d3748',
+  textMuted: '#718096',
+  accent: '#3182ce',
+  success: '#38a169',
+  successLight: '#c6f6d5',
+  successDark: '#276749',
+};
 
 /**
- * Format number as currency
+ * Format number as currency.
  */
 function formatCurrency(amount: number | null | undefined, currency: string = 'RM'): string {
   if (amount === null || amount === undefined) return '';
   return `${currency} ${amount.toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-
 /**
- * Format date for display in MYT (Malaysia Time, UTC+8)
+ * Format date for display in MYT (Malaysia Time, UTC+8).
  */
 function formatDate(dateString: string): string {
   if (!dateString) return '';
@@ -29,7 +42,7 @@ function formatDate(dateString: string): string {
 }
 
 /**
- * Format datetime for display in MYT (Malaysia Time, UTC+8)
+ * Format datetime for display in MYT (Malaysia Time, UTC+8).
  */
 function formatDateTime(dateString: string): string {
   if (!dateString) return '';
@@ -50,22 +63,8 @@ function formatDateTime(dateString: string): string {
   }
 }
 
-// Colors
-const COLORS = {
-  primary: '#1a365d',
-  white: '#ffffff',
-  lightGray: '#f7fafc',
-  borderGray: '#e2e8f0',
-  textDark: '#2d3748',
-  textMuted: '#718096',
-  accent: '#3182ce',
-  success: '#38a169',
-  successLight: '#c6f6d5',
-  successDark: '#276749',
-};
-
 /**
- * Generate receipt PDF using PDFKit with same design language as invoice
+ * Generate receipt PDF using PDFKit with same design language as invoice.
  * @param receiptData - The receipt data (ReceiptDTO)
  * @returns Promise<Buffer> containing the PDF data
  */
@@ -75,7 +74,7 @@ export async function generatePdfReceiptTemplate(
   // Generate QR code if billUrl exists (for reference)
   let qrBuffer: Buffer | null = null;
   if (receiptData.billUrl) {
-    const qrCodeUtil = createQRCodeUtil();
+    const qrCodeUtil = generateQrCode();
     qrBuffer = await qrCodeUtil.generatePaymentQR(receiptData.billUrl, 100);
   }
 
@@ -119,7 +118,7 @@ export async function generatePdfReceiptTemplate(
       // ============ HEADER SECTION ============
       const headerHeight = 176;
 
-      // Header background - using success green to indicate paid
+      // Header background — using success green to indicate paid
       doc.rect(0, 0, pageWidth, headerHeight).fill(COLORS.success);
 
       // Business name
@@ -236,7 +235,7 @@ export async function generatePdfReceiptTemplate(
       const checkY = transactionBoxY + 15;
       doc.circle(checkX, checkY + 10, 15)
         .fill(COLORS.success);
-      
+
       // Draw checkmark
       doc.strokeColor(COLORS.white)
         .lineWidth(2.5)
@@ -264,7 +263,7 @@ export async function generatePdfReceiptTemplate(
 
       yPos += 18;
 
-      // Address - split into separate lines to avoid overlap
+      // Address — split into separate lines to avoid overlap
       doc.font('Helvetica')
         .fontSize(10)
         .fillColor(COLORS.textDark);
@@ -617,7 +616,7 @@ export async function generatePdfReceiptTemplate(
 }
 
 /**
- * Generate receipt PDF and save to file
+ * Generate receipt PDF and save to file.
  * @param receiptData - The receipt data (ReceiptDTO)
  * @param outputPath - Path to save the PDF file
  */
