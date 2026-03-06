@@ -1,0 +1,916 @@
+# 🚀 TypeScript Best Practices
+
+[![GitHub stars](https://img.shields.io/github/stars/seanpmaxwell/Typescript-Best-Practices?style=flat-square)](https://github.com/seanpmaxwell/Typescript-Best-Practices/stargazers)
+
+Patterns and best practices for **procedural TypeScript / JavaScript development**, guided by the **Rule of 4** principle.
+
+> This guide is intentionally opinionated. It prioritizes clarity, consistency, and long-term maintainability over abstraction or novelty.
+<br/>
+
+## 📚 Table of Contents
+
+- [Terminology](#terminology)
+- [Core Language Features](#core-language-features)
+  - [Primitives](#primitives)
+  - [Functions](#functions)
+  - [Objects](#objects)
+    - [Object Literals](#object-literals)
+    - [Classes](#classes)
+    - [Enums](#enums)
+  - [Types](#types-link)
+- [File Types and Categories](#file-types)
+- [File Organization](#file-organization)
+- [Naming Conventions](#naming-conventions)
+- [Comments](#comments)
+- [Imports](#imports)
+- [Organizing Shared Code](#organizing-shared-code)
+- [Philosophy](#philosophy)
+  - [Testing](#testing)
+  - [Programming Paradigms](#programming-paradigms)
+  - [Documenting code](#documenting-code)
+  - [Architecture](#architecture)
+
+<br/><b>***</b><br/>
+
+<a id="terminology"></a>
+## 🔠 Terminology
+
+So things are more clear down the line let's first clarify some terminology.
+
+---
+
+### Projects/Packages
+- **Package**: any JavaScript/TypeScript project with a `package.json` is a **package**.
+- **Application**: packages mean to be executed.
+- **Library**: shared packages to be used by applications or other libraries.
+
+---
+
+### Files/Folders
+- **root**: The highest level folder in a package.
+- **branch-directory**: a directory other than the root with a broad focus and multiple nested directories of its own.
+- **leaf-directory**: a directory with no nested-directories
+- **focused-directory**: a nested-directory with a very narrow scope and purpose and is often a **leaf-directory** although not necessarily.
+- Example:
+  1. `package name/` <--root
+  2.  `src/` <-- branch
+  3.  `components/` <-- branch
+  4.  `Login/` <-- focused
+  5.  `local/` <-- leaf
+ 
+---
+
+### Lifecycles
+- **Compile-time:** Even though TypeScript is technically a _transpiled_ (not compiled) language we still use the term **compile-time** to refer to period before a program starts.
+- **Runtime:** Everything that happens after compilation is runtime. Runtime can be futher divided into:
+  - **Startup-time:** When the application boots up.
+  - **Request-time:** Code runs in response to input (i.e. a user triggers and API call).
+ 
+---
+
+<a id="terminology-objects"></a>
+### Objects 
+- **States**: Objects can be **static**, **readonly**, or **dynamic**.
+  - **static:** values can change but not keys (default for TypeScript).
+  - **dynamic:** keys and values can change (default for JavaScript).
+  - **readonly:** neither keys or values can change (typically done with `as const`).
+- **classes:** Template for describing objects using "Object-Oriented-Programming".  
+- **object-literal:** bracket notation `{}` for describing and instatiating objects.
+- **plain-objects:** objects which inherit directly from the root `Object` class and nothing else OR objects created with `Object.create(null)` (aka null-prototype objects).
+  - Type is commonly `Record<PropertyKey, unknown>` although there is no way to enforce a plain-object type at compile-time.
+  - 3 ways to implement: object-literals, constructor-functions `new Object()`, or `Object.create(null)`.
+  - Note that instances of the Object class (i.e. object-literals) will inherit methods like `.hasOwnProperty`. _null-prototype objects_ inherit from nothing so cannot use these functions.
+- **dictonary:** plain-objects whose type is narrowed `Record<string, unknown>`.
+  - In code, the type-alias is often shorted to `Dict`, (i.e. `type Dict = Record<string, unknown>`).
+  - Note: while a plain-object could technically include symbols, most object-iterator functions (i.e. `Object.keys()`) ingore symbols and numbers are converted to strings when used as keys, so you'll sometimes hear the term plain-object and dictonary used interchangeably. 
+- **plain-data-object:** plain-objects which can only contain types that are easily serializable: i.e. `primitives`, `arrays`, `Dates`, and nested `plain-data-objects`.
+  - Note: `Dates` when being serialized will be converted to ISOStrings.
+  - You can see a full implementation for the `PlainDataObject` type [here](./types-reference.ts#L5).
+- **namespace-objects:** readonly object-literals used for code organization.
+  - **value-object:** namespace-object for storing static values
+    - **lookup-table:** value-object which stores static values and their label counterparts for displaying in a UI.
+    - **configured-value-object:** a value-object returned from a function call: (i.e. most enum replacement libraries could fall into this category)
+  - **module-object** a namespace-object which is the `export default` from a file.
+    - **module** is a type of file in JavaScript (see [File Types and Categories](#file-types) below), so we say **module-object** because it is an object which represents a file.
+   
+---
+ 
+### Functions
+- **function-declarations:** any function declared with `function functionName`.
+- **arrow-functions:** any function declared with `() => { ... }`
+- **embedded-functions:** functions declared in object-literals and the function-name is the object key.
+```
+const UserErrors = {
+  getError(name: string): string {
+    return `The user name is ${name}`;
+  }
+};
+```
+- **function-expressions:** any function assigned to a variable `const foo = ...some function`
+- **factory-function:** a function whose primary purpose is to initialize some other function/object rather than perform actions.
+  - **value-factory-functions:** a factory-function meant for returning mostly static-data (i.e. const GetDefaults => {...} using a function so we get a deep-clone everytime).
+- **configured-functions:** function-expressions returned by a factory-function: `const parseUser = parseObject(UserSchema)`.
+- **validator-functions:** accepts and unknown variable and returns a type-predicate
+
+---
+
+### Types
+- **type-aliases**: any type declared with `type TypeName = ...`.
+  - **object-type-literal:** type-aliases used describe the shape of an object.
+- **interfaces**: types declared with `interface SomeInterfaceName { ... }`.
+- **utility-types:** type-aliases with generics used for resolving other types.
+
+<br/><b>***</b><br/>
+
+<a id="core-language-features"></a>
+## 💡 Core Language Features
+
+This guide revolves around four fundamental language features:
+
+- **Primitives**
+- **Functions**
+- **Objects**
+- **Types**
+
+---
+
+<a id="primitives"></a>
+### Primitives 
+
+JavaScript primitives include:
+
+`null`, `undefined`, `boolean`, `number`, `string`, `symbol`, and `bigint`.
+
+Understand **type-coercion**: when calling methods on primitives, JavaScript temporarily wraps them in their object counterparts (`String`, `Number`, `Boolean`).
+
+`symbol` is particularly useful for defining unique object keys in shared or library code.
+
+---
+
+<a id="functions"></a>
+### Functions
+
+- Prefer **function-declarations** at the file level to take advantage of hoisting and better error handling: error stack-tracing will only print the function name for function-declarations.
+- Use **arrow-functions** for callbacks and inline logic.
+
+```ts
+const 
+
+function parentFn(param: string) {
+  const childFn = value => doSomething(value);
+  const childFn2 = (a, b) => doSomethingElse(a, b);
+}
+```
+
+---
+
+<a id="objects"></a>
+### Objects
+
+Objects are collections of key/value pairs created via:
+
+- Object-literals
+- Classes
+- Enums 
+> Avoid legacy constructor functions (`new Fn()`) in favor of modern class syntax.
+
+<a id="object-literals"></a>
+#### `Object Literals`
+
+Object-literals are convenient templates for initialzing plain-objects. Readonly object-literals are ideal as namespaces and often preferable to classes if there's no internal *dynamic* data.
+
+```ts
+const Errors = {
+  NameMissing: 'The value for name cannot be falsey',
+  InvalidEmail(val: string): string {
+    return `The value "${val}" is not a valid email format.`;
+  },
+} as const;
+```
+
+<a id="classes"></a>
+#### `Classes`
+
+OOP can be achieved in TypeScript/JavaScript with classes or factory-functions. Object-literals cannot follow OOP because they lack encapsulation. 
+
+People coming from strict OOP environments (like Java) tend to overuse classes, but they do make sense in some situtations. Here are some basic guidelines:
+
+- **Use a class** when you have an object with an internal state and methods which modify that internal state over time.
+- **Don't use a class** soley as a namespace or when you're **assembling and returning an object whose behavior is fully determined at instantiation** with no meaningful **lifecycle** or need for `this`. A **factory-function** would be more appropriate here.
+- **Note:** I would also recommend avoiding classes for **handling IO-data** (even when you feel tempted to use OOP), because this often leads to:
+  - Many unnecessary **constructor calls** to support dynamic behavior, or a large number of identical `public static` functions
+  - IO-data should just be 'acted upon' not do things.
+  - Use **module-object** for handling IO-data.
+
+> You can see a more thorough list of design rules [here](Design-Rules.md). 
+
+<a id="enums"></a>
+#### `Enums`
+
+Enums emit runtime JavaScript and are discouraged in modern TypeScript configurations because they generate additional code. Prefer **lookup-tables** with **declaration-merging** intead:
+
+```ts
+const UserRoles = {
+  BASIC: 0,
+  ADMIN: 1,
+  OWNER: 2,
+} as const;
+
+type UserRoles = typeof UserRoles[typeof UserRoles]; // 0 | 1 | 2
+
+const basic: UserRoles = UserRoles.BASIC;
+```
+
+---
+
+<a id="types-link"></a>
+### Types
+
+Type-alias and interfaces are the two primary ways to describe object-types and there's a lot of debate on when to use each. The recommendation from the official TypeScript documentation is to use interfaces until you need to use a type. That's because interfaces transpile faster and more closely align with how runtime object behave. If you're unsure about when to use, each go with the official TypeScript recommendation. 
+
+<br/><b>***</b><br/>
+
+<a id="file-types"></a>
+## 📄 File Types and Categories
+
+Important, even though the terms file, script, and module are used interchangeably, there is technically a difference between them.
+
+File _types_:
+  - **module**: Any file which has imports/exports. TypeScript will locally scope all declarations inside a module so they will not be accessible to other files unless exported.
+  - **script**: A file which does not contain any imports/exports. TypeScript will globally scope all its contents so other files can see them without importing them. 
+
+File _categories_:
+  - **declaration:** exports a single declared item (e.g., a large function, enum, or configuration object).
+  - **module-object:** `export default` is a namespace-object which organizes the values/logic for a particular file.
+  - **inventory:** exports multiple independent declarations, such as shared types or small utility functions.
+  - **linear:** executes a series of commands, often for **startup-time** logic.
+  - You can see a full list of file-category examples [here](File-Category-Examples.md).
+
+#### Module-object files are great for organization
+I believe that for the backbone of all application logic, which is static after startup-time (both server and client-side, with the exception of JSX elements), module-object files are preferred.
+
+Reasons:
+- That way we only need one import at the top
+- Less likely to accidentally export helper functions.
+- Less likely to have naming conflicts for exported functions.
+- Classes should not be used as namespaces: see the [Classes](#classes) section.
+
+<br/><b>***</b><br/>
+
+<a id="file-organization"></a>
+## 🗂️ File Organization
+
+#### Project heirarchy summery: 
+  1. `Folders` (aka directories)
+  2. `Files` (aka modules)
+  3. `Regions`
+  4. `Sections`
+  5. `Blocks` (uncommon except in maybe linear files)
+
+#### Top-down ordering
+Due to how hoisting works, regions in a file should be in this order top-to-bottom:
+  1. `Docs`
+  2. `Constants`
+  4. `Types`  
+  5. `Run (or Setup)`
+  6. `Components`: (if applicable `.jsx` / `.tsx`)  
+  7. `Functions`
+  8. `Classes`: Classes generally should go in their own file but small locally used ones are okay. 
+  9. `Export`: For declaration, module-objects, and linear files, group all your exports together at the bottom. For inventory-files you can export items on the line they are declared; this makes it easier to see what's public. 
+
+> Note: **Constants** should be primarily for static data but could also include functions/objects which primarily handle static-data. See **Constants nuances** below.
+
+Separate regions with:
+
+```ts
+/******************************************************************************
+                        "Region Name" (i.e. Constants)
+******************************************************************************/
+```
+
+**Regions** can be divided further into **sections**:
+
+```ts
+// -------------------------- Setup middleware --------------------------- //
+// Note: if you to add some comments for a Section or Region separator
+// place them here, directly below the separator.
+
+const app = express();
+
+app.use(middleware1);
+app.use(middleware2);
+
+do stuff....
+
+// ----------------------- Configure Front-End --------------------------- //
+const FRONT_END_DIRECTORY_PATH = __dir + '/client/html';
+
+app.views(FRONT_END_DIRECTORY_PATH + '/views');
+app.static(FRONT_END_DIRECTORY_PATH + '/static');
+
+do more stuff...
+```
+
+**Sections** can be divided into **blocks**:
+
+```ts
+// apiRouter.ts <-- Linear file
+
+// ----------------------- Add User Routes  --------------------------- //
+const loginRouter = Router.new();
+
+// -- Local Login -- // <-- Separate blocks with this
+// Login with username and password
+
+const localRouter = Router.new();
+localRouter.use('/local', addUser);
+localRouter.use('/reset-passowrd-request', sendLink);
+
+loginRouter.use('/login', localRouter);
+
+// -- Google Login -- //
+// Login with Google credentials
+
+do stuff...
+```
+
+> If you find your region/section separators getting off center over time there is the [center-comment-headers script](center-comment-headers.js) which can adjust them for you.
+
+#### *Constants section* nuances
+- Value-factory-functions (see [Terminology](#terminology) above) and configured-value-objects can also go at the bottom of the **Constants** section.
+- Although function-declarations are preferred for functions in most situations, use function-expressions for value-factory-functions so they are more inline with other content in the **Constants** section.
+```ts
+// bottom of the *Constants* section
+
+// Value-factory-function: we wrapped the defaults in a function so we get a current datatime each time
+const GetDefaults = (): IUser => ({
+  id: 0,
+  name: '',
+  createdAt: new Date(),
+});
+
+// Configured-value-object
+const Roles = SomeEnumLibrary({
+  Basic: { value: 1, label: 'Basic' },
+  Admin: { value: 2, label: 'Administrator' },
+});
+
+...
+```
+
+#### *Configured-functions* nuances
+- Because areas of a file above the **Functions** section maybe depend on configured-functions (but they are not hoisted), a common practice is to wrap them with helper function-declarations when hoisting is needed. This allows us to keep our file clean by keeping all functions (other than value-factory-functions of course) together in one section.
+- Here is the recommended way to do this in more detail:
+  - Place configured-functions above all functions declarations in the **Functions** section, and separate them with a *section-separator* if you have both.
+  - Create a *hoist* helper function which accepts a configured-function's name and returns it with a switch-case.
+  - If a configured-function does not need to be hoisted, you do not need a switch case for it.
+
+Hoisting configured-functions example:
+```ts
+// UserModel.ts
+
+/******************************************************************************
+                                      Setup                                  
+******************************************************************************/
+
+// Setup validators object
+const UserSchema = {
+  isName: isValidString,
+  isEmail: hoist('isURL'),
+};
+
+/******************************************************************************
+                                   Functions                                   
+******************************************************************************/
+
+const isEmail = isValidString({
+  maxLength: 255,
+  regex: ...some regex,
+});
+
+// Does not need hoisting so we don't add a switch case for it.
+const isValidURL = isValidString({
+  maxLength: 255,
+  regex: ...some regex,
+});
+
+// --------------------- Function-Declarations ---------------------------- //
+
+/**
+ * Use a function-declaration since we don't need hoisting.
+ */
+function isValidString(arg: unknown): arg is string {
+  return typeof arg === 'string';
+}
+
+/**
+ * @private
+ */
+function hoist(name: string) {
+  switch (name) {
+    case 'isEmail':
+      return isEmail;
+    default:
+      throw new Error('Unknown declaration');
+  }
+}
+
+/******************************************************************************
+                                   Export                                   
+******************************************************************************/
+
+return {
+  schema: UserSchema
+  isValidURL,
+} as const;
+```
+
+### Helper types
+- If you have a long lengths of code and you both can and want shorten it by assigning a long type name to a shorter name then that's okay. Just may sure the shorter name isn't used anywhere other than the code it's close to. If the type is declared directly in a file, I advise using acronyms to prevent collisions. 
+
+```
+/**
+ * Fetch user scriptions whose status is suspended and suspension-reason type is 'failed-payment'.
+ */
+type sffps = SuspendedForFailedPaymentSubscription;
+function fetchSubscriptionsWhichAreSuspendedDueToFailedPayments(): Promise<sffps[]> {
+  return database('subscriptions').where({ ... }).returning('*');
+}
+```
+
+#### Linear File Exceptions
+- For large linear-files, you don't have to follow strict section placement for items, but you should group large linear-files into **sections** and place constants at the top of their respective section/block.
+
+#### Comments in functions:
+- Generally you should not put spaces in functions and separate chunks of logic with a single inline comment.
+- If you have a really large function that can't can't be broken up (i.e. React Component) the you can further separate functions with a space and `// ** "Info" ** //`
+
+```ts
+/**
+ * Normal everyday javascript function.
+ */
+function normalFunction() {
+  // Do stuff
+  foo();
+  bar();
+  // Do more stuff
+  blah();
+  whatever();
+}
+
+// Lage self executing startup file that needs to be wrapped
+// in and async function so we use away
+(async () => {
+  try {
+    // ** Do stuff ** //
+    foo();
+    bar();
+    ...several more lines of code
+
+    // ** Do more stuff **//
+    blah();
+    whatever();
+    ...several more lines of code
+
+  } catch (err) {
+    handleErrorObject(err);
+  }
+})()
+```
+
+<br/><b>***</b><br/>
+
+<a id="naming-conventions"></a>
+## 🏷️ Naming Conventions
+
+- **Folders**: `kebab-case` (default) or name them after the primary declared item they are meant to export.
+- **Files**:
+  - **Linear-file:** `kebab-case`
+  - **Declaration-files:** Name them after the item being exported.
+  - **Module-object files:** Name them after the module-object that's used in the code. Usually this is PascalCase but not always. See object naming below.
+  - **Inventory-files:** `kebab-case`
+  - **index.ts** and **main.ts** 
+    - Reserve the filename `index.ts` for **barrel-files**. Barrel-files are for creating a single entry point for a folder.
+    - Use the filename `main.ts` for a file meant to be the starting point of an application (in contrast to a library).
+    - Think of `index.ts` as the entry point for libraries and `main.ts` the starting point for applications.
+  - **file suffixes:** If you follow these conventions but a file's intention is still not clear through the name, consider appending a suffix (i.e. `User.model.ts` for `import User from '@src/models/User.model.ts'`).
+- **Readonly**:
+  - **Primitives/Arrays:** `UPPER_SNAKE_CASE`
+  - **Objects**:
+    - For value-objects, use `PascalCase` for the object name and any nested objects and `UPPER_SNAKE_CASE` for the keys holding readonly values.
+    - If an object is readonly but not a namespace-object (the whole object is being passed as  value) and you need specific key names, UPPER_SNAKE_CASE is preferred for the object name.
+    - Ultimately, name module-object files the same way the object is named in the code. Here are some tips for naming module-objects:
+      - Prefer `PascalCase` by default: i.e `import DateUtils from '@src/utils/DateUtils.ts;`.
+      - If its functions require a heavy amount of initialization (i.e. infrastructure-level files) and the module-object is used widely throughout your application, prefer `camelCase`: i.e `import db from '@src/infra/db.ts;`.
+- **All variables declared inside of functions except for type declarations**: `camelCase`
+- **Functions**:
+  - `camelCase`: most of the time
+  - `PascalCase`: for certain situations
+    - JSX Elements
+    - Constructor functions: `new User()`
+    - Value-factory-functions: `const GetDefaults = () => ...`
+  - Prepend functions returning non IO-data with a `get` and IO-data with a `fetch`: i.e. `getDateAsString()`, `async fetchUserRecords()`.
+  - Prepend **validator-functions** with an `is`: `isValidUser(arg: unknown): arg is IUser`.
+  - If you need to distinguish functions meant to throw an error from a counterpart function, append `OrThrow`: i.e. `findUserById(id: number): IUser | null` vs `findUserByIdOrThrow(id: number): IUser`.
+  - If you want to avoid collisions with a built-in keyword (i.e. `new`/`delete`) append with an underscore (i.e. function new_(): IUser ...` in `User.model.ts`).
+- **Classes:** `PascalCase`
+- **Types**: `PascalCase`
+  - Traditionally it was common to prepend interfaces with an `I` and type-aliases with a `T` but these have fallen out of favor. I still recommend prepending interfaces with an `I` ONLY if you need prevent naming collisions between an interface and some other class/object counterpart: i.e. `IUser` <-- the database entity and `User` from 'User.module.ts` <-- `User` is a module-object. 
+- **Booleans**: prefix with `is`
+
+**Abbreviations** and **Acronyms**: This is not an exact science and abbreviations/acronyms should generally be avoided for clarity BUT there are plenty of exceptions:
+- Well-establish acronyms (i.e. `URL`, `API`) and common abbreviations (i.e. `Pwd`, `Img`) are usually okay.
+- Using **ALL CAPS** for well-established acronyms is okay: i.e `insertIntoURL()`.
+- Avoid abbreviations for `UPPER_SNAKE_CASE` variable names.
+- Uncommon abbreviations/acronyms are okay if they are used widely throughout your project and it's clear to others what their purpose is. 
+ 
+**Suffixes**:
+- `View`: objects specifically formatted for going from server to client and rendering in a UI: i.e. `UserInfo` -> `UserInfoView`.
+- `DTO` (data-transfer-object): objects which only exist in memory and are for moving data around. They may or may not be for IO calls: i.e. `IUser` <-- database entity, `UserDTO` <-- movement around your backend.
+- `Label`: When you need to distinguish a `string` value, specifically meant for rendering in a UI, from the value it was processed from: (i.e. `IUser['createdAt']` <-- an ISOString, `UserView['createdAtLabel']` <-- string formatted as `"MM/DD/YYYY"`).
+  - Can be for object-keys or primitive variable names. DO NOT use for object names; use `View` for that.
+- `Payload`: An object formatted for movement through an API call.
+
+> The module-object file [User.model.ts](User.model.ts) has some good examples on standard naming conventions.
+
+<br/><b>***</b><br/>
+
+<a id="comments"></a>
+## 💬 Comments
+
+- Place `/** */` above all **function-declarations** always, `//` or no comment is okay for **function-expressions**.
+- I would also recommend `/** */` for utility-types as they can become pretty complex.
+- Place a `@testOnly` tag for items not meant to be used in production. 
+- Use `//` for inline explanations.
+- Capitalize and punctuate comments.
+- Separate logical regions clearly.
+
+<br/><b>***</b><br/>
+
+<a id="imports"></a>
+## 📥 Imports
+
+- Group imports by origin: libraries → application → local.
+- Split long import lists across multiple lines.
+- For those your using prettier this can be configured automatically.
+
+<br/><b>***</b><br/>
+
+<a id="organizing-shared-code"></a>
+## 🤝 Organizing shared code
+
+Here the terms **branch-directory** and **focused-directory** are important: see the [Terminology](#terminology) section above. Note: even though we used a React schema for our examples, the following section could be applied to any TypeScript project, client or server.
+
+### Shared categories
+- Let's consider **utils**, **types**, and **constants** the 3 main **shared-categories**. And a 4th category **ui** for those working with JSX elements.
+  - **utils** runtime logic. Functions under `utils` should not fetch IO-data, talk to persistance layers, or import runtime logic from anywhere else other than third-party-libraries or other utility functions in the same file. This helps to prevent dependency loops.
+  - **constants**: organzing readonly values but can also include functions which return mostly readonly values after some simple formatting (function which returns an error message string with the username inserted into it).
+  - **types**: standalone compile-time items (type-aliases and interfaces, never runtime items) that don't need to be coupled with runtime logic in the shared area.
+  - **ui:** Any file ending with a `.jsx/.tsx` extension.
+
+### Branch-directories and the `common` folder
+- In a **branch-directory** with shared content create a subfolder named `common/`.
+- Avoid using **dumping-ground-names** for folders like `misc/`, `helpers/`, `shared/` etc. (except for the common-categories listed above) as their purpose is ambiguous and can quickly degrade your package's organization.
+- Within `common/` it's okay to group files by category but for files **DO NOT EVER** use dumping-ground names. In branch-directories (including `common/`) **filenames should always demonstrate clear intent**: (i.e. `src/common/types/utility-types.ts`).
+- You can have multiple levels of `common/` for nested branch-directories:
+```markdown
+- public/
+- src/
+  - assets/
+  - common/
+    - types/
+      - utility-types.ts
+  - components
+    - common/ <-- shared folder just for components
+      - ui/
+        - buttons.tsx
+      - styles/
+        - box-styles.ts
+    - pages/
+      - Home/
+        - Home.tsx
+        - Home.test.tsx
+      - Login/
+        - dialogs/
+          - ResetPasswordDialog.tsx
+        - Login.tsx
+        - Login.test.tsx
+    - App.tsx
+    - index.css
+  - services/
+  - index.html
+- package.json
+- tsconfig.json
+```
+
+> In the above markdown, `src/` and `components/` are examples of **branch-directories**, `Home/` and `Login/` are **focused-directories**. 
+
+### Focused-directories and the `local` folder
+- Use the folder name **local/** for shared content in a focused-directory.
+- Because a file's purpose in a focused-directory has many layers of narrowing, dumping-ground names like `utils.ts`, `ui.tsx`, etc are actually okay in the `local/` folder. However, **DO NOT** place files with dumping-ground-names directly in the focused-directory itself.
+- If there's focused-directory code which needs to be shared both locally and externally, you can place those items in `local/` as well **`local/` is not meant to be super strict**.
+- If a focused-directory has some shared code not used internally, **but it still makes sense to place that code in that particular focused-directory because it's very unique to that directory's purpose,** place those items in the **external/** folder.
+- If you want to be extra careful about some focused-directory items never being used externally, place them in a folder named **internal/**.
+- If some code in a focused directory isn't shared (that is, it's just used in one place but it was large enough to make separate file for) but you'd like to keep in separated from the other files at a focused-directories root, you can use `local/internal` for that as well: see the `sortTableData.ts` file in the example below.
+
+Various focused directories in a React project:
+```markdown
+- common/
+  - ui/
+    - DataTable/
+      - local/
+        - datatable-elements.tsx <-- shared inside and outside of DataTable/
+      - external/
+        - dataTableFilterToUrlString.ts <-- an external only helper function.
+      - internal/
+        - sortTableData.ts <-- not shared, only called in one place in DataTable.ts
+      - Datatable.tsx
+      - Datatable.test.tsx
+- Login/
+  - dialogs/
+    - local/
+      - AuthDialog.tsx <-- base dialog for the other two
+    - ForgotPasswordDialog.tsx
+    - SignupInsteadDialog.tsx
+  - local/
+    - ui.tsx <-- stores JSX elements needed by both the `Login` component and the `ForgotPasswordDialog` component.
+    - constants.ts
+  - Login.tsx
+  - Login.test.tsx
+```
+
+### Going further
+
+Folders under `common/` and files/folders under `local/` are not confined to common-category names. You can create your own categories too for something used heavily throughout your codebase. Common-categories are more for storing items which don't fit into a specific place. Some other categories I commonly create are:
+  - **classes** - I rarely implement new classes but I'll create a folder for them if I do: (i.e. creating custom `Error` objects).
+  - **entities** - types used to describe database table.
+
+Files under `common/local/internal/external` should never talk to persistance-layers/fetch-IO-data. Use the layers of your application (i.e. Service layer) for that.
+
+<br/><b>***</b><br/>
+
+<a id="philosophy"></a>
+## 🧠 Philosopy
+
+<a id="testing"></a>
+### Testing
+
+#### Testing Terminology
+- **unit-tests:** tests portions workflows in isolation. Could involve multiple-layers (see <a href="#architecture">Architecture</a> for more about layers) but not typically.
+- **integration-tests:** tests workflows involving all the layers of an application but not the back-end and front-end together (i.e. tests which call server routes).
+- **e2e (end-to-end)-tests:** tests client and server together (simulates live user interaction)
+
+#### Testing tips and conventions
+- Unit-tests don't have to cover all theoretical scenarios but should cover all workflows a user can trigger.
+- Developers should write their own unit-tests and integration-tests even in rapid-development cycles.
+  - Note: requiring developers to write their own unit-tests not only improves correctness but also results in a proofreading step improving code readability.
+- e2e-tests are vital to long-term application maintainability but are time-consuming and typically require advanced knowledge of the framework in use (i.e. *cypress*).
+  - Tip 1: e2e testing can be skipped in early development phases (as long as unit/itegration testing is done).
+  - Tip 2: It's okay for teams to have a dedicated integration tester and not require each developer write their own unit-tests: having an extra set of eyes on the code can improve its quality. 
+
+--- 
+
+<a id="programming-paradigms"></a>
+### Programming Paradigms
+- To be clear, **OOP (Object-Oriented-Programming)** is a set of design principles not a specific language feature.
+  - The four design principles are: **Inheritence**, **Polymorphism**, **Abstraction**, and **Encapsulation**
+- The term **functional programming** has been used interchangeably between **procedural-programming** and **strict functional-programming** (stateless, i.e. Haskell).
+- TypeScript supports OOP and is clearly not strictly stateless, so to avoid confusion, let's refer to TypeScript as a procedural programming language which supports OOP.
+- Projects don't have to strictly adhere to one paradigm or the other, use procedural where procedural makes the most sense and likewise for OOP.
+- OOP can be achieved either through **classes** or **factory-functions** although I prefer the former.
+- You can see a more thorough list of design rules [here](Design-Rules.md) to help you decide what feature/paradigm to use and when.
+
+---
+
+<a id="documenting-code"></a>
+### Documenting code
+
+> Documenting the model-layer well saves us a lot of time from constantly have to look in our database-manager for relationship-info.
+
+#### Terminology
+- **model-layer:** is an architecture-layer for describing/handling the shape of database-tables.
+- **comment-tags:** keyword in a comment that starts with `@`.
+- **entity-type:** a type used to describe the shape of a raw database-table.
+  - People also use the term **record** when referring to database-rows, but for TypeScript I advise against this to avoid confusion with the type **Record<>**
+- **auxiliary-table:** a database-table which supports another: (i.e user_avatars holds image metadata for users)
+  - **join-table:** an auxiliary-entity which supports multiple tables together. User plural for both tables in the name: i.e. `projects_users`
+- **derived-type:** is a type which builds off of an entity-type.
+- An **audit-column** is a database-key which holds meta-data about an entity's lifecycle: i.e. `createdAt`, `createdBy`.
+
+#### Documenting with comment @tags
+
+Because TypeScript let's us type the return value and parameters, traditional `jsDoc` comments like `@returns`/`@param` are excessive; however, there are still some comment-tags which can be pretty useful. 
+
+##### Misc
+- `@private`: functions never used outside of their file.
+  - Below `@private` can also add `@see nameOfTheFunctionUsingIt`  
+- `@testOnly`: for testing only and never in production (any item not just functions).
+- `@cronJob`: functions only for cron-jobs and not user-initiated.
+- `@dummyData`: functions only used by dummy-data files.
+- `@startupTime`: functions run at startup-time not request-time. Not really necessary for libraries or automation files but for user-heavy based applications like web-servers.
+
+##### Working with relational-databases
+
+> `@tags` are extremely helpful for code that works with a database so we don't constantly have to look in our DBMS for relationship info.
+
+- `@entity table_name`, above an entity-type declaration:
+```ts
+/**
+ * @entity users
+ */
+interface User = { name: string; }
+```
+
+- `@entity table_name` + `@auxiliaryOf table_it_compliments`, auxiliary-tables:
+```ts
+/**
+ * @entity user_avatars
+ * @auxiliaryOf users
+ */
+```
+
+- `@entity table_name` + `@joins table_key`, join-tables:
+```ts
+/**
+ * @entity charts_users
+ * @joins users
+ * @joins charts
+ */
+```
+
+- For `@entity`, define the columns in this order and use the following tags:
+  - `// @PK`: primary-key
+  - ...everything in between... (i.e. `name`)
+  - `// @FK + "join type" (i.e. 1-1 or 1-many)`: foreign-key
+  - `// @AC`: auditing columns which are not also foreign-keys (i.e. `createdAt`, `updatedAt`)
+  - `// @Tr`: transient entries appended to an object outside the database level
+    - Generally, try to use derived-types in palace of entites with transient-keys.
+
+#### User model snippet
+```ts
+interface Entity {
+  id: number; // @PK
+  createdAt: Date | string; // @AC
+  updatedAt: Date | string; // @AC
+}
+
+/**
+ * @entity users
+ */
+interface User extends Entity {
+  name: string;
+}
+
+/**
+ * @entity user_avatars
+ * @auxiliaryOf users
+ */
+interface UserAvatar extends Entity {
+  fileName: string | null;
+  userId: number; // @FK 1-1
+}
+
+// This is setup in the services layer
+interface UserAvatarDTO extends UserAvatar {
+  data: Blob; // Place this here instead of IUser
+}
+
+/**
+ * @testOnly
+ */
+function getDummyUser() {
+  return {
+    id: randomInt(10),
+    name: 'John',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+}
+```
+
+If you're building a back-end webserver, I highly suggest you document your route functions with the Http "verb+path" as well. Long term, it will help you look up route functions faster.
+
+```ts
+/**
+ * @route GET /api/posts/:userId
+ */
+function fetchPostsByUserId(userId: number): IPost[] {
+  return postRepo(userId);
+}
+
+// ...Somewhere else in your package
+express.get('/api/posts/:userId', fetchPostsByUserId);
+```
+
+--- 
+
+<a id="architecture"></a>
+### Architecture
+
+#### Terminology:
+  - **domain:** high-level business feature for grouping smaller features:
+    - For example: if _Signup_ and _Login_ are features for a website, _Auth_ could be a domain.
+  - **layer:** is a specific level of an application that data moves through.
+
+#### Layers overview:
+  - **repository (suffix `Repo`):** service-layer which talks to the persistence-layer
+    - If you have multiple persistence-layers (i.e. and database and a *file storage third party tool*), I like to use plain `repo` when referring to the database and then `"persistence layer" + Repo` for something else: i.e "UserRepo.ts" (talks to the database) and "UserAssetRepo.ts" (fetches user file data from s3).
+  - **service:** business logic (server-side) or API calls (client-side)
+    -  Server-side, the service-layer can call the persistence layers **BUT SHOULD NEVER CALL THEM DIRECTLY**. They should do this indirectly through the repo/infrastructure layers.
+  - **operations (suffix `Ops`):** business-logic (client-side only)
+  - **cronjobs:** logic which runs at intervals (server-side only)
+  - **controller:** handle incoming requests from the client (server-side)
+  - **middleware:** logic typically passed to the framework to format/validate incoming requests
+
+#### Not established conventions but what I like to do:
+  - Only services (files appended with `Service`) layer can talk to the persistance layers and contain business logic.
+  - **auxilliary-services** (`...Service.aux.ts`): Auxilliary services can contain business logic and talk to other persistance layers but **CANNOT** be called by the controller-layers. Only the primary service layer file for a domain can be called by the controller: i.e. `UserService.ts` (called by the controller), `UserAssetService.aux.ts` fetching user avatars which requires calling the repo-layer and binary-storage handler. This helps to keep your architecture clean by creating a single entry point for controllers.
+  - **static auxilliary-services** (`"Some Service".saux.ts`): These can contain business logic but are not allowed to talk to any persistance-layers. `.saux.ts` files are useful for large features where separating the static business logic out makes sense to keep other service files clean. Don't put your business logic in files marked `...Utils.ts` or under `utils/` folders. Try to keep utility files/functions for more generic non-application specific logic. Also, for `saux` files you leave off the `...Service` suffix if the file name can demonstrate clear intentent without it. 
+
+
+Use **layer-based** based architecture for simple (single developer) applications:
+  - Easier mental map
+  - Folder names show clear intent
+  - Doesn't scale well though
+
+```markdown
+- config/
+- src/
+  - assets/
+  - cronjobs/
+  - repos/
+    - db/
+      - db.ts <-- setup and return database handler
+    - UserRepos.ts
+    - PostRepos.ts
+  - routes/ (aka controllers)
+    - UserRoutes.ts
+    - PostRoutes.ts
+  - services/
+    - UserServices/
+      - UserService.ts
+      - UserAssetService.aux.ts <-- Created later: for uploading avatar to remote storage (i.e S3).
+    - PostService.ts
+  - main.ts
+  - server.ts
+- tests/
+  - users.test.ts
+  - posts.test.ts
+- package.json
+- tsconfig.json
+```
+
+You might be wondering why we gave the files names like `UserRepo.ts` instead of `user.repo.ts`. That's because these are **module-object files** not **inventory-files**: see the [Naming Conventions](#naming-conventions) section.
+
+Use **domain-based** architecture for large applications:
+- Scales better
+- Less risk of circular dependencies
+- Avoids bloated services layer
+- Avoids merge-conflicts
+- Intent less clear so harder to demo for smaller projects/tutorials
+
+```markdown
+- config/
+- src/
+  - asssets/
+  - common/
+  - cronjobs/
+  - domain/
+    - users/
+      - local/
+        - constants/
+          - errors.ts
+        - types
+          - schemas.ts
+      - UserRepo.ts
+      - UserService.ts
+      - UserAssetService.aux.ts
+      - UserController.ts
+    - posts/
+      - internal/
+        - PostToPDF.saux.ts <-- If user wants to download a post as a PDF file
+      - PostRepo.ts
+      - PostService.ts
+      - PostController.ts
+  - infra/ <-- Talking directly to the persistence layer (server or client-side). 
+    - db.ts
+    - session.ts
+  - routers/
+    - middleware/
+    - user.router.ts
+    - post.router.ts
+    - api.ts
+  - main.ts
+  - server.ts
+- tests/
+  - users.test.ts
+  - posts.test.ts
+- package.json
+- tsconfig.json
+```
+
+##### Keys points
+- Now you can see why layer-based architecture does not scale well. In the above layer-based example, you can see that when we needed to add another module for `UserService`, we had to add a folder to the services-layer, move UserService.ts inside of it, and now for the root of the `services/` folder, we have a mixture of files and folders to list the different service-layer domains.
+- For domain-based architecture, keep only layer-files (i.e. `UserRepo.ts`) directly in the domain's root folder. Make use of the `local/internal/external` folders discussed earlier under [Organizing shared code](#organizing-shared-code) for helper files (i.e. `constants.ts`). Although layer files can go in `internal/external` where it makes sense: (i.e. `PostToPDF.saux.ts`).
+ 
+> The examples demonstrated architecture using a typical back-end web server. For a client-side example of domain-based architecture, see: [React-Ts-Best-Practices](https://github.com/seanpmaxwell/React-Ts-Best-Practices).

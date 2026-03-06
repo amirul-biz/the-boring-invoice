@@ -59,7 +59,7 @@ export class AuthService {
     return {
       httpOnly: true,
       secure: this.isSecure,
-      sameSite: this.isSecure ? 'none' as const : 'lax' as const,
+      sameSite: 'lax' as const,
     };
   }
 
@@ -68,7 +68,7 @@ export class AuthService {
   setAccessTokenCookie(res: Response, token: string): void {
     res.cookie('access_token', token, {
       ...this.cookieOptions,
-      maxAge: AUTH_DURATION.ACCESS_TOKEN_MS,
+      maxAge: AUTH_DURATION.REFRESH_TOKEN_MS,
     });
   }
 

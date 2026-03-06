@@ -2,13 +2,13 @@ import {
   Body,
   Controller,
   Get,
-  HttpException,
+  HttpCode,
   HttpStatus,
+  InternalServerErrorException,
   Logger,
   Param,
   Post,
   Query,
-  Req,
   Res,
   UseInterceptors,
 } from '@nestjs/common';
@@ -17,33 +17,23 @@ import { Response } from 'express';
 import {
   ApiBody,
   ApiOperation,
+  ApiParam,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { CreateInvoiceInputDTO, CalculatedInvoiceDto, InvoiceListQueryDTO } from './invoice-dto';
-import { InvoiceService, RetryInvoiceMessage, RetryPaymentCallbackMessage, FailedInvoiceMessage } from './invoice-service';
+import { CreateInvoiceInputDTO, InvoiceListQueryDTO } from './invoice-dto';
+import {
+  InvoiceService,
+  CreateInvoiceMessage,
+  RetryInvoiceMessage,
+  RetryPaymentCallbackMessage,
+  FailedInvoiceMessage,
+  ToyyibPayCallbackData,
+} from './invoice-service';
 import { Ctx, EventPattern, Payload, RmqContext } from '@nestjs/microservices';
 import { generateInvoiceTemplate } from './invoice-template-generator';
 import { UserById } from '../decorator/user.decorator';
 import { INVOICE_QUEUE_PATTERNS } from './invoice.constants';
-
-/**
- * ToyyibPay callback data interface
- */
-interface ToyyibPayCallback {
-  refno: string;
-  status: string;
-  reason: string;
-  billcode: string;
-  order_id: string;
-  amount: string;
-  status_id: string;
-  msg: string;
-  transaction_id: string;
-  fpx_transaction_id: string;
-  hash: string;
-  transaction_time: string;
-}
 
 @ApiTags('invoice')
 @Controller('invoice')
@@ -65,6 +55,8 @@ export class InvoiceController {
 
   @Get('list/:businessId')
   @ApiOperation({ summary: 'Get paginated invoice list' })
+  @ApiParam({ name: 'businessId', type: String })
+  @ApiResponse({ status: 200, description: 'Paginated invoice list' })
   async getInvoiceList(
     @Param('businessId') businessId: string,
     @UserById() userId: string,
@@ -77,37 +69,26 @@ export class InvoiceController {
    * Queue invoice generation for asynchronous processing
    */
   @Post('generate/:businessId')
+  @HttpCode(HttpStatus.ACCEPTED)
   @ApiOperation({ summary: 'Generate invoice PDF' })
+  @ApiParam({ name: 'businessId', type: String })
   @ApiResponse({ status: 202, description: 'Invoice processing started' })
   @ApiResponse({ status: 500, description: 'Failed to queue invoice' })
-  @ApiBody({ type: CreateInvoiceInputDTO })
+  @ApiBody({ type: CreateInvoiceInputDTO, isArray: true })
   async generateInvoice(
     @Param('businessId') businessId: string,
     @UserById() userId: string,
     @Body() invoiceData: CreateInvoiceInputDTO[],
-    @Res() res: Response,
-  ): Promise<void> {
+  ) {
     try {
-      const result = await this.invoiceService.queueInvoiceGeneration(
+      return await this.invoiceService.queueInvoiceGeneration(
         invoiceData,
         businessId,
         userId,
       );
-
-      res.status(HttpStatus.ACCEPTED).json(result);
     } catch (error) {
-      this.logger.error(
-        `Queue Error: ${error.message}`,
-        error.stack,
-      );
-
-      throw new HttpException(
-        {
-          status: HttpStatus.INTERNAL_SERVER_ERROR,
-          error: 'Failed to queue invoice processing',
-        },
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
+      this.logger.error(`Queue Error: ${error.message}`, error.stack);
+      throw new InternalServerErrorException('Failed to queue invoice processing');
     }
   }
 
@@ -119,21 +100,17 @@ export class InvoiceController {
   @Post('callback')
   @UseInterceptors(AnyFilesInterceptor())
   async handleToyyibPayCallback(
-    @Req() req: any,
-    @Body() callbackData: any,
+    @Body() callbackData: ToyyibPayCallbackData,
     @Res() res: Response,
   ): Promise<void> {
     try {
       this.logger.log('Payment callback received');
       this.logger.log(`[Callback] raw body: ${JSON.stringify(callbackData)}`);
-      this.logger.log(`[Callback] req.body: ${JSON.stringify(req.body)}`);
-
-      const data: ToyyibPayCallback = callbackData || req.body;
 
       // Queue the callback for async processing
-      await this.invoiceService.queuePaymentCallback(data);
+      await this.invoiceService.queuePaymentCallback(callbackData);
 
-      this.logger.log(`Payment callback queued: ${data.order_id}`);
+      this.logger.log(`Payment callback queued: ${callbackData.order_id}`);
 
       // Always return 200 OK to ToyyibPay immediately
       res.status(HttpStatus.OK).send('OK');
@@ -150,9 +127,10 @@ export class InvoiceController {
    */
   @EventPattern(INVOICE_QUEUE_PATTERNS.CREATE)
   async receiverCreateInvoice(
-    @Payload() data: { businessId: string; calculatedInvoiceList: CalculatedInvoiceDto[] },
+    @Payload() data: CreateInvoiceMessage,
     @Ctx() context: RmqContext,
   ): Promise<void> {
+    this.logger.log(`[Queue] Invoice creation received — ${data.calculatedInvoiceList.length} invoice(s) for business ${data.businessId}`);
     const channel = context.getChannelRef();
     const originalMsg = context.getMessage();
     await this.invoiceService.processInvoiceBatch(data.businessId, data.calculatedInvoiceList);
@@ -169,6 +147,7 @@ export class InvoiceController {
     @Payload() data: RetryInvoiceMessage,
     @Ctx() context: RmqContext,
   ): Promise<void> {
+    this.logger.log(`[Queue] Invoice retry received — attempt ${data.attemptNo} for ${data.calculatedInvoice.invoiceNo}`);
     const channel = context.getChannelRef();
     const originalMsg = context.getMessage();
     await this.invoiceService.processInvoiceRetry(data);
@@ -182,9 +161,10 @@ export class InvoiceController {
    */
   @EventPattern(INVOICE_QUEUE_PATTERNS.CALLBACK)
   async receiverUpdateInvoice(
-    @Payload() callbackData: ToyyibPayCallback,
+    @Payload() callbackData: ToyyibPayCallbackData,
     @Ctx() context: RmqContext,
   ): Promise<void> {
+    this.logger.log(`[Queue] Payment callback received — order_id: ${callbackData.order_id}`);
     const channel = context.getChannelRef();
     const originalMsg = context.getMessage();
     await this.invoiceService.processPaymentCallbackFromQueue(callbackData);
@@ -201,6 +181,7 @@ export class InvoiceController {
     @Payload() data: RetryPaymentCallbackMessage,
     @Ctx() context: RmqContext,
   ): Promise<void> {
+    this.logger.log(`[Queue] Payment callback retry received — attempt ${data.attemptNo} for order_id: ${data.callbackData.order_id}`);
     const channel = context.getChannelRef();
     const originalMsg = context.getMessage();
     await this.invoiceService.processPaymentCallbackRetry(data);
@@ -216,6 +197,7 @@ export class InvoiceController {
     @Payload() data: FailedInvoiceMessage,
     @Ctx() context: RmqContext,
   ): Promise<void> {
+    this.logger.log(`[Queue] Failed invoice received — ${data.calculatedInvoice.invoiceNo}`);
     const channel = context.getChannelRef();
     const originalMsg = context.getMessage();
     await this.invoiceService.processFailedInvoice(data);

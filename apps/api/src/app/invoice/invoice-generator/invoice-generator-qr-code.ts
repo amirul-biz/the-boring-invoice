@@ -11,8 +11,8 @@ export interface QRCodeOptions {
 }
 
 /**
- * QR Code Utility for generating payment QR codes
- * Serverless-compatible - no binary dependencies
+ * QR Code Utility for generating payment QR codes.
+ * Serverless-compatible — no binary dependencies.
  */
 export class QRCodeUtil {
   private readonly defaultOptions: QRCodeOptions = {
@@ -26,7 +26,7 @@ export class QRCodeUtil {
   };
 
   /**
-   * Generate QR code as buffer for PDF embedding
+   * Generate QR code as buffer for PDF embedding.
    */
   async toBuffer(content: string, options?: QRCodeOptions): Promise<Buffer> {
     const mergedOptions = { ...this.defaultOptions, ...options };
@@ -43,7 +43,7 @@ export class QRCodeUtil {
   }
 
   /**
-   * Generate QR code as data URL (for web display)
+   * Generate QR code as data URL (for web display).
    */
   async toDataUrl(content: string, options?: QRCodeOptions): Promise<string> {
     const mergedOptions = { ...this.defaultOptions, ...options };
@@ -59,26 +59,18 @@ export class QRCodeUtil {
   }
 
   /**
-   * Generate QR code for a payment bill URL
+   * Generate QR code for a payment bill URL.
    */
   async generatePaymentQR(billUrl: string, size: number = 120): Promise<Buffer> {
-    return this.toBuffer(billUrl, {
-      width: size,
-      margin: 1,
-      color: {
-        dark: '#1a365d',
-        light: '#ffffff',
-      },
-      errorCorrectionLevel: 'H',
-    });
+    return this.toBuffer(billUrl, { width: size });
   }
 }
 
+/**
+ * Factory function for creating a QRCodeUtil instance.
+ */
 export function generateQrCode(): QRCodeUtil {
   return new QRCodeUtil();
 }
-
-// Alias for backward compatibility
-export const createQRCodeUtil = generateQrCode;
 
 export default QRCodeUtil;
