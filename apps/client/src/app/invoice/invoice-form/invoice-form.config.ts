@@ -72,7 +72,7 @@ export function recipientForm(): FormGroup<RecipientForm> {
     tin: new FormControl(null, {
       nonNullable: true,
     }),
-    idType: new FormControl('BRN', {
+    idType: new FormControl('NRIC', {
       nonNullable: true,
       validators: [Validators.required],
     }),
@@ -255,7 +255,7 @@ export function patchExcelDataToInvoiceForm(
       email: r.email ?? null,
       phone: r.phone,
       tin: r.tin,
-      idType: r.idType ?? 'BRN',
+      idType: r.idType ?? 'NRIC',
       registrationNumber: r.registrationNumber,
       addressLine1: r.addressLine1,
       postcode: r.postcode,

@@ -205,17 +205,146 @@
 
         <div class="inv-separator"></div>
 
+        <!-- ── Invoice Items ─────────────────────────────────────────────────── -->
+        <div class="inv-section-header">Invoice Items</div>
+        <div formArrayName="items">
+
+          @for (item of items.controls; track item) {
+            <div class="inv-sub-card">
+              <div class="inv-sub-header">
+                <span class="inv-sub-title">Item #{{ $index + 1 }}</span>
+                <button
+                  type="button"
+                  class="inv-remove-btn"
+                  (click)="removeItem($index)"
+                  [disabled]="!canRemoveItem()">
+                  Remove
+                </button>
+              </div>
+
+              <div [formGroupName]="$index">
+                <div class="row g-3">
+
+                  <div class="col-12 col-md-5">
+                    <label class="inv-label" [for]="'itemName' + $index">Item Name</label>
+                    <input
+                      type="text"
+                      class="inv-input form-control"
+                      [ngClass]="{'is-invalid': isFieldInvalid(item.get('itemName'))}"
+                      [id]="'itemName' + $index"
+                      formControlName="itemName">
+                    <div class="invalid-feedback">Item name is required</div>
+                  </div>
+
+                  <div class="col-12 col-md-2">
+                    <label class="inv-label" [for]="'quantity' + $index">Quantity</label>
+                    <input
+                      type="number"
+                      class="inv-input form-control"
+                      [ngClass]="{'is-invalid': isFieldInvalid(item.get('quantity'))}"
+                      [id]="'quantity' + $index"
+                      formControlName="quantity">
+                    <div class="invalid-feedback">Quantity must be at least 1</div>
+                  </div>
+
+                  <div class="col-12 col-md-2">
+                    <label class="inv-label" [for]="'unitPrice' + $index">Unit Price</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      class="inv-input form-control"
+                      [ngClass]="{'is-invalid': isFieldInvalid(item.get('unitPrice'))}"
+                      [id]="'unitPrice' + $index"
+                      formControlName="unitPrice">
+                    <div class="invalid-feedback">Unit price must be 0 or greater</div>
+                  </div>
+
+                  <div class="col-12 col-md-2">
+                    <label class="inv-label" [for]="'taxType' + $index">Tax Type</label>
+                    <select
+                      class="inv-select form-select"
+                      [ngClass]="{'is-invalid': isFieldInvalid(item.get('taxType'))}"
+                      [id]="'taxType' + $index"
+                      formControlName="taxType">
+                      @for (tax of taxTypes; track tax.value) {
+                        <option [value]="tax.value">{{ tax.label }}</option>
+                      }
+                    </select>
+                    <div class="invalid-feedback">Tax type is required</div>
+                  </div>
+
+                  <div class="col-12 col-md-2">
+                    <label class="inv-label" [for]="'taxRate' + $index">Tax Rate (%)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      class="inv-input form-control"
+                      [ngClass]="{'is-invalid': isFieldInvalid(item.get('taxRate'))}"
+                      [id]="'taxRate' + $index"
+                      formControlName="taxRate">
+                    <div class="invalid-feedback">Tax rate is required</div>
+                  </div>
+
+                  <div class="col-12 col-md-2">
+                    <label class="inv-label" [for]="'discountRate' + $index">Discount (%)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      max="100"
+                      class="inv-input form-control"
+                      [ngClass]="{'is-invalid': isFieldInvalid(item.get('discountRate'))}"
+                      [id]="'discountRate' + $index"
+                      formControlName="discountRate"
+                      placeholder="0">
+                    <div class="invalid-feedback">Discount must be 0–100</div>
+                  </div>
+
+                  <div class="col-12 col-md-8">
+                    <label class="inv-label" [for]="'classificationCode' + $index">Classification Code</label>
+                    <select
+                      class="inv-select form-select"
+                      [ngClass]="{'is-invalid': isFieldInvalid(item.get('classificationCode'))}"
+                      [id]="'classificationCode' + $index"
+                      formControlName="classificationCode">
+                      <option value="">Select a classification</option>
+                      @for (classification of classificationCodes; track classification.code) {
+                        <option [value]="classification.code">{{ classification.code }} — {{ classification.description }}</option>
+                      }
+                    </select>
+                    <div class="invalid-feedback">Classification code is required</div>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+          }
+
+          <button type="button" class="inv-add-btn" (click)="addItem()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            Add Item
+          </button>
+
+        </div>
+
+        <div class="inv-separator"></div>
+
         <!-- ── Recipients ────────────────────────────────────────────────────── -->
         <div class="inv-section-header">Recipients</div>
         <div formArrayName="recipients">
 
           <div ngbAccordion class="inv-recipients-accordion">
             @for (recipient of recipients.controls; track recipient) {
+              @let recipientName = recipient.get('name')?.value;
               <div ngbAccordionItem [collapsed]="recipients.length > 1 && $index > 0">
                 <h2 ngbAccordionHeader>
                   <button ngbAccordionButton [class.inv-acc-error]="isRecipientInvalid($index)">
                     <div class="inv-acc-header">
-                      <span class="inv-acc-title">Recipient #{{ $index + 1 }}</span>
+                      <span class="inv-acc-title">Recipient #{{ $index + 1 }}{{ recipientName ? ' — ' + recipientName : '' }}</span>
                       @if (isRecipientInvalid($index)) {
                         <span class="inv-acc-error-badge">Check fields</span>
                       }
@@ -399,134 +528,6 @@
               <line x1="5" y1="12" x2="19" y2="12"/>
             </svg>
             Add Recipient
-          </button>
-
-        </div>
-
-        <div class="inv-separator"></div>
-
-        <!-- ── Invoice Items ─────────────────────────────────────────────────── -->
-        <div class="inv-section-header">Invoice Items</div>
-        <div formArrayName="items">
-
-          @for (item of items.controls; track item) {
-            <div class="inv-sub-card">
-              <div class="inv-sub-header">
-                <span class="inv-sub-title">Item #{{ $index + 1 }}</span>
-                <button
-                  type="button"
-                  class="inv-remove-btn"
-                  (click)="removeItem($index)"
-                  [disabled]="!canRemoveItem()">
-                  Remove
-                </button>
-              </div>
-
-              <div [formGroupName]="$index">
-                <div class="row g-3">
-
-                  <div class="col-12 col-md-5">
-                    <label class="inv-label" [for]="'itemName' + $index">Item Name</label>
-                    <input
-                      type="text"
-                      class="inv-input form-control"
-                      [ngClass]="{'is-invalid': isFieldInvalid(item.get('itemName'))}"
-                      [id]="'itemName' + $index"
-                      formControlName="itemName">
-                    <div class="invalid-feedback">Item name is required</div>
-                  </div>
-
-                  <div class="col-12 col-md-2">
-                    <label class="inv-label" [for]="'quantity' + $index">Quantity</label>
-                    <input
-                      type="number"
-                      class="inv-input form-control"
-                      [ngClass]="{'is-invalid': isFieldInvalid(item.get('quantity'))}"
-                      [id]="'quantity' + $index"
-                      formControlName="quantity">
-                    <div class="invalid-feedback">Quantity must be at least 1</div>
-                  </div>
-
-                  <div class="col-12 col-md-2">
-                    <label class="inv-label" [for]="'unitPrice' + $index">Unit Price</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      class="inv-input form-control"
-                      [ngClass]="{'is-invalid': isFieldInvalid(item.get('unitPrice'))}"
-                      [id]="'unitPrice' + $index"
-                      formControlName="unitPrice">
-                    <div class="invalid-feedback">Unit price must be 0 or greater</div>
-                  </div>
-
-                  <div class="col-12 col-md-2">
-                    <label class="inv-label" [for]="'taxType' + $index">Tax Type</label>
-                    <select
-                      class="inv-select form-select"
-                      [ngClass]="{'is-invalid': isFieldInvalid(item.get('taxType'))}"
-                      [id]="'taxType' + $index"
-                      formControlName="taxType">
-                      @for (tax of taxTypes; track tax.value) {
-                        <option [value]="tax.value">{{ tax.label }}</option>
-                      }
-                    </select>
-                    <div class="invalid-feedback">Tax type is required</div>
-                  </div>
-
-                  <div class="col-12 col-md-2">
-                    <label class="inv-label" [for]="'taxRate' + $index">Tax Rate (%)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      class="inv-input form-control"
-                      [ngClass]="{'is-invalid': isFieldInvalid(item.get('taxRate'))}"
-                      [id]="'taxRate' + $index"
-                      formControlName="taxRate">
-                    <div class="invalid-feedback">Tax rate is required</div>
-                  </div>
-
-                  <div class="col-12 col-md-2">
-                    <label class="inv-label" [for]="'discountRate' + $index">Discount (%)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      max="100"
-                      class="inv-input form-control"
-                      [ngClass]="{'is-invalid': isFieldInvalid(item.get('discountRate'))}"
-                      [id]="'discountRate' + $index"
-                      formControlName="discountRate"
-                      placeholder="0">
-                    <div class="invalid-feedback">Discount must be 0–100</div>
-                  </div>
-
-                  <div class="col-12 col-md-8">
-                    <label class="inv-label" [for]="'classificationCode' + $index">Classification Code</label>
-                    <select
-                      class="inv-select form-select"
-                      [ngClass]="{'is-invalid': isFieldInvalid(item.get('classificationCode'))}"
-                      [id]="'classificationCode' + $index"
-                      formControlName="classificationCode">
-                      <option value="">Select a classification</option>
-                      @for (classification of classificationCodes; track classification.code) {
-                        <option [value]="classification.code">{{ classification.code }} — {{ classification.description }}</option>
-                      }
-                    </select>
-                    <div class="invalid-feedback">Classification code is required</div>
-                  </div>
-
-                </div>
-              </div>
-            </div>
-          }
-
-          <button type="button" class="inv-add-btn" (click)="addItem()">
-            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
-              stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="12" y1="5" x2="12" y2="19"/>
-              <line x1="5" y1="12" x2="19" y2="12"/>
-            </svg>
-            Add Item
           </button>
 
         </div>
