@@ -29,7 +29,7 @@ export function parseInvoiceTemplate(buffer: ArrayBuffer): ParsedExcelData {
       email: row['email'] ? String(row['email']) : undefined,
       phone: String(row['phone'] ?? ''),
       tin: String(row['tin'] ?? ''),
-      idType: String(row['idType'] ?? 'BRN'),
+      idType: String(row['idType'] ?? 'NRIC'),
       registrationNumber: String(row['registrationNumber'] ?? ''),
       addressLine1: String(row['addressLine1'] ?? ''),
       postcode: String(row['postcode'] ?? ''),

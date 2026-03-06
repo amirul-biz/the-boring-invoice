@@ -97,16 +97,17 @@ export async function generateInvoiceTemplate(): Promise<Buffer> {
   // Sheet 1: Recipients
   const recipientSheet = wb.addWorksheet('Recipients');
   recipientSheet.columns = [
-    { header: 'name', key: 'name', width: 25 },
-    { header: 'email', key: 'email', width: 25 },
-    { header: 'phone', key: 'phone', width: 18 },
-    { header: 'tin', key: 'tin', width: 18 },
+    { header: 'name',               key: 'name',               width: 25 },
+    { header: 'email',              key: 'email',              width: 25 },
+    { header: 'phone',              key: 'phone',              width: 18 },
+    { header: 'tin',                key: 'tin',                width: 18 },
+    { header: 'idType',             key: 'idType',             width: 15 },
     { header: 'registrationNumber', key: 'registrationNumber', width: 22 },
-    { header: 'addressLine1', key: 'addressLine1', width: 35 },
-    { header: 'postcode', key: 'postcode', width: 12 },
-    { header: 'city', key: 'city', width: 15 },
-    { header: 'state', key: 'state', width: 35 },
-    { header: 'countryCode', key: 'countryCode', width: 20 },
+    { header: 'addressLine1',       key: 'addressLine1',       width: 35 },
+    { header: 'postcode',           key: 'postcode',           width: 12 },
+    { header: 'city',               key: 'city',               width: 15 },
+    { header: 'state',              key: 'state',              width: 35 },
+    { header: 'countryCode',        key: 'countryCode',        width: 20 },
   ];
 
   recipientSheet.getRow(1).font = { bold: true };
@@ -116,6 +117,7 @@ export async function generateInvoiceTemplate(): Promise<Buffer> {
     email: 'ahmad@email.com',
     phone: '60196643494',
     tin: 'E100000000010',
+    idType: 'NRIC',
     registrationNumber: '900101015555',
     addressLine1: 'No 50 Jalan Seri Putra 3/9',
     postcode: '43000',
@@ -129,7 +131,17 @@ export async function generateInvoiceTemplate(): Promise<Buffer> {
   const countryFormula = `"${COUNTRY_OPTIONS.join(',')}"`;
 
   for (let row = 2; row <= 100; row++) {
-    recipientSheet.getCell(`I${row}`).dataValidation = {
+    // Column E: idType dropdown
+    recipientSheet.getCell(`E${row}`).dataValidation = {
+      type: 'list',
+      allowBlank: true,
+      formulae: ['"BRN,NRIC,PASSPORT,ARMY"'],
+      showErrorMessage: true,
+      errorTitle: 'Invalid ID Type',
+      error: 'Please select BRN, NRIC, PASSPORT, or ARMY.',
+    };
+    // Column J: state (shifted from I due to new idType column)
+    recipientSheet.getCell(`J${row}`).dataValidation = {
       type: 'list',
       allowBlank: true,
       formulae: [stateFormula],
@@ -137,7 +149,8 @@ export async function generateInvoiceTemplate(): Promise<Buffer> {
       errorTitle: 'Invalid State',
       error: 'Please select a valid state from the dropdown.',
     };
-    recipientSheet.getCell(`J${row}`).dataValidation = {
+    // Column K: countryCode (shifted from J)
+    recipientSheet.getCell(`K${row}`).dataValidation = {
       type: 'list',
       allowBlank: true,
       formulae: [countryFormula],
