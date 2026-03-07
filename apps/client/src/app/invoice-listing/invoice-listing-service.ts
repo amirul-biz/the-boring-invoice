@@ -1,7 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { IGetPaginatedInvoiceList } from './invoice-listing-interface';
+import { IGetPaginatedInvoiceList, IInvoiceDetail } from './invoice-listing-interface';
 
 export interface InvoiceListFilter {
   pageIndex: number;
@@ -54,6 +54,12 @@ export class InvoiceListingService {
     return this.http.post<void>(
       `${this.apiUrl}/invoice/deactivate/${businessId}/${invoiceNo}`,
       {},
+    );
+  }
+
+  getInvoiceDetail(businessId: string, invoiceNo: string): Observable<IInvoiceDetail> {
+    return this.http.get<IInvoiceDetail>(
+      `${this.apiUrl}/invoice/detail/${businessId}/${invoiceNo}`,
     );
   }
 }

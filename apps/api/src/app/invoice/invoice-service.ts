@@ -1,5 +1,5 @@
 // Third-party / framework
-import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
+import { Injectable, Logger, HttpException, HttpStatus, ForbiddenException } from '@nestjs/common';
 import { MailerService } from '@nestjs-modules/mailer';
 import { InvoiceStatus } from '@prisma/client';
 
@@ -359,7 +359,42 @@ export class InvoiceService {
   async getInvoiceList(encodedBusinessId: string, userId: string, query: InvoiceListQuery): Promise<PaginatedInvoiceList> {
     await this.businessInfoService.verifyOwnership(encodedBusinessId, userId);
     const businessId = this.cryptoService.decodeId(encodedBusinessId);
-    return getInvoiceList(this.prisma, { ...query, businessId }, this.logger);
+    const result = await getInvoiceList(this.prisma, { ...query, businessId }, this.logger);
+    result.items = result.items.map(item => ({
+      ...item,
+      recipientPhone: item.recipientPhone ? this.cryptoService.decrypt(item.recipientPhone) : '',
+    }));
+    return result;
+  }
+
+  async getInvoiceDetail(encodedBusinessId: string, invoiceNo: string, userId: string): Promise<ProcessedInvoiceDto> {
+    await this.businessInfoService.verifyOwnership(encodedBusinessId, userId);
+    const rawBusinessId = this.cryptoService.decodeId(encodedBusinessId);
+
+    const invoice = await getInvoiceByNumber(this.prisma, invoiceNo, this.logger);
+
+    if (invoice.businessId !== rawBusinessId) {
+      throw new ForbiddenException('Invoice does not belong to this business');
+    }
+
+    return {
+      invoiceNo: invoice.invoiceNo,
+      invoiceType: invoice.invoiceType,
+      originalInvoiceRef: invoice.originalInvoiceRef ?? undefined,
+      currency: invoice.currency,
+      status: invoice.status,
+      issuedDate: invoice.issuedDate.toISOString(),
+      dueDate: invoice.dueDate.toISOString(),
+      supplier: this.decryptSupplier(invoice.supplier as unknown as SupplierDTO),
+      recipient: this.decryptRecipient(invoice.recipient as unknown as RecipientDTO),
+      items: invoice.items as any as InvoiceItemDTO[],
+      totalNetAmount: parseFloat(invoice.totalNetAmount.toString()),
+      totalTaxAmount: parseFloat(invoice.totalTaxAmount.toString()),
+      totalDiscountAmount: parseFloat(invoice.totalDiscountAmount.toString()),
+      totalPayableAmount: parseFloat(invoice.totalPayableAmount.toString()),
+      billUrl: invoice.billUrl ?? undefined,
+      invoiceVersion: invoice.invoiceVersion,
+    };
   }
 
   async deactivateInvoice(encodedBusinessId: string, invoiceNo: string, userId: string): Promise<void> {

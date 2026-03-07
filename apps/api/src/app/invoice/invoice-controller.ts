@@ -21,7 +21,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { CreateInvoiceInputDTO, InvoiceListQueryDTO, NotifyEmailBatchDTO } from './invoice-dto';
+import { CreateInvoiceInputDTO, InvoiceListQueryDTO, NotifyEmailBatchDTO, ProcessedInvoiceDto } from './invoice-dto';
 import {
   InvoiceService,
   CreateInvoiceMessage,
@@ -64,6 +64,21 @@ export class InvoiceController {
     @Query() query: InvoiceListQueryDTO,
   ) {
     return this.invoiceService.getInvoiceList(businessId, userId, query);
+  }
+
+  @Get('detail/:businessId/:invoiceNo')
+  @ApiOperation({ summary: 'Get full invoice detail with decrypted fields' })
+  @ApiParam({ name: 'businessId', type: String })
+  @ApiParam({ name: 'invoiceNo', type: String })
+  @ApiResponse({ status: 200, description: 'Full invoice detail' })
+  @ApiResponse({ status: 403, description: 'Invoice does not belong to this business' })
+  @ApiResponse({ status: 404, description: 'Invoice not found' })
+  async getInvoiceDetail(
+    @Param('businessId') businessId: string,
+    @Param('invoiceNo') invoiceNo: string,
+    @UserById() userId: string,
+  ): Promise<ProcessedInvoiceDto> {
+    return this.invoiceService.getInvoiceDetail(businessId, invoiceNo, userId);
   }
 
   /**

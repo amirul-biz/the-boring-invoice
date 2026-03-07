@@ -5,6 +5,11 @@
 
       <thead class="ilt-thead">
         <tr>
+          <th class="ilt-th ilt-th--check">
+            <input type="checkbox" class="ilt-checkbox"
+              [checked]="allPendingChecked"
+              (change)="checkAllChange.emit()" />
+          </th>
           <th class="ilt-th">#</th>
           <th class="ilt-th">Invoice ID</th>
           <th class="ilt-th">Type</th>
@@ -20,11 +25,22 @@
       <tbody class="ilt-tbody">
         @for (invoice of invoices; track invoice.id; let i = $index) {
           <tr>
+            <td class="ilt-td ilt-td--check">
+              @if (invoice.status === 'PENDING') {
+                <input type="checkbox" class="ilt-checkbox"
+                  [checked]="invoice.isChecked"
+                  (change)="onAction('check-single', invoice)" />
+              }
+            </td>
             <td class="ilt-td ilt-td--num">{{ getRowNumber(i) }}</td>
-            <td class="ilt-td ilt-td--invoice-no">{{ invoice.invoiceNo }}</td>
+            <td class="ilt-td ilt-td--invoice-no">
+              <button type="button" class="ilt-invoice-id-btn" (click)="onAction('view-detail', invoice)">
+                {{ invoice.invoiceNo }}
+              </button>
+            </td>
             <td class="ilt-td">{{ invoiceTypeLabel[invoice.invoiceType] }}</td>
             <td class="ilt-td">{{ invoice.recipientName }}</td>
-            <td class="ilt-td ilt-td--amount">{{ invoice.currency }} {{ invoice.totalIncludingTax | number:'1.2-2' }}</td>
+            <td class="ilt-td ilt-td--amount">{{ invoice.currency }} {{ invoice.totalPayableAmount | number:'1.2-2' }}</td>
             <td class="ilt-td ilt-td--date">{{ invoice.issuedDate | date:'dd/MM/yyyy' }}</td>
             <td class="ilt-td ilt-td--date">{{ invoice.dueDate | date:'dd/MM/yyyy' }}</td>
             <td class="ilt-td">
@@ -79,7 +95,7 @@
           </tr>
         } @empty {
           <tr>
-            <td class="ilt-empty" colspan="9">No invoices found</td>
+            <td class="ilt-empty" colspan="10">No invoices found</td>
           </tr>
         }
       </tbody>

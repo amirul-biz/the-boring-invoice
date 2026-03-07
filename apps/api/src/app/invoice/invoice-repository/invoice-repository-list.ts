@@ -19,6 +19,7 @@ export interface InvoiceListItem {
   invoiceNo: string;
   invoiceType: string;
   recipientName: string;
+  recipientPhone: string;
   totalPayableAmount: number;
   currency: string;
   status: string;
@@ -96,6 +97,7 @@ export async function getInvoiceList(
         invoiceNo: invoice.invoiceNo,
         invoiceType: invoice.invoiceType,
         recipientName: recipient?.name || '',
+        recipientPhone: recipient?.phone || '',
         totalPayableAmount: parseFloat(invoice.totalPayableAmount.toString()),
         currency: invoice.currency,
         status: invoice.status,
