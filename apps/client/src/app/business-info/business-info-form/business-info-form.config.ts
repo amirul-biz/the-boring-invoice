@@ -53,7 +53,7 @@ export function getBusinessInfoForm(): FormGroup<BusinessInfoForm> {
       nonNullable: true,
       validators: [Validators.required],
     }),
-    idType: new FormControl('BRN', {
+    idType: new FormControl({ value: 'BRN', disabled: true }, {
       nonNullable: true,
       validators: [Validators.required],
     }),

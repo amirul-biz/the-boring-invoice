@@ -96,6 +96,27 @@ $radius-btn:           7px;
   letter-spacing: -0.02em;
 }
 
+.ilt-invoice-id-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: $font-family;
+  font-size: inherit;
+  font-weight: 500;
+  color: $color-text-primary;
+  letter-spacing: -0.02em;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: transparent;
+  transition: text-decoration-color 0.15s;
+  text-align: left;
+
+  &:hover {
+    text-decoration-color: currentColor;
+  }
+}
+
 .ilt-td--amount {
   font-weight: 500;
   color: $color-text-primary;
@@ -164,6 +185,7 @@ $radius-btn:           7px;
 .ilt-action-btn {
   display: inline-flex;
   align-items: center;
+  gap: 0.3rem;
   padding: 0.3rem 0.625rem;
   border-radius: $radius-btn;
   font-family: $font-family;
@@ -197,6 +219,21 @@ $radius-btn:           7px;
       border-color: #B91C1C;
     }
   }
+}
+
+// ─── Checkbox ────────────────────────────────────────────────────────────────
+
+.ilt-th--check,
+.ilt-td--check {
+  width: 44px;
+  padding-right: 0;
+}
+
+.ilt-checkbox {
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+  accent-color: $color-text-primary;
 }
 
 // ─── Pagination ──────────────────────────────────────────────────────────────

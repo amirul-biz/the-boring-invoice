@@ -19,6 +19,12 @@ export class InvoiceListingTableComponent {
   @Input() totalItems = 0;
   @Output() pageChange = new EventEmitter<number>();
   @Output() action = new EventEmitter<{ type: string; invoice: IInvoiceListItem }>();
+  @Output() checkAllChange = new EventEmitter<void>();
+
+  get allPendingChecked(): boolean {
+    const pending = this.invoices.filter(i => i.status === 'PENDING');
+    return pending.length > 0 && pending.every(i => i.isChecked);
+  }
 
   getRowNumber(index: number): number {
     return (this.page - 1) * this.pageSize + index + 1;

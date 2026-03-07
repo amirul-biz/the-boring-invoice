@@ -229,6 +229,24 @@ $radius-btn:           10px;
   }
 }
 
+// ─── Batch Action Bar ────────────────────────────────────────────────────────
+
+.il-batch-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 1rem;
+  background: #FEF9C3;
+  border: 1px solid rgba(161, 98, 7, 0.2);
+  border-radius: 10px;
+}
+
+.il-batch-label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #A16207;
+}
+
 // ─── Spinner Label ───────────────────────────────────────────────────────────
 
 .il-spinner-label {

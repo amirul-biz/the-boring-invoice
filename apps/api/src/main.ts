@@ -4,6 +4,7 @@ import { AppModule } from './app/app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { rabbitMQInvoiceConfig } from './app/rabbit-mq/rabbit-mq-invoice.config';
 import { rabbitMQPaymentConfig } from './app/rabbit-mq/rabbit-mq-payment.config';
+import { rabbitMQNotifyEmailConfig } from './app/rabbit-mq/rabbit-mq-notify-email.config';
 import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
@@ -67,6 +68,7 @@ async function bootstrap() {
   try {
     app.connectMicroservice(rabbitMQInvoiceConfig());
     app.connectMicroservice(rabbitMQPaymentConfig());
+    app.connectMicroservice(rabbitMQNotifyEmailConfig());
   } catch (err) {
     console.error('Failed to connect microservice:', err.message);
   }

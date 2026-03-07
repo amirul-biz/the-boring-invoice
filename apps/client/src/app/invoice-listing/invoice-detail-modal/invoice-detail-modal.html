@@ -1,0 +1,163 @@
+<div class="idm-header">
+  <div class="idm-header-top">
+    <div class="idm-header-left">
+      <h2 class="idm-title">{{ detail.invoiceNo }}</h2>
+      <span class="idm-badge" [ngClass]="getStatusClass(detail.status)">{{ detail.status }}</span>
+    </div>
+    <button type="button" class="idm-close-btn" (click)="activeModal.dismiss()">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+        <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8z"/>
+      </svg>
+    </button>
+  </div>
+  <p class="idm-subtitle">
+    {{ invoiceTypeLabel[detail.invoiceType] }} · {{ detail.currency }} · Due {{ detail.dueDate | date:'dd/MM/yyyy' }}
+  </p>
+</div>
+
+<div class="idm-body">
+
+  <!-- Supplier -->
+  <div class="idm-section">
+    <div class="idm-section-title">Supplier</div>
+    <div class="idm-grid">
+      <div class="idm-field">
+        <div class="idm-label">Name</div>
+        <div class="idm-value">{{ detail.supplier.name }}</div>
+      </div>
+      <div class="idm-field">
+        <div class="idm-label">TIN</div>
+        <div class="idm-value">{{ detail.supplier.tin }}</div>
+      </div>
+      <div class="idm-field">
+        <div class="idm-label">Reg No</div>
+        <div class="idm-value">{{ detail.supplier.registrationNumber }}</div>
+      </div>
+      <div class="idm-field">
+        <div class="idm-label">Contact</div>
+        <div class="idm-value">{{ detail.supplier.contactNumber }}</div>
+      </div>
+      @if (detail.supplier.email) {
+        <div class="idm-field">
+          <div class="idm-label">Email</div>
+          <div class="idm-value">{{ detail.supplier.email }}</div>
+        </div>
+      }
+    </div>
+    <div class="idm-address">
+      {{ detail.supplier.addressLine1 }}, {{ detail.supplier.postcode }} {{ detail.supplier.city }}, {{ detail.supplier.state }}, {{ detail.supplier.country }}
+    </div>
+  </div>
+
+  <!-- Recipient -->
+  <div class="idm-section">
+    <div class="idm-section-title">Recipient</div>
+    <div class="idm-grid">
+      <div class="idm-field">
+        <div class="idm-label">Name</div>
+        <div class="idm-value">{{ detail.recipient.name }}</div>
+      </div>
+      @if (detail.recipient.email) {
+        <div class="idm-field">
+          <div class="idm-label">Email</div>
+          <div class="idm-value">{{ detail.recipient.email }}</div>
+        </div>
+      }
+      <div class="idm-field">
+        <div class="idm-label">Phone</div>
+        <div class="idm-value">{{ detail.recipient.phone }}</div>
+      </div>
+      <div class="idm-field">
+        <div class="idm-label">TIN</div>
+        <div class="idm-value">{{ detail.recipient.tin }}</div>
+      </div>
+      <div class="idm-field">
+        <div class="idm-label">ID Type</div>
+        <div class="idm-value">{{ detail.recipient.idType }}</div>
+      </div>
+      <div class="idm-field">
+        <div class="idm-label">Reg No</div>
+        <div class="idm-value">{{ detail.recipient.registrationNumber }}</div>
+      </div>
+    </div>
+    <div class="idm-address">
+      {{ detail.recipient.addressLine1 }}, {{ detail.recipient.postcode }} {{ detail.recipient.city }}, {{ detail.recipient.state }}, {{ detail.recipient.countryCode }}
+    </div>
+  </div>
+
+  <!-- Items -->
+  <div class="idm-section">
+    <div class="idm-section-title">Items</div>
+    <div class="idm-table-wrap">
+      <table class="idm-items-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Item</th>
+            <th>Qty</th>
+            <th>Unit Price</th>
+            <th>Tax</th>
+            <th>Discount</th>
+            <th>Subtotal</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of detail.items; track $index) {
+            <tr>
+              <td class="idm-td--num">{{ $index + 1 }}</td>
+              <td>{{ item.itemName }}</td>
+              <td class="idm-td--num">{{ item.quantity }}</td>
+              <td class="idm-td--num">{{ item.unitPrice | number:'1.2-2' }}</td>
+              <td class="idm-td--num">{{ item.taxRate }}%</td>
+              <td class="idm-td--num">{{ item.discountRate }}%</td>
+              <td class="idm-td--num idm-td--total">{{ getItemSubtotal(item) | number:'1.2-2' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Summary -->
+  <div class="idm-section">
+    <div class="idm-section-title">Summary</div>
+    <div class="idm-summary">
+      <div class="idm-summary-row">
+        <span class="idm-summary-label">Net Amount</span>
+        <span class="idm-summary-value">{{ detail.currency }} {{ detail.totalNetAmount | number:'1.2-2' }}</span>
+      </div>
+      <div class="idm-summary-row">
+        <span class="idm-summary-label">Tax</span>
+        <span class="idm-summary-value">{{ detail.currency }} {{ detail.totalTaxAmount | number:'1.2-2' }}</span>
+      </div>
+      @if (detail.totalDiscountAmount > 0) {
+        <div class="idm-summary-row">
+          <span class="idm-summary-label">Discount</span>
+          <span class="idm-summary-value">− {{ detail.currency }} {{ detail.totalDiscountAmount | number:'1.2-2' }}</span>
+        </div>
+      }
+      <div class="idm-summary-divider"></div>
+      <div class="idm-summary-row idm-summary-row--total">
+        <span class="idm-summary-label">Total Payable</span>
+        <span class="idm-summary-value">{{ detail.currency }} {{ detail.totalPayableAmount | number:'1.2-2' }}</span>
+      </div>
+    </div>
+  </div>
+
+  @if (detail.billUrl) {
+    <div class="idm-bill-row">
+      <a [href]="detail.billUrl" target="_blank" class="idm-bill-link">
+        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" viewBox="0 0 16 16">
+          <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8M1.173 8a13 13 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5s3.879 1.168 5.168 2.457A13 13 0 0 1 14.828 8q-.086.13-.195.288c-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5s-3.879-1.168-5.168-2.457A13 13 0 0 1 1.172 8z"/>
+          <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5M4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0"/>
+        </svg>
+        View Bill
+      </a>
+    </div>
+  }
+
+</div>
+
+<div class="idm-footer">
+  <button type="button" class="idm-close-footer-btn" (click)="activeModal.dismiss()">Close</button>
+</div>

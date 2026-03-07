@@ -7,6 +7,8 @@ export const INVOICE_QUEUE_CONFIG = {
   RETRY_DELAY_MS: 60_000,
   /** Delay in milliseconds between invoices in a batch (1.5 seconds) */
   BATCH_DELAY_MS: 1_500,
+  /** Timeout in ms for emitting a single message to the queue (fail-fast on reconnect) */
+  QUEUE_EMIT_TIMEOUT_MS: 5_000,
 } as const;
 
 export const INVOICE_QUEUE_PATTERNS = {
@@ -14,6 +16,9 @@ export const INVOICE_QUEUE_PATTERNS = {
   CREATE:        'receiver-create-invoice',
   RETRY:         'retry-invoice',
   FAILED:        'failed-invoice',
+
+  // Notify email queue
+  NOTIFY_EMAIL:  'notify-invoice-email',
 
   // Payment callback queue
   CALLBACK:      'receiver-update-invoice',

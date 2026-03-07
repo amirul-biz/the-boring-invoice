@@ -13,6 +13,6 @@ export const rabbitMQInvoiceConfig = (noAck = false): RmqOptions => ({
       reconnectTimeInSeconds: 5,
     },
     noAck,
-    prefetchCount: 1,
+    prefetchCount: 3,
   },
 });
