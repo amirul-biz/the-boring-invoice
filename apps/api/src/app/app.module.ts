@@ -45,7 +45,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
         // SMTP transport — Amazon SES
         transport: {
           host: config.get('SMTP_MAILER_HOST'),
-          port: 465,
+          port: 2465,
           secure: true,
           auth: {
             user: config.get('SMTP_MAILER_EMAIL'),
