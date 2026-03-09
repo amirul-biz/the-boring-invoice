@@ -42,6 +42,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
     MailerModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
+        // SMTP transport — Amazon SES
         transport: {
           host: config.get('SMTP_MAILER_HOST'),
           port: 465,
