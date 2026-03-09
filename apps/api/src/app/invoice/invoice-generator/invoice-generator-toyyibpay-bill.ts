@@ -106,10 +106,16 @@ export class ToyyibPayUtil {
         formData,
       );
 
+      this.logger.log(`ToyyibPay createBill raw response: ${JSON.stringify(raw)}`);
+
       // ToyyibPay returns array with single object
       let response: ToyyibPayBillResponse;
       if (Array.isArray(raw) && raw.length > 0) {
-        response = raw[0];
+        const first = raw[0] as any;
+        if (first?.error) {
+          throw new HttpException(`ToyyibPay error: ${first.error}`, HttpStatus.BAD_REQUEST);
+        }
+        response = first as ToyyibPayBillResponse;
       } else if ((raw as any).error) {
         throw new HttpException(`ToyyibPay error: ${(raw as any).error}`, HttpStatus.BAD_REQUEST);
       } else {
@@ -117,7 +123,10 @@ export class ToyyibPayUtil {
       }
 
       if (!response?.BillCode) {
-        throw new HttpException('Failed to create ToyyibPay bill - Invalid response', HttpStatus.BAD_GATEWAY);
+        throw new HttpException(
+          `Failed to create ToyyibPay bill - Invalid response: ${JSON.stringify(response)}`,
+          HttpStatus.BAD_GATEWAY,
+        );
       }
 
       const billCode = response.BillCode;

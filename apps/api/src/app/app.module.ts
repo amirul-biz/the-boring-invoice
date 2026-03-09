@@ -26,6 +26,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
           'SMTP_MAILER_EMAIL',
           'SMTP_MAILER_SERVER_PASSWORD',
           'SMTP_MAILER_HOST',
+          'SMTP_MAILER_FROM',
           'PAYMENT_RETURN_URL',
           'API_URL',
         ];
@@ -41,14 +42,18 @@ import { ThrottlerModule } from '@nestjs/throttler';
     MailerModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
+        // SMTP transport — Amazon SES
         transport: {
           host: config.get('SMTP_MAILER_HOST'),
-          port: 465,
+          port: 2465,
           secure: true,
           auth: {
             user: config.get('SMTP_MAILER_EMAIL'),
             pass: config.get('SMTP_MAILER_SERVER_PASSWORD'),
           },
+        },
+        defaults: {
+          from: `"The Boring Invoice" <${config.get('SMTP_MAILER_FROM')}>`,
         },
       }),
     }),

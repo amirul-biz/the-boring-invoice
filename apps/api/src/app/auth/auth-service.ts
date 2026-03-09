@@ -59,7 +59,7 @@ export class AuthService {
     return {
       httpOnly: true,
       secure: this.isSecure,
-      sameSite: 'lax' as const,
+      sameSite: this.isSecure ? 'none' as const : 'lax' as const,
     };
   }
 

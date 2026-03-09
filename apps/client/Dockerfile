@@ -6,8 +6,8 @@ WORKDIR /app
 # Copy root workspace package files
 COPY package*.json ./
 
-# Install all dependencies
-RUN npm ci
+# Install all dependencies (skip postinstall: prisma generate not needed for client)
+RUN npm ci --ignore-scripts
 
 # Copy full workspace source
 COPY . .
