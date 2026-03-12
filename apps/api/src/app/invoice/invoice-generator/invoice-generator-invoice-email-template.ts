@@ -94,7 +94,7 @@ function generateInvoiceEmailHtml(invoice: ProcessedInvoiceDto): string {
                               </td>
                               <td style="width: 33%; text-align: center;">
                                 <p style="margin: 0; color: #64748b; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Due Date</p>
-                                <p style="margin: 4px 0 0; color: #dc2626; font-size: 14px; font-weight: 600;">${invoice.dueDate}</p>
+                                <p style="margin: 4px 0 0; color: #dc2626; font-size: 14px; font-weight: 600;">${invoice.dueDate.split('T')[0]}</p>
                               </td>
                               <td style="width: 33%; text-align: right;">
                                 <p style="margin: 0; color: #64748b; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Currency</p>
