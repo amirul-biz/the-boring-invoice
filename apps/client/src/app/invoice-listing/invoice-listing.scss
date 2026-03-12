@@ -41,6 +41,10 @@ $radius-btn:           10px;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+
+  @media (max-width: 575px) {
+    padding: 0 1rem;
+  }
 }
 
 .il-title-block {
@@ -72,6 +76,10 @@ $radius-btn:           10px;
   max-width: 1280px;
   margin: 0 auto;
   padding: 2.5rem 2rem;
+
+  @media (max-width: 575px) {
+    padding: 1.25rem 1rem;
+  }
 }
 
 // ─── Stat Cards ──────────────────────────────────────────────────────────────
