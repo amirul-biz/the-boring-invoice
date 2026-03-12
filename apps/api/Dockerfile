@@ -11,7 +11,7 @@ COPY package*.json ./
 COPY prisma ./prisma/
 
 # Install all dependencies (devDeps needed for Nx build)
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 
 # Copy full workspace source
 COPY . .

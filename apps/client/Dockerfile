@@ -7,7 +7,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install all dependencies (skip postinstall: prisma generate not needed for client)
-RUN npm ci --ignore-scripts
+RUN npm ci --ignore-scripts --legacy-peer-deps
 
 # Copy full workspace source
 COPY . .
