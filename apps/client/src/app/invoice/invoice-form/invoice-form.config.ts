@@ -67,7 +67,7 @@ export function recipientForm(): FormGroup<RecipientForm> {
     email: new FormControl<string | null>(null, [Validators.required, Validators.email]),
     phone: new FormControl(null, {
       nonNullable: true,
-      validators: [Validators.required],
+      validators: [Validators.required, Validators.minLength(11), Validators.maxLength(11)],
     }),
     tin: new FormControl(null, {
       nonNullable: true,
@@ -115,7 +115,7 @@ export function invoiceItemForm(): FormGroup<InvoiceItemForm> {
     }),
     unitPrice: new FormControl(0, {
       nonNullable: true,
-      validators: [Validators.required, Validators.min(0)],
+      validators: [Validators.required, Validators.min(0.01)],
     }),
     discountRate: new FormControl(0, {
       nonNullable: true,
@@ -308,12 +308,12 @@ export function getInvoicesData(
     (item) =>
       ({
         itemName: item.itemName,
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        discountRate: item.discountRate ?? 0,
+        quantity: parseInt(String(item.quantity), 10) || 0,
+        unitPrice: parseFloat(String(item.unitPrice).replace(/,/g, '')) || 0,
+        discountRate: parseFloat(String(item.discountRate ?? 0).replace(/,/g, '')) || 0,
         classificationCode: item.classificationCode,
         taxType: item.taxType,
-        taxRate: item.taxRate,
+        taxRate: parseFloat(String(item.taxRate).replace(/,/g, '')) || 0,
       }) as ICreateInvoiceItem,
   );
 

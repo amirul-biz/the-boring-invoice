@@ -135,7 +135,7 @@ export class InvoiceItemDTO {
   quantity: number;
 
   @ApiProperty({ example: 150.00 })
-  @IsNumber() @IsNotEmpty()
+  @IsNumber() @IsNotEmpty() @Min(0.01)
   unitPrice: number;
 
   @ApiProperty({ example: '010', description: 'LHDN Classification Code' })

@@ -37,8 +37,9 @@
           [ngClass]="{'is-invalid': isFieldInvalid(form.controls.businessContactNumber)}"
           id="businessContactNumber"
           formControlName="businessContactNumber"
-          placeholder="+60123456789">
-        <div class="invalid-feedback">Contact number is required</div>
+          mask="00000000000"
+          appPhoneAutoFormat>
+        <div class="invalid-feedback">Contact number must be exactly 11 digits</div>
       </div>
 
       <div class="col-12 col-md-6">
@@ -59,7 +60,8 @@
           class="bif-input form-control"
           [ngClass]="{'is-invalid': isFieldInvalid(form.controls.businessRegistrationNumber)}"
           id="businessRegistrationNumber"
-          formControlName="businessRegistrationNumber">
+          formControlName="businessRegistrationNumber"
+          mask="000000000000">
         <div class="invalid-feedback">Registration number is required</div>
       </div>
 
@@ -70,19 +72,9 @@
           class="bif-input form-control"
           [ngClass]="{'is-invalid': isFieldInvalid(form.controls.msicCode)}"
           id="msicCode"
-          formControlName="msicCode">
+          formControlName="msicCode"
+          mask="00000">
         <div class="invalid-feedback">Valid 5-digit MSIC code is required</div>
-      </div>
-
-      <div class="col-12 col-md-6">
-        <label class="bif-label" for="categoryCode">Category Code</label>
-        <input
-          type="text"
-          class="bif-input form-control"
-          [ngClass]="{'is-invalid': isFieldInvalid(form.controls.categoryCode)}"
-          id="categoryCode"
-          formControlName="categoryCode">
-        <div class="invalid-feedback">Category code is required</div>
       </div>
 
       <div class="col-12 col-md-6">
@@ -139,7 +131,8 @@
           class="bif-input form-control"
           [ngClass]="{'is-invalid': isFieldInvalid(form.controls.postcode)}"
           id="postcode"
-          formControlName="postcode">
+          formControlName="postcode"
+          mask="00000">
         <div class="invalid-feedback">Postcode is required</div>
       </div>
 
@@ -219,6 +212,17 @@
         <div class="invalid-feedback" [class.d-block]="isFieldInvalid(form.controls.userSecretKey)">
           User secret key is required
         </div>
+      </div>
+
+      <div class="col-12 col-md-6">
+        <label class="bif-label" for="categoryCode">Payment Category Code</label>
+        <input
+          type="text"
+          class="bif-input form-control"
+          [ngClass]="{'is-invalid': isFieldInvalid(form.controls.categoryCode)}"
+          id="categoryCode"
+          formControlName="categoryCode">
+        <div class="invalid-feedback">Category code is required</div>
       </div>
 
     </div>

@@ -151,7 +151,9 @@
                 type="tel"
                 class="inv-input form-control"
                 id="supplierContactNumber"
-                formControlName="contactNumber">
+                formControlName="contactNumber"
+                mask="00000000000"
+                appPhoneAutoFormat>
             </div>
 
             <div class="col-12 col-md-4">
@@ -239,24 +241,27 @@
                   <div class="col-12 col-md-2">
                     <label class="inv-label" [for]="'quantity' + $index">Quantity</label>
                     <input
-                      type="number"
+                      type="text"
                       class="inv-input form-control"
                       [ngClass]="{'is-invalid': isFieldInvalid(item.get('quantity'))}"
                       [id]="'quantity' + $index"
-                      formControlName="quantity">
+                      formControlName="quantity"
+                      mask="9999">
                     <div class="invalid-feedback">Quantity must be at least 1</div>
                   </div>
 
                   <div class="col-12 col-md-2">
                     <label class="inv-label" [for]="'unitPrice' + $index">Unit Price</label>
                     <input
-                      type="number"
-                      step="0.01"
+                      type="text"
                       class="inv-input form-control"
                       [ngClass]="{'is-invalid': isFieldInvalid(item.get('unitPrice'))}"
                       [id]="'unitPrice' + $index"
-                      formControlName="unitPrice">
-                    <div class="invalid-feedback">Unit price must be 0 or greater</div>
+                      formControlName="unitPrice"
+                      mask="separator.2"
+                      [thousandSeparator]="','"
+                      appPriceFormat>
+                    <div class="invalid-feedback">Unit price must be greater than 0</div>
                   </div>
 
                   <div class="col-12 col-md-2">
@@ -276,26 +281,24 @@
                   <div class="col-12 col-md-2">
                     <label class="inv-label" [for]="'taxRate' + $index">Tax Rate (%)</label>
                     <input
-                      type="number"
-                      step="0.01"
+                      type="text"
                       class="inv-input form-control"
                       [ngClass]="{'is-invalid': isFieldInvalid(item.get('taxRate'))}"
                       [id]="'taxRate' + $index"
-                      formControlName="taxRate">
+                      formControlName="taxRate"
+                      mask="separator.2">
                     <div class="invalid-feedback">Tax rate is required</div>
                   </div>
 
                   <div class="col-12 col-md-2">
                     <label class="inv-label" [for]="'discountRate' + $index">Discount (%)</label>
                     <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      max="100"
+                      type="text"
                       class="inv-input form-control"
                       [ngClass]="{'is-invalid': isFieldInvalid(item.get('discountRate'))}"
                       [id]="'discountRate' + $index"
                       formControlName="discountRate"
+                      mask="separator.2"
                       placeholder="0">
                     <div class="invalid-feedback">Discount must be 0–100</div>
                   </div>
@@ -384,13 +387,15 @@
                         <div class="col-12 col-md-4">
                           <label class="inv-label" [for]="'recipientPhone' + $index">Phone</label>
                           <input
-                            type="text"
+                            type="tel"
                             class="inv-input form-control"
                             [ngClass]="{'is-invalid': isFieldInvalid(recipient.get('phone'))}"
                             [id]="'recipientPhone' + $index"
                             formControlName="phone"
-                            autocomplete="off">
-                          <div class="invalid-feedback">Phone is required</div>
+                            autocomplete="off"
+                            mask="00000000000"
+                            appPhoneAutoFormat>
+                          <div class="invalid-feedback">Phone must be exactly 11 digits</div>
                         </div>
 
                         <div class="col-12 col-md-4">
@@ -438,7 +443,8 @@
                             [ngClass]="{'is-invalid': isFieldInvalid(recipient.get('registrationNumber'))}"
                             [id]="'recipientRegNum' + $index"
                             formControlName="registrationNumber"
-                            autocomplete="off">
+                            autocomplete="off"
+                            mask="000000000000">
                           <div class="invalid-feedback">Registration number is required</div>
                         </div>
 
@@ -462,7 +468,8 @@
                             [ngClass]="{'is-invalid': isFieldInvalid(recipient.get('postcode'))}"
                             [id]="'recipientPostcode' + $index"
                             formControlName="postcode"
-                            autocomplete="off">
+                            autocomplete="off"
+                            mask="00000">
                           <div class="invalid-feedback">Postcode is required</div>
                         </div>
 

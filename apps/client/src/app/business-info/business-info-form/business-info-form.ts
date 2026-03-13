@@ -1,11 +1,13 @@
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { ReactiveFormsModule, FormGroup } from '@angular/forms';
+import { NgxMaskDirective } from 'ngx-mask';
 import { BusinessInfoForm } from './business-info-form.config';
+import { PhoneAutoFormatDirective } from '../../shared/phone-auto-format.directive';
 
 @Component({
   selector: 'app-business-info-form',
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, NgxMaskDirective, PhoneAutoFormatDirective],
   templateUrl: './business-info-form.html',
   styleUrl: './business-info-form.scss',
 })

@@ -614,7 +614,7 @@ export class InvoiceService {
 
     this.logger.log(`[Callback] Matched transaction — billpaymentStatus: ${match.billpaymentStatus}`);
 
-    const paymentStatus = match.billpaymentStatus === '1' ? InvoiceStatus.PAID : InvoiceStatus.CANCELLED;
+    const paymentStatus = match.billpaymentStatus === '1' ? InvoiceStatus.PAID : invoice.status;
 
     // Use billPaymentDate from getBillTransactions — more reliable than callbackData.transaction_time
     const sanitizedTransactionTime = this.parseBillPaymentDate(match.billPaymentDate);
