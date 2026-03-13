@@ -8,5 +8,6 @@ import { CryptoModule } from '../crypto/crypto.module';
   imports: [CryptoModule],
   controllers: [BusinessInfoController],
   providers: [BusinessInfoService, PrismaService],
+  exports: [BusinessInfoService],
 })
 export class BusinessInfoModule {}

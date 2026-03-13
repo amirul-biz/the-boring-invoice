@@ -110,6 +110,7 @@
     "dotenv": "^17.2.3",
     "exceljs": "^4.4.0",
     "file-saver": "^2.0.5",
+    "ngx-mask": "^21.0.1",
     "ngx-spinner": "^18.0.0",
     "nodemailer": "^7.0.11",
     "passport": "^0.7.0",

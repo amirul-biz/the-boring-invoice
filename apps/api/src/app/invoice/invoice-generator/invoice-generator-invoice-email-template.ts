@@ -165,7 +165,7 @@ function generateInvoiceEmailHtml(invoice: ProcessedInvoiceDto): string {
           <!-- CTA Button -->
           <tr>
             <td style="padding: 0 40px 32px; text-align: center;">
-              <a href="${invoice.billUrl}" style="display: inline-block; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: #ffffff; text-decoration: none; padding: 16px 48px; border-radius: 8px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);">Pay Now</a>
+              <a href="${process.env.API_BASE_URL}/invoice/pay/${invoice.invoiceNo}" style="display: inline-block; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: #ffffff; text-decoration: none; padding: 16px 48px; border-radius: 8px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);">Pay Now</a>
               <p style="margin: 16px 0 0; color: #9ca3af; font-size: 13px;">Accepts FPX & Credit/Debit Cards</p>
             </td>
           </tr>
@@ -243,7 +243,7 @@ TOTAL: ${formatCurrency(invoice.totalPayableAmount)}
 
 PAY NOW
 ───────────────
-${invoice.billUrl}
+${process.env.API_BASE_URL}/invoice/pay/${invoice.invoiceNo}
 
 Accepts FPX & Credit/Debit Cards
 

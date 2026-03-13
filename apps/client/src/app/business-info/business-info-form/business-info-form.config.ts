@@ -60,7 +60,7 @@ export function getBusinessInfoForm(): FormGroup<BusinessInfoForm> {
     sstRegistrationNumber: new FormControl<string | null>(null),
     businessContactNumber: new FormControl(<string | null>(null), {
       nonNullable: true,
-      validators: [Validators.required],
+      validators: [Validators.required, Validators.minLength(11), Validators.maxLength(11)],
     }),
     addressLine1: new FormControl(null, {
       nonNullable: true,

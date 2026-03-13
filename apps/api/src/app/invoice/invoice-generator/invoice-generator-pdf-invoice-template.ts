@@ -48,10 +48,13 @@ export async function generatePdfInvoiceTemplate(
   invoiceData: ProcessedInvoiceDto,
 ): Promise<Buffer> {
   // Generate QR code if billUrl exists
+  const paymentProxyUrl = invoiceData.billUrl
+    ? `${process.env.API_BASE_URL}/invoice/pay/${invoiceData.invoiceNo}`
+    : null;
   let qrBuffer: Buffer | null = null;
-  if (invoiceData.billUrl) {
+  if (paymentProxyUrl) {
     const qrCodeUtil = generateQrCode();
-    qrBuffer = await qrCodeUtil.generatePaymentQR(invoiceData.billUrl, 100);
+    qrBuffer = await qrCodeUtil.generatePaymentQR(paymentProxyUrl, 100);
   }
 
   return new Promise((resolve, reject) => {
@@ -88,7 +91,7 @@ export async function generatePdfInvoiceTemplate(
       const currency = currencyCode === 'MYR' ? 'RM' : currencyCode;
       const businessName = supplier?.name || '';
       const invoiceNo = invoiceData.invoiceNo || '';
-      const billUrl = invoiceData.billUrl || '';
+      const billUrl = paymentProxyUrl || '';
 
       // ============ HEADER SECTION ============
       const headerHeight = 176;

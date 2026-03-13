@@ -4,6 +4,9 @@ import { ActivatedRoute } from '@angular/router';
 import { ReactiveFormsModule, FormGroup, AbstractControl, Validators } from '@angular/forms';
 import { NgbAccordionModule, NgbDatepickerModule, NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { NgxSpinnerModule, NgxSpinnerService } from 'ngx-spinner';
+import { NgxMaskDirective } from 'ngx-mask';
+import { PhoneAutoFormatDirective } from '../shared/phone-auto-format.directive';
+import { PriceFormatDirective } from '../shared/price-format.directive';
 import {
   getInvoiceForm,
   CreateInvoiceForm,
@@ -27,7 +30,7 @@ import { saveAs } from 'file-saver';
 
 @Component({
   selector: 'app-invoice',
-  imports: [CommonModule, ReactiveFormsModule, NgbAccordionModule, NgbDatepickerModule, NgxSpinnerModule],
+  imports: [CommonModule, ReactiveFormsModule, NgbAccordionModule, NgbDatepickerModule, NgxSpinnerModule, NgxMaskDirective, PhoneAutoFormatDirective, PriceFormatDirective],
   templateUrl: './invoice.html',
   styleUrl: './invoice.scss',
 })

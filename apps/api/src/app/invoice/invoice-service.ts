@@ -356,6 +356,12 @@ export class InvoiceService {
     }
   }
 
+  async getPaymentRedirectUrl(invoiceNo: string): Promise<string> {
+    const invoice = await getInvoiceByNumber(this.prisma, invoiceNo, this.logger);
+    if (!invoice.billUrl) throw new HttpException('Payment link not available', HttpStatus.NOT_FOUND);
+    return invoice.billUrl;
+  }
+
   async getInvoiceList(encodedBusinessId: string, userId: string, query: InvoiceListQuery): Promise<PaginatedInvoiceList> {
     await this.businessInfoService.verifyOwnership(encodedBusinessId, userId);
     const businessId = this.cryptoService.decodeId(encodedBusinessId);
@@ -614,7 +620,7 @@ export class InvoiceService {
 
     this.logger.log(`[Callback] Matched transaction — billpaymentStatus: ${match.billpaymentStatus}`);
 
-    const paymentStatus = match.billpaymentStatus === '1' ? InvoiceStatus.PAID : InvoiceStatus.CANCELLED;
+    const paymentStatus = match.billpaymentStatus === '1' ? InvoiceStatus.PAID : invoice.status;
 
     // Use billPaymentDate from getBillTransactions — more reliable than callbackData.transaction_time
     const sanitizedTransactionTime = this.parseBillPaymentDate(match.billPaymentDate);

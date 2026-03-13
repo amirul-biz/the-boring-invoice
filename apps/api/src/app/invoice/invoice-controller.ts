@@ -54,6 +54,16 @@ export class InvoiceController {
     res.send(buffer);
   }
 
+  @Get('pay/:invoiceNo')
+  @ApiOperation({ summary: 'Redirect to ToyyibPay payment page' })
+  @ApiParam({ name: 'invoiceNo', type: String })
+  @ApiResponse({ status: 302, description: 'Redirect to payment page' })
+  @ApiResponse({ status: 404, description: 'Invoice not found or payment link not available' })
+  async payInvoice(@Param('invoiceNo') invoiceNo: string, @Res() res: Response): Promise<void> {
+    const billUrl = await this.invoiceService.getPaymentRedirectUrl(invoiceNo);
+    res.redirect(billUrl);
+  }
+
   @Get('list/:businessId')
   @ApiOperation({ summary: 'Get paginated invoice list' })
   @ApiParam({ name: 'businessId', type: String })
