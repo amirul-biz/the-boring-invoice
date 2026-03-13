@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { BusinessInfoService } from './business-info-service';
-import { CreateBusinessInfoBody, UpdateBusinessInfoData } from './business-info-interface';
+import { CreateBusinessInfoDTO, UpdateBusinessInfoDTO } from './business-info-dto';
 import { UserById } from '../decorator/user.decorator';
 
 @ApiTags('BusinessInfo')
@@ -19,7 +19,7 @@ export class BusinessInfoController {
 
   @Post()
   @ApiOperation({ summary: 'Create business information' })
-  async create(@UserById() userId: string, @Body() data: CreateBusinessInfoBody) {
+  async create(@UserById() userId: string, @Body() data: CreateBusinessInfoDTO) {
     return this.businessInfoService.create(userId, data);
   }
 
@@ -30,7 +30,7 @@ export class BusinessInfoController {
   }
 
   @Get(':id/public')
-  @ApiOperation({ summary: 'Get business information by ID without sensitive data' })
+  @ApiOperation({ summary: 'Get public business information (no sensitive fields)' })
   async findPublicById(@Param('id') id: string) {
     return this.businessInfoService.findPublicById(id);
   }
@@ -43,7 +43,7 @@ export class BusinessInfoController {
 
   @Put(':id')
   @ApiOperation({ summary: 'Update business information' })
-  async update(@Param('id') id: string, @UserById() userId: string, @Body() data: UpdateBusinessInfoData) {
+  async update(@Param('id') id: string, @UserById() userId: string, @Body() data: UpdateBusinessInfoDTO) {
     return this.businessInfoService.update(id, userId, data);
   }
 

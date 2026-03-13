@@ -1,7 +1,8 @@
 import { Logger, HttpException, HttpStatus } from '@nestjs/common';
 import { PrismaService } from '@prismaService';
 import { BusinessInformation, IdType, Prisma } from '@prisma/client';
-import { BusinessInfoPublicData, CreateBusinessInfoData, PaymentIntegrationCredential, UpdateBusinessInfoData } from './business-info-interface';
+import { BusinessInfoPublicData, CreateBusinessInfoData, PaymentIntegrationCredential } from './business-info-interface';
+import { UpdateBusinessInfoDTO } from './business-info-dto';
 
 export async function createBusinessInfo(
   prisma: PrismaService,
@@ -21,6 +22,7 @@ export async function createBusinessInfo(
         msicCode: data.msicCode,
         categoryCode: data.categoryCode,
         userSecretKey: data.userSecretKey,
+        businessContactNumber: data.businessContactNumber,
         idType: data.idType as IdType,
         sstRegistrationNumber: data.sstRegistrationNumber,
         address: data.address as unknown as Prisma.InputJsonValue,
@@ -146,7 +148,7 @@ export async function getPaymentIntegrationCredential(
 export async function updateBusinessInfo(
   prisma: PrismaService,
   id: string,
-  data: UpdateBusinessInfoData,
+  data: UpdateBusinessInfoDTO,
   logger: Logger,
 ): Promise<BusinessInformation> {
   try {

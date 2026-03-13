@@ -1,31 +1,12 @@
-export interface BusinessAddress {
-  addressLine1: string;
-  city: string;
-  postcode: string;
-  state: string;
-  country: string;
-}
+import { BusinessAddressDTO } from './business-info-dto';
+import { CreateBusinessInfoDTO } from './business-info-dto';
 
-export interface CreateBusinessInfoBody {
-  businessName: string;
-  businessEmail: string;
-  taxIdentificationNumber: string;
-  businessRegistrationNumber: string;
-  businessActivityDescription: string;
-  msicCode: string;
-  categoryCode: string;
-  userSecretKey: string;
-  idType: string;
-  sstRegistrationNumber?: string;
-  businessContactNumber: string;
-  address: BusinessAddress;
-  invoiceVersion: string;
-}
-
-export interface CreateBusinessInfoData extends CreateBusinessInfoBody {
+// Internal: extends DTO with userId added by the service before calling the repository
+export interface CreateBusinessInfoData extends CreateBusinessInfoDTO {
   userId: string;
 }
 
+// Internal: response shape for public endpoint (no userSecretKey)
 export interface BusinessInfoPublicData {
   id: string;
   businessName: string;
@@ -38,27 +19,12 @@ export interface BusinessInfoPublicData {
   idType?: string;
   sstRegistrationNumber?: string;
   businessContactNumber: string;
-  address?: BusinessAddress;
+  address?: BusinessAddressDTO;
   invoiceVersion: string;
 }
 
+// Internal: used by queue consumers — never exposed over HTTP
 export interface PaymentIntegrationCredential {
   categoryCode: string;
   userSecretKey: string;
-}
-
-export interface UpdateBusinessInfoData {
-  businessName?: string;
-  businessEmail?: string;
-  taxIdentificationNumber?: string;
-  businessRegistrationNumber?: string;
-  businessActivityDescription?: string;
-  msicCode?: string;
-  categoryCode?: string;
-  userSecretKey?: string;
-  idType?: string;
-  sstRegistrationNumber?: string;
-  businessContactNumber?: string;
-  address?: Partial<BusinessAddress>;
-  invoiceVersion?: string;
 }
