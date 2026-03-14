@@ -21,10 +21,11 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { CreateInvoiceInputDTO, InvoiceListQueryDTO, NotifyEmailBatchDTO, ProcessedInvoiceDto } from './invoice-dto';
+import { CreateInvoiceInputDTO, DeactivateBatchDTO, InvoiceListQueryDTO, NotifyEmailBatchDTO, ProcessedInvoiceDto } from './invoice-dto';
 import {
   InvoiceService,
   CreateInvoiceMessage,
+  DeactivateMessage,
   RetryInvoiceMessage,
   RetryPaymentCallbackMessage,
   FailedInvoiceMessage,
@@ -136,21 +137,22 @@ export class InvoiceController {
     await this.invoiceService.queueNotifyEmailBatch(businessId, body.invoiceNumbers, userId);
   }
 
-  @Post('deactivate/:businessId/:invoiceNo')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Deactivate invoice and cancel ToyyibPay bill' })
+  /**
+   * Queue a batch of invoice deactivations for async processing
+   */
+  @Post('deactivate/:businessId')
+  @HttpCode(HttpStatus.ACCEPTED)
+  @ApiOperation({ summary: 'Queue batch invoice deactivation' })
   @ApiParam({ name: 'businessId', type: String })
-  @ApiParam({ name: 'invoiceNo', type: String })
-  @ApiResponse({ status: 200, description: 'Invoice deactivated successfully' })
-  @ApiResponse({ status: 400, description: 'Invoice is already paid' })
+  @ApiBody({ type: DeactivateBatchDTO })
+  @ApiResponse({ status: 202, description: 'Deactivation batch queued' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 404, description: 'Invoice not found' })
-  async deactivateInvoice(
+  async queueDeactivateBatch(
     @Param('businessId') businessId: string,
-    @Param('invoiceNo') invoiceNo: string,
+    @Body() body: DeactivateBatchDTO,
     @UserById() userId: string,
   ): Promise<void> {
-    await this.invoiceService.deactivateInvoice(businessId, invoiceNo, userId);
+    await this.invoiceService.queueDeactivateBatch(businessId, body.invoiceNumbers, userId);
   }
 
   /**
@@ -212,6 +214,23 @@ export class InvoiceController {
     const originalMsg = context.getMessage();
     await this.invoiceService.processNotifyEmailBatch(data);
     this.logger.log(`[Queue] Notify-email batch complete — acking message`);
+    channel.ack(originalMsg);
+  }
+
+  /**
+   * Event consumer for deactivation batch queue
+   * Deactivates each invoice with a 1.5 s gap between items
+   */
+  @EventPattern(INVOICE_QUEUE_PATTERNS.DEACTIVATE)
+  async receiverDeactivate(
+    @Payload() data: DeactivateMessage,
+    @Ctx() context: RmqContext,
+  ): Promise<void> {
+    this.logger.log(`[Queue] Deactivate consumer triggered — ${data.invoiceNumbers.length} invoice(s): [${data.invoiceNumbers.join(', ')}]`);
+    const channel = context.getChannelRef();
+    const originalMsg = context.getMessage();
+    await this.invoiceService.processDeactivateBatch(data);
+    this.logger.log(`[Queue] Deactivate batch complete — acking message`);
     channel.ack(originalMsg);
   }
 

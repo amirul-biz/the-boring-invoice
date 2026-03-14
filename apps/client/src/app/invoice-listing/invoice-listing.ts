@@ -125,15 +125,41 @@ export class InvoiceListing implements OnInit, OnDestroy {
 
     this.spinner.show();
     this.invoiceListingService
-      .deactivateInvoice(this.businessId, invoice.invoiceNo)
+      .deactivateInvoice(this.businessId, [invoice.invoiceNo])
       .pipe(finalize(() => this.spinner.hide()))
       .subscribe({
         next: async () => {
-          await successModal('Deactivated', `Invoice ${invoice.invoiceNo} has been deactivated.`);
+          await successModal('Queued', `Deactivation of ${invoice.invoiceNo} has been queued.`);
           this.getInvoiceList();
         },
         error: async (err) => {
-          const message = err?.error?.message || 'Failed to deactivate invoice.';
+          const message = err?.error?.message || 'Failed to queue deactivation.';
+          await errorModal('Error', message);
+        },
+      });
+  }
+
+  async onBatchDeactivate(): Promise<void> {
+    const invoiceNumbers = this.getCheckedPendingInvoice();
+    if (invoiceNumbers.length === 0) return;
+
+    const confirmed = await confirmModal(
+      `Deactivate ${invoiceNumbers.length} Invoice(s)?`,
+      `The following invoices will be cancelled and their payment links deactivated: ${invoiceNumbers.join(', ')}. This cannot be undone.`,
+    );
+    if (!confirmed) return;
+
+    this.spinner.show();
+    this.invoiceListingService
+      .deactivateInvoice(this.businessId, invoiceNumbers)
+      .pipe(finalize(() => this.spinner.hide()))
+      .subscribe({
+        next: async () => {
+          await successModal('Queued', `Deactivation queued for ${invoiceNumbers.length} invoice(s).`);
+          this.getInvoiceList();
+        },
+        error: async (err) => {
+          const message = err?.error?.message || 'Failed to queue deactivation.';
           await errorModal('Error', message);
         },
       });
@@ -143,8 +169,16 @@ export class InvoiceListing implements OnInit, OnDestroy {
     return this.invoices.filter(i => i.isChecked).length;
   }
 
+  get checkedPendingCount(): number {
+    return this.invoices.filter(i => i.isChecked && i.status === 'PENDING').length;
+  }
+
   getCheckedInvoice(): string[] {
     return this.invoices.filter(i => i.isChecked).map(i => i.invoiceNo);
+  }
+
+  getCheckedPendingInvoice(): string[] {
+    return this.invoices.filter(i => i.isChecked && i.status === 'PENDING').map(i => i.invoiceNo);
   }
 
   async onBatchNotifyByEmail(): Promise<void> {

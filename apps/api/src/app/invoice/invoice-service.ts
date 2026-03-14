@@ -86,6 +86,12 @@ export interface NotifyEmailMessage {
   userId: string;
 }
 
+export interface DeactivateMessage {
+  rawBusinessId: string;
+  invoiceNumbers: string[];
+  userId: string;
+}
+
 @Injectable()
 export class InvoiceService {
   private readonly logger = new Logger(InvoiceService.name);
@@ -403,41 +409,87 @@ export class InvoiceService {
     };
   }
 
-  async deactivateInvoice(encodedBusinessId: string, invoiceNo: string, userId: string): Promise<void> {
-    // 1. Verify ownership (throws 401 if user doesn't own business)
+  /**
+   * Queue a batch of invoice deactivations for async processing.
+   * Verifies ownership at HTTP time; consumer processes with 1.5 s gap between items.
+   */
+  async queueDeactivateBatch(
+    encodedBusinessId: string,
+    invoiceNumbers: string[],
+    userId: string,
+  ): Promise<void> {
+    this.logger.log(`[Deactivate:1] Verifying ownership for user ${userId}`);
     await this.businessInfoService.verifyOwnership(encodedBusinessId, userId);
 
-    // 2. Decode to raw UUID for DB comparisons and credential lookup
+    this.logger.log(`[Deactivate:2] Ownership verified — decoding businessId`);
     const rawBusinessId = this.cryptoService.decodeId(encodedBusinessId);
 
-    // 3. Get invoice
+    this.logger.log(`[Deactivate:3] Emitting batch to queue — invoices: [${invoiceNumbers.join(', ')}]`);
+    const message: DeactivateMessage = { rawBusinessId, invoiceNumbers, userId };
+    await this.queueService.sendMessageQue(INVOICE_QUEUE_PATTERNS.DEACTIVATE, message);
+    this.logger.log(`[Deactivate:4] Batch queued successfully — ${invoiceNumbers.length} invoice(s) by user ${userId}`);
+  }
+
+  /**
+   * Process a batch of invoice deactivations from the queue.
+   * Deactivates each with a 1.5 s delay; continues batch on individual failure.
+   */
+  async processDeactivateBatch(data: DeactivateMessage): Promise<void> {
+    const { rawBusinessId, invoiceNumbers, userId } = data;
+    const total = invoiceNumbers.length;
+
+    this.logger.log(`[Deactivate:Consumer:1] Batch processing started — ${total} invoice(s): [${invoiceNumbers.join(', ')}]`);
+
+    for (let i = 0; i < total; i++) {
+      const invoiceNo = invoiceNumbers[i];
+      this.logger.log(`[Deactivate:Consumer:2] Processing ${i + 1}/${total} — ${invoiceNo}`);
+      try {
+        await this.deactivateSingleInvoice(rawBusinessId, invoiceNo, userId);
+        this.logger.log(`[Deactivate:Consumer:3] ${invoiceNo} — deactivated successfully`);
+      } catch (err) {
+        this.logger.error(`[Deactivate:Consumer:3] ${invoiceNo} — failed: ${err.message}`);
+      }
+
+      if (i < total - 1) {
+        this.logger.log(`[Deactivate:Consumer:4] Waiting ${INVOICE_QUEUE_CONFIG.BATCH_DELAY_MS}ms before next deactivation`);
+        await this.delay(INVOICE_QUEUE_CONFIG.BATCH_DELAY_MS);
+      }
+    }
+
+    this.logger.log(`[Deactivate:Consumer:5] Batch processing complete — ${total} invoice(s) processed`);
+  }
+
+  /**
+   * Deactivate a single invoice: calls ToyyibPay then cancels in DB.
+   * Throws if invoice not found, belongs to different business, or is already PAID.
+   * @private
+   */
+  private async deactivateSingleInvoice(rawBusinessId: string, invoiceNo: string, userId: string): Promise<void> {
+    this.logger.log(`[Deactivate:Single:1] Fetching invoice ${invoiceNo} from DB`);
     const invoice = await findInvoiceByNumber(this.prisma, invoiceNo, this.logger);
     if (!invoice) {
       throw new HttpException(`Invoice ${invoiceNo} not found`, HttpStatus.NOT_FOUND);
     }
 
-    // 4. Check invoice belongs to this business
     if (invoice.businessId !== rawBusinessId) {
+      this.logger.warn(`[Deactivate:Single:X] BusinessId mismatch — invoice belongs to ${invoice.businessId}, expected ${rawBusinessId}`);
       throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
     }
 
-    // 5. Block deactivation of paid invoices
     if (invoice.status === InvoiceStatus.PAID) {
+      this.logger.warn(`[Deactivate:Single:X] Skipping ${invoiceNo} — invoice is already PAID`);
       throw new HttpException('Cannot deactivate a paid invoice', HttpStatus.BAD_REQUEST);
     }
 
-    // 6. Get payment credential with decrypted userSecretKey (requires raw UUID)
     const paymentCredential = await this.businessInfoService.getPaymentIntegrationCredential(rawBusinessId);
 
-    // 7. Deactivate ToyyibPay bill first — await so DB update only happens after
     if (invoice.billCode) {
       await ToyyibPayUtil.deactivateBill(invoice.billCode, paymentCredential.userSecretKey);
-      this.logger.log(`ToyyibPay bill deactivated for ${invoiceNo}`);
+      this.logger.log(`[Deactivate:Single:2] ToyyibPay bill deactivated for ${invoiceNo}`);
     }
 
-    // 8. Update DB status to CANCELLED
     await cancelInvoice(this.prisma, invoiceNo, this.logger);
-    this.logger.log(`Invoice ${invoiceNo} deactivated by user ${userId}`);
+    this.logger.log(`[Deactivate:Single:3] Invoice ${invoiceNo} cancelled in DB (triggered by user ${userId})`);
   }
 
   /**

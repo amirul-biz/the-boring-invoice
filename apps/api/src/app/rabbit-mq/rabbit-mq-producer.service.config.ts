@@ -64,6 +64,7 @@ export class RabbitMqProducerService implements OnModuleInit, OnModuleDestroy {
       case INVOICE_QUEUE_PATTERNS.CREATE:
       case INVOICE_QUEUE_PATTERNS.RETRY:
       case INVOICE_QUEUE_PATTERNS.FAILED:
+      case INVOICE_QUEUE_PATTERNS.DEACTIVATE:
       default:
         await lastValueFrom(
           this.invoiceClient.emit(pattern, data).pipe(

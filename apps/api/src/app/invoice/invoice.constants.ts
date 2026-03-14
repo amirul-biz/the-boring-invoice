@@ -20,6 +20,9 @@ export const INVOICE_QUEUE_PATTERNS = {
   // Notify email queue
   NOTIFY_EMAIL:  'notify-invoice-email',
 
+  // Deactivation queue
+  DEACTIVATE:    'deactivate-invoice',
+
   // Payment callback queue
   CALLBACK:      'receiver-update-invoice',
   CALLBACK_RETRY: 'retry-payment-callback',

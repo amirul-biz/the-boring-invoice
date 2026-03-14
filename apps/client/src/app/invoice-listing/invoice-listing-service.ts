@@ -50,10 +50,10 @@ export class InvoiceListingService {
     );
   }
 
-  deactivateInvoice(businessId: string, invoiceNo: string): Observable<void> {
+  deactivateInvoice(businessId: string, invoiceNumbers: string[]): Observable<void> {
     return this.http.post<void>(
-      `${this.apiUrl}/invoice/deactivate/${businessId}/${invoiceNo}`,
-      {},
+      `${this.apiUrl}/invoice/deactivate/${businessId}`,
+      { invoiceNumbers },
     );
   }
 
