@@ -8,8 +8,8 @@ import { InvoiceStatus, Invoice } from '@prisma/client';
 export interface UpdateInvoiceStatusData {
   invoiceNo: string;
   status: InvoiceStatus;
-  transactionId: string;
-  transactionTime: string;
+  transactionId?: string;
+  transactionTime?: string;
 }
 
 /**

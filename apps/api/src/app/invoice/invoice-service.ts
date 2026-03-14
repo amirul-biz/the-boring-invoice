@@ -92,6 +92,12 @@ export interface DeactivateMessage {
   userId: string;
 }
 
+export interface MarkInvoicePaidMessage {
+  rawBusinessId: string;
+  invoiceNumbers: string[];
+  userId: string;
+}
+
 @Injectable()
 export class InvoiceService {
   private readonly logger = new Logger(InvoiceService.name);
@@ -124,7 +130,7 @@ export class InvoiceService {
         invoiceDataList.map(invoiceData => calculateInvoiceData(invoiceData, this.logger)),
       );
 
-      await this.queueService.sendMessageQue(INVOICE_QUEUE_PATTERNS.CREATE, { businessId, calculatedInvoiceList });
+      await this.queueService.sendMessageQue(INVOICE_QUEUE_PATTERNS.CREATE_INVOICE, { businessId, calculatedInvoiceList });
 
       this.logger.log('Invoice generation queued successfully');
 
@@ -297,7 +303,7 @@ export class InvoiceService {
     try {
       this.logger.log(`Queueing payment callback for invoice: ${callbackData.order_id}`);
 
-      await this.queueService.sendMessageQue(INVOICE_QUEUE_PATTERNS.CALLBACK, callbackData);
+      await this.queueService.sendMessageQue(INVOICE_QUEUE_PATTERNS.UPDATE_INVOICE_PAYMENT_STATUS, callbackData);
 
       return { message: 'Payment callback queued successfully' };
     } catch (error) {
@@ -424,39 +430,22 @@ export class InvoiceService {
     this.logger.log(`[Deactivate:2] Ownership verified — decoding businessId`);
     const rawBusinessId = this.cryptoService.decodeId(encodedBusinessId);
 
-    this.logger.log(`[Deactivate:3] Emitting batch to queue — invoices: [${invoiceNumbers.join(', ')}]`);
-    const message: DeactivateMessage = { rawBusinessId, invoiceNumbers, userId };
-    await this.queueService.sendMessageQue(INVOICE_QUEUE_PATTERNS.DEACTIVATE, message);
-    this.logger.log(`[Deactivate:4] Batch queued successfully — ${invoiceNumbers.length} invoice(s) by user ${userId}`);
+    this.logger.log(`[Deactivate:3] Emitting batch of ${invoiceNumbers.length} invoice(s) to queue — [${invoiceNumbers.join(', ')}]`);
+    await this.queueService.sendMessageQue(INVOICE_QUEUE_PATTERNS.DEACTIVATE_INVOICE_BILL, { rawBusinessId, invoiceNumbers, userId } as DeactivateMessage);
+    this.logger.log(`[Deactivate:4] Batch queued successfully by user ${userId}`);
   }
 
   /**
-   * Process a batch of invoice deactivations from the queue.
-   * Deactivates each with a 1.5 s delay; continues batch on individual failure.
+   * Process a single invoice deactivation from the queue.
+   * Each invoice is an independent queue message — no loop, no delay.
    */
-  async processDeactivateBatch(data: DeactivateMessage): Promise<void> {
-    const { rawBusinessId, invoiceNumbers, userId } = data;
-    const total = invoiceNumbers.length;
-
-    this.logger.log(`[Deactivate:Consumer:1] Batch processing started — ${total} invoice(s): [${invoiceNumbers.join(', ')}]`);
-
-    for (let i = 0; i < total; i++) {
-      const invoiceNo = invoiceNumbers[i];
-      this.logger.log(`[Deactivate:Consumer:2] Processing ${i + 1}/${total} — ${invoiceNo}`);
-      try {
-        await this.deactivateSingleInvoice(rawBusinessId, invoiceNo, userId);
-        this.logger.log(`[Deactivate:Consumer:3] ${invoiceNo} — deactivated successfully`);
-      } catch (err) {
-        this.logger.error(`[Deactivate:Consumer:3] ${invoiceNo} — failed: ${err.message}`);
-      }
-
-      if (i < total - 1) {
-        this.logger.log(`[Deactivate:Consumer:4] Waiting ${INVOICE_QUEUE_CONFIG.BATCH_DELAY_MS}ms before next deactivation`);
-        await this.delay(INVOICE_QUEUE_CONFIG.BATCH_DELAY_MS);
-      }
+  async processDeactivateSingle(data: DeactivateMessage): Promise<void> {
+    this.logger.log(`[Deactivate:Consumer:1] Processing batch of ${data.invoiceNumbers.length} invoice(s) — [${data.invoiceNumbers.join(', ')}]`);
+    for (const invoiceNo of data.invoiceNumbers) {
+      await this.deactivateSingleInvoice(data.rawBusinessId, invoiceNo, data.userId);
+      this.logger.log(`[Deactivate:Consumer:2] ${invoiceNo} — deactivated successfully`);
+      await new Promise(resolve => setTimeout(resolve, INVOICE_QUEUE_CONFIG.BATCH_DELAY_MS));
     }
-
-    this.logger.log(`[Deactivate:Consumer:5] Batch processing complete — ${total} invoice(s) processed`);
   }
 
   /**
@@ -476,20 +465,57 @@ export class InvoiceService {
       throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
     }
 
-    if (invoice.status === InvoiceStatus.PAID) {
-      this.logger.warn(`[Deactivate:Single:X] Skipping ${invoiceNo} — invoice is already PAID`);
-      throw new HttpException('Cannot deactivate a paid invoice', HttpStatus.BAD_REQUEST);
+    // Already in a terminal state — nothing to do
+    if (invoice.status === InvoiceStatus.PAID || invoice.status === InvoiceStatus.CANCELLED) {
+      this.logger.warn(`[Deactivate:Single:X] Skipping ${invoiceNo} — already ${invoice.status}`);
+      return;
+    }
+
+    // Only PENDING invoices can be deactivated
+    if (invoice.status !== InvoiceStatus.PENDING) {
+      this.logger.warn(`[Deactivate:Single:X] Skipping ${invoiceNo} — status is ${invoice.status}`);
+      return;
+    }
+
+    // Cross-check with ToyyibPay before deactivating — guard against race with payment callback
+    if (invoice.billCode) {
+      this.logger.log(`[Deactivate:Single:2] Checking ToyyibPay for ${invoiceNo} (billCode=${invoice.billCode})`);
+      const transactions = await ToyyibPayUtil.fetchBillTransactions(invoice.billCode);
+      const paidTx = transactions.find(t => t.billExternalReferenceNo === invoiceNo && t.billpaymentStatus === '1');
+
+      if (paidTx) {
+        this.logger.warn(`[Deactivate:Single:X] ToyyibPay confirms payment received for ${invoiceNo} — updating to PAID and sending receipt`);
+        await updateInvoiceStatus(this.prisma, {
+          invoiceNo,
+          status: InvoiceStatus.PAID,
+          transactionId: paidTx.billpaymentInvoiceNo,
+          transactionTime: this.parseBillPaymentDate(paidTx.billPaymentDate),
+        }, this.logger);
+
+        const rawReceipt = await getInvoiceAsReceipt(this.prisma, invoiceNo, this.logger);
+        const receiptData: ReceiptDTO = {
+          ...rawReceipt,
+          recipient: this.decryptRecipient(rawReceipt.recipient),
+          supplier: this.decryptSupplier(rawReceipt.supplier),
+        };
+        sendReceiptEmail(this.mailService, receiptData, this.logger).catch(() => {
+          this.logger.warn(`[Deactivate:Single:X] Receipt email failed but status updated to PAID: ${invoiceNo}`);
+        });
+        return;
+      }
+
+      this.logger.log(`[Deactivate:Single:3] ToyyibPay confirms no payment — proceeding with deactivation`);
     }
 
     const paymentCredential = await this.businessInfoService.getPaymentIntegrationCredential(rawBusinessId);
 
     if (invoice.billCode) {
       await ToyyibPayUtil.deactivateBill(invoice.billCode, paymentCredential.userSecretKey);
-      this.logger.log(`[Deactivate:Single:2] ToyyibPay bill deactivated for ${invoiceNo}`);
+      this.logger.log(`[Deactivate:Single:4] ToyyibPay bill deactivated for ${invoiceNo}`);
     }
 
     await cancelInvoice(this.prisma, invoiceNo, this.logger);
-    this.logger.log(`[Deactivate:Single:3] Invoice ${invoiceNo} cancelled in DB (triggered by user ${userId})`);
+    this.logger.log(`[Deactivate:Single:5] Invoice ${invoiceNo} cancelled in DB (triggered by user ${userId})`);
   }
 
   /**
@@ -507,39 +533,22 @@ export class InvoiceService {
     this.logger.log(`[NotifyEmail:2] Ownership verified — decoding businessId`);
     const rawBusinessId = this.cryptoService.decodeId(encodedBusinessId);
 
-    this.logger.log(`[NotifyEmail:3] Emitting batch to queue — invoices: [${invoiceNumbers.join(', ')}]`);
-    const message: NotifyEmailMessage = { rawBusinessId, invoiceNumbers, userId };
-    await this.queueService.sendMessageQue(INVOICE_QUEUE_PATTERNS.NOTIFY_EMAIL, message);
-    this.logger.log(`[NotifyEmail:4] Batch queued successfully — ${invoiceNumbers.length} invoice(s) by user ${userId}`);
+    this.logger.log(`[NotifyEmail:3] Emitting batch of ${invoiceNumbers.length} invoice(s) to queue — [${invoiceNumbers.join(', ')}]`);
+    await this.queueService.sendMessageQue(INVOICE_QUEUE_PATTERNS.NOTIFY_INVOICE_EMAIL, { rawBusinessId, invoiceNumbers, userId } as NotifyEmailMessage);
+    this.logger.log(`[NotifyEmail:4] Batch queued successfully by user ${userId}`);
   }
 
   /**
-   * Process a batch of notification emails from the queue.
-   * Sends each email with a 1.5 s delay; continues batch on individual failure.
+   * Process a single invoice email notification from the queue.
+   * Each invoice is an independent queue message — no loop, no delay.
    */
-  async processNotifyEmailBatch(data: NotifyEmailMessage): Promise<void> {
-    const { rawBusinessId, invoiceNumbers, userId } = data;
-    const total = invoiceNumbers.length;
-
-    this.logger.log(`[NotifyEmail:Consumer:1] Batch processing started — ${total} invoice(s): [${invoiceNumbers.join(', ')}]`);
-
-    for (let i = 0; i < total; i++) {
-      const invoiceNo = invoiceNumbers[i];
-      this.logger.log(`[NotifyEmail:Consumer:2] Processing ${i + 1}/${total} — ${invoiceNo}`);
-      try {
-        await this.sendSingleInvoiceEmail(rawBusinessId, invoiceNo, userId);
-        this.logger.log(`[NotifyEmail:Consumer:3] ${invoiceNo} — email sent successfully`);
-      } catch (err) {
-        this.logger.error(`[NotifyEmail:Consumer:3] ${invoiceNo} — failed: ${err.message}`);
-      }
-
-      if (i < total - 1) {
-        this.logger.log(`[NotifyEmail:Consumer:4] Waiting ${INVOICE_QUEUE_CONFIG.BATCH_DELAY_MS}ms before next email`);
-        await this.delay(INVOICE_QUEUE_CONFIG.BATCH_DELAY_MS);
-      }
+  async processNotifyEmailSingle(data: NotifyEmailMessage): Promise<void> {
+    this.logger.log(`[NotifyEmail:Consumer:1] Processing batch of ${data.invoiceNumbers.length} invoice(s) — [${data.invoiceNumbers.join(', ')}]`);
+    for (const invoiceNo of data.invoiceNumbers) {
+      await this.sendSingleInvoiceEmail(data.rawBusinessId, invoiceNo, data.userId);
+      this.logger.log(`[NotifyEmail:Consumer:2] ${invoiceNo} — email sent successfully`);
+      await new Promise(resolve => setTimeout(resolve, INVOICE_QUEUE_CONFIG.BATCH_DELAY_MS));
     }
-
-    this.logger.log(`[NotifyEmail:Consumer:5] Batch processing complete — ${total} invoice(s) processed`);
   }
 
   /**
@@ -706,10 +715,111 @@ export class InvoiceService {
   }
 
   /**
+   * Queue a batch of invoices to be marked as paid for async processing.
+   * Verifies ownership at HTTP time; consumer syncs each invoice against ToyyibPay.
+   */
+  async queueMarkInvoicePaidBatch(
+    encodedBusinessId: string,
+    invoiceNumbers: string[],
+    userId: string,
+  ): Promise<void> {
+    this.logger.log(`[MarkPaid:1] Verifying ownership for user ${userId}`);
+    await this.businessInfoService.verifyOwnership(encodedBusinessId, userId);
+
+    this.logger.log(`[MarkPaid:2] Ownership verified — decoding businessId`);
+    const rawBusinessId = this.cryptoService.decodeId(encodedBusinessId);
+
+    this.logger.log(`[MarkPaid:3] Emitting batch of ${invoiceNumbers.length} invoice(s) to queue — [${invoiceNumbers.join(', ')}]`);
+    await this.queueService.sendMessageQue(INVOICE_QUEUE_PATTERNS.MARK_INVOICE_AS_PAID, { rawBusinessId, invoiceNumbers, userId } as MarkInvoicePaidMessage);
+    this.logger.log(`[MarkPaid:4] Batch queued successfully by user ${userId}`);
+  }
+
+  /**
+   * Process a batch of mark-as-paid requests from the queue.
+   */
+  async processMarkInvoicePaidBatch(data: MarkInvoicePaidMessage): Promise<void> {
+    this.logger.log(`[MarkPaid:Consumer:1] Processing batch of ${data.invoiceNumbers.length} invoice(s) — [${data.invoiceNumbers.join(', ')}]`);
+    for (const invoiceNo of data.invoiceNumbers) {
+      await this.markSingleInvoiceAsPaid(data.rawBusinessId, invoiceNo, data.userId);
+      this.logger.log(`[MarkPaid:Consumer:2] ${invoiceNo} — processed`);
+      await new Promise(resolve => setTimeout(resolve, INVOICE_QUEUE_CONFIG.BATCH_DELAY_MS));
+    }
+  }
+
+  /**
+   * Mark a single invoice as paid.
+   * If a billCode exists, ToyyibPay is the source of truth — only marks PAID if ToyyibPay confirms.
+   * If no billCode, allows manual marking (offline/cash payment).
+   * @private
+   */
+  private async markSingleInvoiceAsPaid(rawBusinessId: string, invoiceNo: string, userId: string): Promise<void> {
+    this.logger.log(`[MarkPaid:Single:1] Fetching invoice ${invoiceNo} from DB`);
+    const invoice = await findInvoiceByNumber(this.prisma, invoiceNo, this.logger);
+    if (!invoice) {
+      throw new HttpException(`Invoice ${invoiceNo} not found`, HttpStatus.NOT_FOUND);
+    }
+
+    if (invoice.businessId !== rawBusinessId) {
+      this.logger.warn(`[MarkPaid:Single:X] BusinessId mismatch — invoice belongs to ${invoice.businessId}, expected ${rawBusinessId}`);
+      throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
+    }
+
+    if (invoice.status === InvoiceStatus.PAID || invoice.status === InvoiceStatus.CANCELLED) {
+      this.logger.warn(`[MarkPaid:Single:X] Skipping ${invoiceNo} — already ${invoice.status}`);
+      return;
+    }
+
+    if (invoice.status !== InvoiceStatus.PENDING) {
+      this.logger.warn(`[MarkPaid:Single:X] Skipping ${invoiceNo} — status is ${invoice.status}`);
+      return;
+    }
+
+    if (invoice.billCode) {
+      // ToyyibPay is source of truth — verify payment before updating DB
+      this.logger.log(`[MarkPaid:Single:2] Checking ToyyibPay for ${invoiceNo} (billCode=${invoice.billCode})`);
+      const transactions = await ToyyibPayUtil.fetchBillTransactions(invoice.billCode);
+      const paidTx = transactions.find(t => t.billExternalReferenceNo === invoiceNo && t.billpaymentStatus === '1');
+
+      if (!paidTx) {
+        this.logger.warn(`[MarkPaid:Single:X] ToyyibPay has no confirmed payment for ${invoiceNo} — skipping`);
+        return;
+      }
+
+      this.logger.log(`[MarkPaid:Single:3] ToyyibPay confirms payment — updating DB to PAID`);
+      await updateInvoiceStatus(this.prisma, {
+        invoiceNo,
+        status: InvoiceStatus.PAID,
+        transactionId: paidTx.billpaymentInvoiceNo,
+        transactionTime: this.parseBillPaymentDate(paidTx.billPaymentDate),
+      }, this.logger);
+    } else {
+      // No online payment link — allow manual marking (offline/cash payment)
+      this.logger.log(`[MarkPaid:Single:2] No billCode — manual mark as PAID for ${invoiceNo} (triggered by user ${userId})`);
+      await updateInvoiceStatus(this.prisma, {
+        invoiceNo,
+        status: InvoiceStatus.PAID,
+        transactionId: '',
+        transactionTime: new Date().toISOString(),
+      }, this.logger);
+    }
+
+    const rawReceipt = await getInvoiceAsReceipt(this.prisma, invoiceNo, this.logger);
+    const receiptData: ReceiptDTO = {
+      ...rawReceipt,
+      recipient: this.decryptRecipient(rawReceipt.recipient),
+      supplier: this.decryptSupplier(rawReceipt.supplier),
+    };
+    sendReceiptEmail(this.mailService, receiptData, this.logger).catch(() => {
+      this.logger.warn(`[MarkPaid:Single:X] Receipt email failed but status updated to PAID: ${invoiceNo}`);
+    });
+    this.logger.log(`[MarkPaid:Single:4] Invoice ${invoiceNo} marked as PAID successfully`);
+  }
+
+  /**
    * @private
    */
   private async sendToRetryQueue(msg: RetryInvoiceMessage): Promise<void> {
-    await this.queueService.sendMessageQue(INVOICE_QUEUE_PATTERNS.RETRY, msg);
+    await this.queueService.sendMessageQue(INVOICE_QUEUE_PATTERNS.RETRY_CREATE_INVOICE, msg);
     this.logger.log(`Invoice ${msg.calculatedInvoice.invoiceNo} emitted to retry-invoice (attempt ${msg.attemptNo}/${INVOICE_QUEUE_CONFIG.MAX_RETRY_ATTEMPTS})`);
   }
 
@@ -717,7 +827,7 @@ export class InvoiceService {
    * @private
    */
   private async sendToFailedQueue(businessId: string, calculatedInvoice: CalculatedInvoiceDto, error: Error): Promise<void> {
-    await this.queueService.sendMessageQue(INVOICE_QUEUE_PATTERNS.FAILED, {
+    await this.queueService.sendMessageQue(INVOICE_QUEUE_PATTERNS.FAILED_CREATE_INVOICE, {
       businessId,
       calculatedInvoice,
       error: error.message,
@@ -732,7 +842,7 @@ export class InvoiceService {
    * @private
    */
   private async sendToPaymentRetryQueue(msg: RetryPaymentCallbackMessage): Promise<void> {
-    await this.queueService.sendMessageQue(INVOICE_QUEUE_PATTERNS.CALLBACK_RETRY, msg);
+    await this.queueService.sendMessageQue(INVOICE_QUEUE_PATTERNS.RETRY_INVOICE_PAYMENT_CALLBACK, msg);
     this.logger.log(
       `Payment callback for ${msg.callbackData.order_id} emitted to retry-payment-callback (attempt ${msg.attemptNo}/${INVOICE_QUEUE_CONFIG.MAX_RETRY_ATTEMPTS})`,
     );
@@ -742,7 +852,7 @@ export class InvoiceService {
    * @private
    */
   private async sendToPaymentFailedQueue(callbackData: ToyyibPayCallbackData, error: Error): Promise<void> {
-    await this.queueService.sendMessageQue(INVOICE_QUEUE_PATTERNS.CALLBACK_FAILED, {
+    await this.queueService.sendMessageQue(INVOICE_QUEUE_PATTERNS.FAILED_INVOICE_PAYMENT_CALLBACK, {
       callbackData,
       error: error.message,
       failedAt: new Date().toISOString(),

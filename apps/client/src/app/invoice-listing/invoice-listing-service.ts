@@ -57,6 +57,13 @@ export class InvoiceListingService {
     );
   }
 
+  markInvoiceAsPaid(businessId: string, invoiceNumbers: string[]): Observable<void> {
+    return this.http.post<void>(
+      `${this.apiUrl}/invoice/mark-paid/${businessId}`,
+      { invoiceNumbers },
+    );
+  }
+
   getInvoiceDetail(businessId: string, invoiceNo: string): Observable<IInvoiceDetail> {
     return this.http.get<IInvoiceDetail>(
       `${this.apiUrl}/invoice/detail/${businessId}/${invoiceNo}`,

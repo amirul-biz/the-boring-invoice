@@ -21,7 +21,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { CreateInvoiceInputDTO, DeactivateBatchDTO, InvoiceListQueryDTO, NotifyEmailBatchDTO, ProcessedInvoiceDto } from './invoice-dto';
+import { CreateInvoiceInputDTO, DeactivateBatchDTO, InvoiceListQueryDTO, MarkPaidBatchDTO, NotifyEmailBatchDTO, ProcessedInvoiceDto } from './invoice-dto';
 import {
   InvoiceService,
   CreateInvoiceMessage,
@@ -30,6 +30,7 @@ import {
   RetryPaymentCallbackMessage,
   FailedInvoiceMessage,
   NotifyEmailMessage,
+  MarkInvoicePaidMessage,
   ToyyibPayCallbackData,
 } from './invoice-service';
 import { Ctx, EventPattern, Payload, RmqContext } from '@nestjs/microservices';
@@ -156,6 +157,25 @@ export class InvoiceController {
   }
 
   /**
+   * Queue batch mark-as-paid — syncs each invoice against ToyyibPay
+   * Only PENDING invoices with confirmed ToyyibPay payment (or no billCode) will be updated
+   */
+  @Post('mark-paid/:businessId')
+  @HttpCode(HttpStatus.ACCEPTED)
+  @ApiOperation({ summary: 'Queue batch mark invoice as paid' })
+  @ApiParam({ name: 'businessId', type: String })
+  @ApiBody({ type: MarkPaidBatchDTO })
+  @ApiResponse({ status: 202, description: 'Mark-as-paid batch queued' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async queueMarkInvoicePaidBatch(
+    @Param('businessId') businessId: string,
+    @Body() body: MarkPaidBatchDTO,
+    @UserById() userId: string,
+  ): Promise<void> {
+    await this.invoiceService.queueMarkInvoicePaidBatch(businessId, body.invoiceNumbers, userId);
+  }
+
+  /**
    * Handle payment callback from ToyyibPay
    * Queue for async processing to avoid serverless timeout
    * Always returns 200 OK to ToyyibPay regardless of processing result
@@ -188,7 +208,7 @@ export class InvoiceController {
    * Event consumer for queued invoice creation
    * Processes invoices from RabbitMQ queue
    */
-  @EventPattern(INVOICE_QUEUE_PATTERNS.CREATE)
+  @EventPattern(INVOICE_QUEUE_PATTERNS.CREATE_INVOICE)
   async receiverCreateInvoice(
     @Payload() data: CreateInvoiceMessage,
     @Ctx() context: RmqContext,
@@ -204,16 +224,16 @@ export class InvoiceController {
    * Event consumer for notify-email batch queue
    * Sends each email with a 1.5 s gap between sends
    */
-  @EventPattern(INVOICE_QUEUE_PATTERNS.NOTIFY_EMAIL)
+  @EventPattern(INVOICE_QUEUE_PATTERNS.NOTIFY_INVOICE_EMAIL)
   async receiverNotifyEmail(
     @Payload() data: NotifyEmailMessage,
     @Ctx() context: RmqContext,
   ): Promise<void> {
-    this.logger.log(`[Queue] Notify-email consumer triggered — ${data.invoiceNumbers.length} invoice(s): [${data.invoiceNumbers.join(', ')}]`);
+    this.logger.log(`[Queue] Notify-email consumer triggered — ${data.invoiceNumbers.length} invoice(s)`);
     const channel = context.getChannelRef();
     const originalMsg = context.getMessage();
-    await this.invoiceService.processNotifyEmailBatch(data);
-    this.logger.log(`[Queue] Notify-email batch complete — acking message`);
+    await this.invoiceService.processNotifyEmailSingle(data);
+    this.logger.log(`[Queue] Notify-email complete — acking message`);
     channel.ack(originalMsg);
   }
 
@@ -221,16 +241,16 @@ export class InvoiceController {
    * Event consumer for deactivation batch queue
    * Deactivates each invoice with a 1.5 s gap between items
    */
-  @EventPattern(INVOICE_QUEUE_PATTERNS.DEACTIVATE)
+  @EventPattern(INVOICE_QUEUE_PATTERNS.DEACTIVATE_INVOICE_BILL)
   async receiverDeactivate(
     @Payload() data: DeactivateMessage,
     @Ctx() context: RmqContext,
   ): Promise<void> {
-    this.logger.log(`[Queue] Deactivate consumer triggered — ${data.invoiceNumbers.length} invoice(s): [${data.invoiceNumbers.join(', ')}]`);
+    this.logger.log(`[Queue] Deactivate consumer triggered — ${data.invoiceNumbers.length} invoice(s)`);
     const channel = context.getChannelRef();
     const originalMsg = context.getMessage();
-    await this.invoiceService.processDeactivateBatch(data);
-    this.logger.log(`[Queue] Deactivate batch complete — acking message`);
+    await this.invoiceService.processDeactivateSingle(data);
+    this.logger.log(`[Queue] Deactivate complete — acking message`);
     channel.ack(originalMsg);
   }
 
@@ -239,7 +259,7 @@ export class InvoiceController {
    * Waits 1 minute then retries idempotent invoice creation
    * Re-emits with incremented attemptNo or routes to failed-invoice after 5 attempts
    */
-  @EventPattern(INVOICE_QUEUE_PATTERNS.RETRY)
+  @EventPattern(INVOICE_QUEUE_PATTERNS.RETRY_CREATE_INVOICE)
   async receiverRetryInvoice(
     @Payload() data: RetryInvoiceMessage,
     @Ctx() context: RmqContext,
@@ -256,7 +276,7 @@ export class InvoiceController {
    * Processes payment callbacks from RabbitMQ queue
    * This avoids timeout issues in serverless environments
    */
-  @EventPattern(INVOICE_QUEUE_PATTERNS.CALLBACK)
+  @EventPattern(INVOICE_QUEUE_PATTERNS.UPDATE_INVOICE_PAYMENT_STATUS)
   async receiverUpdateInvoice(
     @Payload() callbackData: ToyyibPayCallbackData,
     @Ctx() context: RmqContext,
@@ -273,7 +293,7 @@ export class InvoiceController {
    * Waits 1 minute then retries payment callback processing
    * Re-emits with incremented attemptNo or routes to failed-payment-callback after 5 attempts
    */
-  @EventPattern(INVOICE_QUEUE_PATTERNS.CALLBACK_RETRY)
+  @EventPattern(INVOICE_QUEUE_PATTERNS.RETRY_INVOICE_PAYMENT_CALLBACK)
   async receiverRetryPaymentCallback(
     @Payload() data: RetryPaymentCallbackMessage,
     @Ctx() context: RmqContext,
@@ -289,7 +309,7 @@ export class InvoiceController {
    * Event consumer for permanently failed invoices
    * Cancels invoice status and deactivates ToyyibPay bill
    */
-  @EventPattern(INVOICE_QUEUE_PATTERNS.FAILED)
+  @EventPattern(INVOICE_QUEUE_PATTERNS.FAILED_CREATE_INVOICE)
   async receiverFailedInvoice(
     @Payload() data: FailedInvoiceMessage,
     @Ctx() context: RmqContext,
@@ -305,12 +325,29 @@ export class InvoiceController {
    * Event consumer for permanently failed payment callbacks
    * Acks to clear the queue — revisit handling later
    */
-  @EventPattern(INVOICE_QUEUE_PATTERNS.CALLBACK_FAILED)
+  @EventPattern(INVOICE_QUEUE_PATTERNS.FAILED_INVOICE_PAYMENT_CALLBACK)
   async receiverFailedPaymentCallback(
     @Payload() _data: unknown,
     @Ctx() context: RmqContext,
   ): Promise<void> {
     this.logger.warn('Payment callback permanently failed — acking to clear queue');
     context.getChannelRef().ack(context.getMessage());
+  }
+
+  /**
+   * Event consumer for mark-as-paid batch queue
+   * Syncs each invoice against ToyyibPay and updates DB to PAID + sends receipt
+   */
+  @EventPattern(INVOICE_QUEUE_PATTERNS.MARK_INVOICE_AS_PAID)
+  async receiverMarkInvoicePaid(
+    @Payload() data: MarkInvoicePaidMessage,
+    @Ctx() context: RmqContext,
+  ): Promise<void> {
+    this.logger.log(`[Queue] Mark-as-paid consumer triggered — ${data.invoiceNumbers.length} invoice(s)`);
+    const channel = context.getChannelRef();
+    const originalMsg = context.getMessage();
+    await this.invoiceService.processMarkInvoicePaidBatch(data);
+    this.logger.log(`[Queue] Mark-as-paid complete — acking message`);
+    channel.ack(originalMsg);
   }
 }

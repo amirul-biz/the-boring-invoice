@@ -116,6 +116,29 @@ export class InvoiceListing implements OnInit, OnDestroy {
       });
   }
 
+  async onMarkAsPaidInvoice(invoice: IInvoiceListItem): Promise<void> {
+    const confirmed = await confirmModal(
+      'Mark Invoice as Paid?',
+      `Invoice ${invoice.invoiceNo} will be marked as paid and a receipt will be sent to the recipient.`,
+    );
+    if (!confirmed) return;
+
+    this.spinner.show();
+    this.invoiceListingService
+      .markInvoiceAsPaid(this.businessId, [invoice.invoiceNo])
+      .pipe(finalize(() => this.spinner.hide()))
+      .subscribe({
+        next: async () => {
+          await successModal('Queued', `Mark-as-paid for ${invoice.invoiceNo} has been queued.`);
+          this.getInvoiceList();
+        },
+        error: async (err) => {
+          const message = err?.error?.message || 'Failed to queue mark-as-paid.';
+          await errorModal('Error', message);
+        },
+      });
+  }
+
   async onDeactivateInvoice(invoice: IInvoiceListItem): Promise<void> {
     const confirmed = await confirmModal(
       'Deactivate Invoice?',
@@ -179,6 +202,32 @@ export class InvoiceListing implements OnInit, OnDestroy {
 
   getCheckedPendingInvoice(): string[] {
     return this.invoices.filter(i => i.isChecked && i.status === 'PENDING').map(i => i.invoiceNo);
+  }
+
+  async onBatchMarkAsPaid(): Promise<void> {
+    const invoiceNumbers = this.getCheckedPendingInvoice();
+    if (invoiceNumbers.length === 0) return;
+
+    const confirmed = await confirmModal(
+      `Mark ${invoiceNumbers.length} Invoice(s) as Paid?`,
+      `The following invoices will be marked as paid: ${invoiceNumbers.join(', ')}. A receipt will be sent to each recipient.`,
+    );
+    if (!confirmed) return;
+
+    this.spinner.show();
+    this.invoiceListingService
+      .markInvoiceAsPaid(this.businessId, invoiceNumbers)
+      .pipe(finalize(() => this.spinner.hide()))
+      .subscribe({
+        next: async () => {
+          await successModal('Queued', `Mark-as-paid queued for ${invoiceNumbers.length} invoice(s).`);
+          this.getInvoiceList();
+        },
+        error: async (err) => {
+          const message = err?.error?.message || 'Failed to queue mark-as-paid.';
+          await errorModal('Error', message);
+        },
+      });
   }
 
   async onBatchNotifyByEmail(): Promise<void> {
@@ -289,6 +338,9 @@ export class InvoiceListing implements OnInit, OnDestroy {
         break;
       case 'notify-whatsapp':
         this.onNotifyInvoiceByWhatsApp(event.invoice);
+        break;
+      case 'mark-paid':
+        this.onMarkAsPaidInvoice(event.invoice);
         break;
       case 'deactivate':
         this.onDeactivateInvoice(event.invoice);

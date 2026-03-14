@@ -256,7 +256,15 @@ export class DeactivateBatchDTO {
   invoiceNumbers: string[];
 }
 
-// 9. INVOICE LIST QUERY DTO
+// 9. MARK PAID BATCH DTO
+export class MarkPaidBatchDTO {
+  @ApiProperty({ type: [String], example: ['INV-001', 'INV-002'] })
+  @IsArray()
+  @IsString({ each: true })
+  invoiceNumbers: string[];
+}
+
+// 10. INVOICE LIST QUERY DTO
 export class InvoiceListQueryDTO {
   @ApiProperty({ example: 1 })
   @Type(() => Number)

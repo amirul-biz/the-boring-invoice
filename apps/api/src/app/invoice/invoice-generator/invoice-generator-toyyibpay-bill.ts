@@ -294,6 +294,9 @@ export class ToyyibPayUtil {
       }
 
       const text = await response.text();
+      if (!text.startsWith('[') && !text.startsWith('{')) {
+        return [];
+      }
       return JSON.parse(text) as ToyyibPayTransaction[];
     } catch (error) {
       if (error.name === 'AbortError') {
