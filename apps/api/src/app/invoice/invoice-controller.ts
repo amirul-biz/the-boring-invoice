@@ -21,16 +21,18 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { CreateInvoiceInputDTO, DeactivateBatchDTO, InvoiceListQueryDTO, MarkPaidBatchDTO, NotifyEmailBatchDTO, ProcessedInvoiceDto } from './invoice-dto';
+import { CreateInvoiceInputDTO, DeactivateBatchDTO, InvoiceListQueryDTO, MarkPaidBatchDTO, NotifyInvoiceViaEmailBatchDTO, ProcessedInvoiceDto } from './invoice-dto';
 import {
   InvoiceService,
   CreateInvoiceMessage,
   DeactivateMessage,
+  RetryDeactivateMessage,
   RetryInvoiceMessage,
   RetryPaymentCallbackMessage,
   FailedInvoiceMessage,
-  NotifyEmailMessage,
+  NotifyInvoiceViaEmailMessage,
   MarkInvoicePaidMessage,
+  RetryMarkPaidMessage,
   ToyyibPayCallbackData,
 } from './invoice-service';
 import { Ctx, EventPattern, Payload, RmqContext } from '@nestjs/microservices';
@@ -123,19 +125,19 @@ export class InvoiceController {
   /**
    * Queue a batch of invoice notification emails for async processing
    */
-  @Post('notify-email/:businessId')
+  @Post('notify-invoice-via-email/:businessId')
   @HttpCode(HttpStatus.ACCEPTED)
   @ApiOperation({ summary: 'Queue batch invoice notification emails' })
   @ApiParam({ name: 'businessId', type: String })
-  @ApiBody({ type: NotifyEmailBatchDTO })
+  @ApiBody({ type: NotifyInvoiceViaEmailBatchDTO })
   @ApiResponse({ status: 202, description: 'Notification batch queued' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async queueNotifyEmailBatch(
+  async queueNotifyInvoiceViaEmailBatch(
     @Param('businessId') businessId: string,
-    @Body() body: NotifyEmailBatchDTO,
+    @Body() body: NotifyInvoiceViaEmailBatchDTO,
     @UserById() userId: string,
   ): Promise<void> {
-    await this.invoiceService.queueNotifyEmailBatch(businessId, body.invoiceNumbers, userId);
+    await this.invoiceService.queueNotifyInvoiceViaEmailBatch(businessId, body.invoiceNumbers, userId);
   }
 
   /**
@@ -224,16 +226,16 @@ export class InvoiceController {
    * Event consumer for notify-email batch queue
    * Sends each email with a 1.5 s gap between sends
    */
-  @EventPattern(INVOICE_QUEUE_PATTERNS.NOTIFY_INVOICE_EMAIL)
-  async receiverNotifyEmail(
-    @Payload() data: NotifyEmailMessage,
+  @EventPattern(INVOICE_QUEUE_PATTERNS.NOTIFY_INVOICE_VIA_EMAIL)
+  async receiverNotifyInvoiceViaEmail(
+    @Payload() data: NotifyInvoiceViaEmailMessage,
     @Ctx() context: RmqContext,
   ): Promise<void> {
-    this.logger.log(`[Queue] Notify-email consumer triggered — ${data.invoiceNumbers.length} invoice(s)`);
+    this.logger.log(`[Queue] Notify-invoice-via-email consumer triggered — ${data.invoiceNumbers.length} invoice(s)`);
     const channel = context.getChannelRef();
     const originalMsg = context.getMessage();
-    await this.invoiceService.processNotifyEmailSingle(data);
-    this.logger.log(`[Queue] Notify-email complete — acking message`);
+    await this.invoiceService.processNotifyInvoiceViaEmailBatch(data);
+    this.logger.log(`[Queue] Notify-invoice-via-email complete — acking message`);
     channel.ack(originalMsg);
   }
 
@@ -349,5 +351,63 @@ export class InvoiceController {
     await this.invoiceService.processMarkInvoicePaidBatch(data);
     this.logger.log(`[Queue] Mark-as-paid complete — acking message`);
     channel.ack(originalMsg);
+  }
+
+  /**
+   * Event consumer for retry-deactivate queue
+   * Waits 1 minute then retries — re-emits with incremented attemptNo or routes to failed
+   */
+  @EventPattern(INVOICE_QUEUE_PATTERNS.RETRY_DEACTIVATE_INVOICE_BILL)
+  async receiverRetryDeactivate(
+    @Payload() data: RetryDeactivateMessage,
+    @Ctx() context: RmqContext,
+  ): Promise<void> {
+    this.logger.log(`[Queue] Deactivate retry received — attempt ${data.attemptNo} for ${data.invoiceNo}`);
+    const channel = context.getChannelRef();
+    const originalMsg = context.getMessage();
+    await this.invoiceService.processDeactivateRetry(data);
+    channel.ack(originalMsg);
+  }
+
+  /**
+   * Event consumer for permanently failed deactivations
+   * Logs and acks to clear the queue
+   */
+  @EventPattern(INVOICE_QUEUE_PATTERNS.FAILED_DEACTIVATE_INVOICE_BILL)
+  async receiverFailedDeactivate(
+    @Payload() data: RetryDeactivateMessage & { error: string; failedAt: string },
+    @Ctx() context: RmqContext,
+  ): Promise<void> {
+    await this.invoiceService.processDeactivateFailed(data);
+    context.getChannelRef().ack(context.getMessage());
+  }
+
+  /**
+   * Event consumer for retry-mark-paid queue
+   * Waits 1 minute then retries — re-emits with incremented attemptNo or routes to failed
+   */
+  @EventPattern(INVOICE_QUEUE_PATTERNS.RETRY_MARK_INVOICE_AS_PAID)
+  async receiverRetryMarkPaid(
+    @Payload() data: RetryMarkPaidMessage,
+    @Ctx() context: RmqContext,
+  ): Promise<void> {
+    this.logger.log(`[Queue] Mark-as-paid retry received — attempt ${data.attemptNo} for ${data.invoiceNo}`);
+    const channel = context.getChannelRef();
+    const originalMsg = context.getMessage();
+    await this.invoiceService.processMarkPaidRetry(data);
+    channel.ack(originalMsg);
+  }
+
+  /**
+   * Event consumer for permanently failed mark-as-paid
+   * Logs and acks to clear the queue
+   */
+  @EventPattern(INVOICE_QUEUE_PATTERNS.FAILED_MARK_INVOICE_AS_PAID)
+  async receiverFailedMarkPaid(
+    @Payload() data: RetryMarkPaidMessage & { error: string; failedAt: string },
+    @Ctx() context: RmqContext,
+  ): Promise<void> {
+    await this.invoiceService.processMarkPaidFailed(data);
+    context.getChannelRef().ack(context.getMessage());
   }
 }

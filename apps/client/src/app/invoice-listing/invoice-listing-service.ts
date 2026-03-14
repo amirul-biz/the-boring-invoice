@@ -43,9 +43,9 @@ export class InvoiceListingService {
     );
   }
 
-  notifyInvoiceByEmail(businessId: string, invoiceNumbers: string[]): Observable<void> {
+  notifyInvoiceViaEmail(businessId: string, invoiceNumbers: string[]): Observable<void> {
     return this.http.post<void>(
-      `${this.apiUrl}/invoice/notify-email/${businessId}`,
+      `${this.apiUrl}/invoice/notify-invoice-via-email/${businessId}`,
       { invoiceNumbers },
     );
   }

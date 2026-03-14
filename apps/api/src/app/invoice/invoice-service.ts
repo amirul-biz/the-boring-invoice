@@ -80,7 +80,7 @@ export interface FailedInvoiceMessage {
   failedAt: string;
 }
 
-export interface NotifyEmailMessage {
+export interface NotifyInvoiceViaEmailMessage {
   rawBusinessId: string;
   invoiceNumbers: string[];
   userId: string;
@@ -92,10 +92,24 @@ export interface DeactivateMessage {
   userId: string;
 }
 
+export interface RetryDeactivateMessage {
+  rawBusinessId: string;
+  invoiceNo: string;
+  userId: string;
+  attemptNo: number;
+}
+
 export interface MarkInvoicePaidMessage {
   rawBusinessId: string;
   invoiceNumbers: string[];
   userId: string;
+}
+
+export interface RetryMarkPaidMessage {
+  rawBusinessId: string;
+  invoiceNo: string;
+  userId: string;
+  attemptNo: number;
 }
 
 @Injectable()
@@ -436,16 +450,64 @@ export class InvoiceService {
   }
 
   /**
-   * Process a single invoice deactivation from the queue.
-   * Each invoice is an independent queue message — no loop, no delay.
+   * Process a batch of invoice deactivations from the queue.
+   * On per-invoice failure, emits to retry queue instead of throwing.
    */
   async processDeactivateSingle(data: DeactivateMessage): Promise<void> {
     this.logger.log(`[Deactivate:Consumer:1] Processing batch of ${data.invoiceNumbers.length} invoice(s) — [${data.invoiceNumbers.join(', ')}]`);
-    for (const invoiceNo of data.invoiceNumbers) {
-      await this.deactivateSingleInvoice(data.rawBusinessId, invoiceNo, data.userId);
-      this.logger.log(`[Deactivate:Consumer:2] ${invoiceNo} — deactivated successfully`);
-      await new Promise(resolve => setTimeout(resolve, INVOICE_QUEUE_CONFIG.BATCH_DELAY_MS));
+    for (const [index, invoiceNo] of data.invoiceNumbers.entries()) {
+      try {
+        await this.deactivateSingleInvoice(data.rawBusinessId, invoiceNo, data.userId);
+        this.logger.log(`[Deactivate:Consumer:2] ${invoiceNo} — deactivated successfully`);
+      } catch (error) {
+        this.logger.error(`[Deactivate:Consumer:X] ${invoiceNo} failed — emitting to retry queue: ${error.message}`, error.stack);
+        try {
+          await this.sendToDeactivateRetryQueue({ rawBusinessId: data.rawBusinessId, invoiceNo, userId: data.userId, attemptNo: INVOICE_QUEUE_CONFIG.INITIAL_RETRY_ATTEMPT });
+        } catch (queueError) {
+          this.logger.error(`CRITICAL: Failed to queue deactivate retry for ${invoiceNo} — message lost: ${queueError.message}`);
+        }
+      }
+      const isLastItem = index === data.invoiceNumbers.length - 1;
+      if (!isLastItem) {
+        await this.delay(INVOICE_QUEUE_CONFIG.BATCH_DELAY_MS);
+      }
     }
+  }
+
+  /**
+   * Process a single invoice deactivation from the retry-deactivate queue.
+   * Waits 1 minute then retries — re-emits with incremented attemptNo or routes to failed.
+   */
+  async processDeactivateRetry(msg: RetryDeactivateMessage): Promise<void> {
+    this.logger.log(`[Deactivate:Retry] Attempt ${msg.attemptNo}/${INVOICE_QUEUE_CONFIG.MAX_RETRY_ATTEMPTS} for ${msg.invoiceNo} — waiting 1 minute`);
+    await this.delay(INVOICE_QUEUE_CONFIG.RETRY_DELAY_MS);
+
+    try {
+      await this.deactivateSingleInvoice(msg.rawBusinessId, msg.invoiceNo, msg.userId);
+      this.logger.log(`[Deactivate:Retry] Attempt ${msg.attemptNo}/${INVOICE_QUEUE_CONFIG.MAX_RETRY_ATTEMPTS} succeeded for ${msg.invoiceNo}`);
+    } catch (error) {
+      this.logger.error(`[Deactivate:Retry] Attempt ${msg.attemptNo}/${INVOICE_QUEUE_CONFIG.MAX_RETRY_ATTEMPTS} failed for ${msg.invoiceNo}: ${error.message}`, error.stack);
+      if (msg.attemptNo < INVOICE_QUEUE_CONFIG.MAX_RETRY_ATTEMPTS) {
+        try {
+          await this.sendToDeactivateRetryQueue({ ...msg, attemptNo: msg.attemptNo + 1 });
+        } catch (queueError) {
+          this.logger.error(`CRITICAL: Failed to re-queue deactivate retry for ${msg.invoiceNo}: ${queueError.message}`);
+        }
+      } else {
+        try {
+          await this.sendToDeactivateFailedQueue(msg, error);
+        } catch (queueError) {
+          this.logger.error(`CRITICAL: Failed to queue failed-deactivate for ${msg.invoiceNo}: ${queueError.message}`);
+        }
+      }
+    }
+  }
+
+  /**
+   * Permanently failed deactivation — log only, invoice remains in its current state.
+   */
+  async processDeactivateFailed(msg: RetryDeactivateMessage & { error: string; failedAt: string }): Promise<void> {
+    this.logger.error(`[Deactivate:Failed] Invoice ${msg.invoiceNo} permanently failed deactivation after ${INVOICE_QUEUE_CONFIG.MAX_RETRY_ATTEMPTS} attempts — error: ${msg.error}`);
   }
 
   /**
@@ -522,31 +584,31 @@ export class InvoiceService {
    * Queue a batch of invoice notification emails for async processing.
    * Verifies ownership at HTTP time; consumer processes with 1.5 s gap between sends.
    */
-  async queueNotifyEmailBatch(
+  async queueNotifyInvoiceViaEmailBatch(
     encodedBusinessId: string,
     invoiceNumbers: string[],
     userId: string,
   ): Promise<void> {
-    this.logger.log(`[NotifyEmail:1] Verifying ownership for user ${userId}`);
+    this.logger.log(`[NotifyInvoiceViaEmail:1] Verifying ownership for user ${userId}`);
     await this.businessInfoService.verifyOwnership(encodedBusinessId, userId);
 
-    this.logger.log(`[NotifyEmail:2] Ownership verified — decoding businessId`);
+    this.logger.log(`[NotifyInvoiceViaEmail:2] Ownership verified — decoding businessId`);
     const rawBusinessId = this.cryptoService.decodeId(encodedBusinessId);
 
-    this.logger.log(`[NotifyEmail:3] Emitting batch of ${invoiceNumbers.length} invoice(s) to queue — [${invoiceNumbers.join(', ')}]`);
-    await this.queueService.sendMessageQue(INVOICE_QUEUE_PATTERNS.NOTIFY_INVOICE_EMAIL, { rawBusinessId, invoiceNumbers, userId } as NotifyEmailMessage);
-    this.logger.log(`[NotifyEmail:4] Batch queued successfully by user ${userId}`);
+    this.logger.log(`[NotifyInvoiceViaEmail:3] Emitting batch of ${invoiceNumbers.length} invoice(s) to queue — [${invoiceNumbers.join(', ')}]`);
+    await this.queueService.sendMessageQue(INVOICE_QUEUE_PATTERNS.NOTIFY_INVOICE_VIA_EMAIL, { rawBusinessId, invoiceNumbers, userId } as NotifyInvoiceViaEmailMessage);
+    this.logger.log(`[NotifyInvoiceViaEmail:4] Batch queued successfully by user ${userId}`);
   }
 
   /**
    * Process a single invoice email notification from the queue.
    * Each invoice is an independent queue message — no loop, no delay.
    */
-  async processNotifyEmailSingle(data: NotifyEmailMessage): Promise<void> {
-    this.logger.log(`[NotifyEmail:Consumer:1] Processing batch of ${data.invoiceNumbers.length} invoice(s) — [${data.invoiceNumbers.join(', ')}]`);
+  async processNotifyInvoiceViaEmailBatch(data: NotifyInvoiceViaEmailMessage): Promise<void> {
+    this.logger.log(`[NotifyInvoiceViaEmail:Consumer:1] Processing batch of ${data.invoiceNumbers.length} invoice(s) — [${data.invoiceNumbers.join(', ')}]`);
     for (const invoiceNo of data.invoiceNumbers) {
       await this.sendSingleInvoiceEmail(data.rawBusinessId, invoiceNo, data.userId);
-      this.logger.log(`[NotifyEmail:Consumer:2] ${invoiceNo} — email sent successfully`);
+      this.logger.log(`[NotifyInvoiceViaEmail:Consumer:2] ${invoiceNo} — email sent successfully`);
       await new Promise(resolve => setTimeout(resolve, INVOICE_QUEUE_CONFIG.BATCH_DELAY_MS));
     }
   }
@@ -557,21 +619,21 @@ export class InvoiceService {
    * @private
    */
   private async sendSingleInvoiceEmail(rawBusinessId: string, invoiceNo: string, userId: string): Promise<void> {
-    this.logger.log(`[NotifyEmail:Send:1] Fetching invoice ${invoiceNo} from DB`);
+    this.logger.log(`[NotifyInvoiceViaEmail:Send:1] Fetching invoice ${invoiceNo} from DB`);
     const invoice = await getInvoiceByNumber(this.prisma, invoiceNo, this.logger);
-    this.logger.log(`[NotifyEmail:Send:2] Invoice found — status: ${invoice.status}, businessId: ${invoice.businessId}`);
+    this.logger.log(`[NotifyInvoiceViaEmail:Send:2] Invoice found — status: ${invoice.status}, businessId: ${invoice.businessId}`);
 
     if (invoice.businessId !== rawBusinessId) {
-      this.logger.warn(`[NotifyEmail:Send:X] BusinessId mismatch — invoice belongs to ${invoice.businessId}, expected ${rawBusinessId}`);
+      this.logger.warn(`[NotifyInvoiceViaEmail:Send:X] BusinessId mismatch — invoice belongs to ${invoice.businessId}, expected ${rawBusinessId}`);
       throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
     }
 
     if (invoice.status === InvoiceStatus.PAID || invoice.status === InvoiceStatus.CANCELLED) {
-      this.logger.warn(`[NotifyEmail:Send:X] Skipping ${invoiceNo} — status is ${invoice.status}`);
+      this.logger.warn(`[NotifyInvoiceViaEmail:Send:X] Skipping ${invoiceNo} — status is ${invoice.status}`);
       throw new HttpException('Cannot send notification for a paid or cancelled invoice', HttpStatus.BAD_REQUEST);
     }
 
-    this.logger.log(`[NotifyEmail:Send:3] Decrypting recipient/supplier fields`);
+    this.logger.log(`[NotifyInvoiceViaEmail:Send:3] Decrypting recipient/supplier fields`);
     const processedInvoice: ProcessedInvoiceDto = {
       invoiceNo: invoice.invoiceNo,
       invoiceType: invoice.invoiceType,
@@ -592,9 +654,9 @@ export class InvoiceService {
       invoiceVersion: invoice.invoiceVersion,
     };
 
-    this.logger.log(`[NotifyEmail:Send:4] Calling sendInvoiceEmail for ${invoiceNo} → recipient: ${processedInvoice.recipient.email}`);
+    this.logger.log(`[NotifyInvoiceViaEmail:Send:4] Calling sendInvoiceEmail for ${invoiceNo} → recipient: ${processedInvoice.recipient.email}`);
     await sendInvoiceEmail(this.mailService, processedInvoice, this.logger);
-    this.logger.log(`[NotifyEmail:Send:5] Email dispatched for ${invoiceNo} (triggered by user ${userId})`);
+    this.logger.log(`[NotifyInvoiceViaEmail:Send:5] Email dispatched for ${invoiceNo} (triggered by user ${userId})`);
   }
 
   // ─── Private helpers ─────────────────────────────────────────────────────────
@@ -736,14 +798,63 @@ export class InvoiceService {
 
   /**
    * Process a batch of mark-as-paid requests from the queue.
+   * On per-invoice failure, emits to retry queue instead of throwing.
    */
   async processMarkInvoicePaidBatch(data: MarkInvoicePaidMessage): Promise<void> {
     this.logger.log(`[MarkPaid:Consumer:1] Processing batch of ${data.invoiceNumbers.length} invoice(s) — [${data.invoiceNumbers.join(', ')}]`);
-    for (const invoiceNo of data.invoiceNumbers) {
-      await this.markSingleInvoiceAsPaid(data.rawBusinessId, invoiceNo, data.userId);
-      this.logger.log(`[MarkPaid:Consumer:2] ${invoiceNo} — processed`);
-      await new Promise(resolve => setTimeout(resolve, INVOICE_QUEUE_CONFIG.BATCH_DELAY_MS));
+    for (const [index, invoiceNo] of data.invoiceNumbers.entries()) {
+      try {
+        await this.markSingleInvoiceAsPaid(data.rawBusinessId, invoiceNo, data.userId);
+        this.logger.log(`[MarkPaid:Consumer:2] ${invoiceNo} — processed`);
+      } catch (error) {
+        this.logger.error(`[MarkPaid:Consumer:X] ${invoiceNo} failed — emitting to retry queue: ${error.message}`, error.stack);
+        try {
+          await this.sendToMarkPaidRetryQueue({ rawBusinessId: data.rawBusinessId, invoiceNo, userId: data.userId, attemptNo: INVOICE_QUEUE_CONFIG.INITIAL_RETRY_ATTEMPT });
+        } catch (queueError) {
+          this.logger.error(`CRITICAL: Failed to queue mark-paid retry for ${invoiceNo} — message lost: ${queueError.message}`);
+        }
+      }
+      const isLastItem = index === data.invoiceNumbers.length - 1;
+      if (!isLastItem) {
+        await this.delay(INVOICE_QUEUE_CONFIG.BATCH_DELAY_MS);
+      }
     }
+  }
+
+  /**
+   * Process a single mark-as-paid from the retry-mark-paid queue.
+   * Waits 1 minute then retries — re-emits with incremented attemptNo or routes to failed.
+   */
+  async processMarkPaidRetry(msg: RetryMarkPaidMessage): Promise<void> {
+    this.logger.log(`[MarkPaid:Retry] Attempt ${msg.attemptNo}/${INVOICE_QUEUE_CONFIG.MAX_RETRY_ATTEMPTS} for ${msg.invoiceNo} — waiting 1 minute`);
+    await this.delay(INVOICE_QUEUE_CONFIG.RETRY_DELAY_MS);
+
+    try {
+      await this.markSingleInvoiceAsPaid(msg.rawBusinessId, msg.invoiceNo, msg.userId);
+      this.logger.log(`[MarkPaid:Retry] Attempt ${msg.attemptNo}/${INVOICE_QUEUE_CONFIG.MAX_RETRY_ATTEMPTS} succeeded for ${msg.invoiceNo}`);
+    } catch (error) {
+      this.logger.error(`[MarkPaid:Retry] Attempt ${msg.attemptNo}/${INVOICE_QUEUE_CONFIG.MAX_RETRY_ATTEMPTS} failed for ${msg.invoiceNo}: ${error.message}`, error.stack);
+      if (msg.attemptNo < INVOICE_QUEUE_CONFIG.MAX_RETRY_ATTEMPTS) {
+        try {
+          await this.sendToMarkPaidRetryQueue({ ...msg, attemptNo: msg.attemptNo + 1 });
+        } catch (queueError) {
+          this.logger.error(`CRITICAL: Failed to re-queue mark-paid retry for ${msg.invoiceNo}: ${queueError.message}`);
+        }
+      } else {
+        try {
+          await this.sendToMarkPaidFailedQueue(msg, error);
+        } catch (queueError) {
+          this.logger.error(`CRITICAL: Failed to queue failed-mark-paid for ${msg.invoiceNo}: ${queueError.message}`);
+        }
+      }
+    }
+  }
+
+  /**
+   * Permanently failed mark-as-paid — log only, invoice remains PENDING.
+   */
+  async processMarkPaidFailed(msg: RetryMarkPaidMessage & { error: string; failedAt: string }): Promise<void> {
+    this.logger.error(`[MarkPaid:Failed] Invoice ${msg.invoiceNo} permanently failed mark-as-paid after ${INVOICE_QUEUE_CONFIG.MAX_RETRY_ATTEMPTS} attempts — error: ${msg.error}`);
   }
 
   /**
@@ -836,6 +947,46 @@ export class InvoiceService {
     this.logger.error(
       `Invoice ${calculatedInvoice.invoiceNo} permanently failed after ${INVOICE_QUEUE_CONFIG.MAX_RETRY_ATTEMPTS} attempts — moved to failed-invoice queue`,
     );
+  }
+
+  /**
+   * @private
+   */
+  private async sendToDeactivateRetryQueue(msg: RetryDeactivateMessage): Promise<void> {
+    await this.queueService.sendMessageQue(INVOICE_QUEUE_PATTERNS.RETRY_DEACTIVATE_INVOICE_BILL, msg);
+    this.logger.log(`Invoice ${msg.invoiceNo} emitted to retry-deactivate (attempt ${msg.attemptNo}/${INVOICE_QUEUE_CONFIG.MAX_RETRY_ATTEMPTS})`);
+  }
+
+  /**
+   * @private
+   */
+  private async sendToDeactivateFailedQueue(msg: RetryDeactivateMessage, error: Error): Promise<void> {
+    await this.queueService.sendMessageQue(INVOICE_QUEUE_PATTERNS.FAILED_DEACTIVATE_INVOICE_BILL, {
+      ...msg,
+      error: error.message,
+      failedAt: new Date().toISOString(),
+    });
+    this.logger.error(`Invoice ${msg.invoiceNo} permanently failed deactivation after ${INVOICE_QUEUE_CONFIG.MAX_RETRY_ATTEMPTS} attempts — moved to failed-deactivate queue`);
+  }
+
+  /**
+   * @private
+   */
+  private async sendToMarkPaidRetryQueue(msg: RetryMarkPaidMessage): Promise<void> {
+    await this.queueService.sendMessageQue(INVOICE_QUEUE_PATTERNS.RETRY_MARK_INVOICE_AS_PAID, msg);
+    this.logger.log(`Invoice ${msg.invoiceNo} emitted to retry-mark-paid (attempt ${msg.attemptNo}/${INVOICE_QUEUE_CONFIG.MAX_RETRY_ATTEMPTS})`);
+  }
+
+  /**
+   * @private
+   */
+  private async sendToMarkPaidFailedQueue(msg: RetryMarkPaidMessage, error: Error): Promise<void> {
+    await this.queueService.sendMessageQue(INVOICE_QUEUE_PATTERNS.FAILED_MARK_INVOICE_AS_PAID, {
+      ...msg,
+      error: error.message,
+      failedAt: new Date().toISOString(),
+    });
+    this.logger.error(`Invoice ${msg.invoiceNo} permanently failed mark-as-paid after ${INVOICE_QUEUE_CONFIG.MAX_RETRY_ATTEMPTS} attempts — moved to failed-mark-paid queue`);
   }
 
   /**

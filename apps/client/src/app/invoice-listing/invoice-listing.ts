@@ -94,7 +94,7 @@ export class InvoiceListing implements OnInit, OnDestroy {
     this.getInvoiceList();
   }
 
-  async onNotifyInvoiceByEmail(invoice: IInvoiceListItem): Promise<void> {
+  async onNotifyInvoiceViaEmail(invoice: IInvoiceListItem): Promise<void> {
     const confirmed = await confirmModal(
       'Send Notification?',
       `Re-send the invoice email for ${invoice.invoiceNo} to the recipient?`,
@@ -103,7 +103,7 @@ export class InvoiceListing implements OnInit, OnDestroy {
 
     this.spinner.show();
     this.invoiceListingService
-      .notifyInvoiceByEmail(this.businessId, [invoice.invoiceNo])
+      .notifyInvoiceViaEmail(this.businessId, [invoice.invoiceNo])
       .pipe(finalize(() => this.spinner.hide()))
       .subscribe({
         next: async () => {
@@ -230,7 +230,7 @@ export class InvoiceListing implements OnInit, OnDestroy {
       });
   }
 
-  async onBatchNotifyByEmail(): Promise<void> {
+  async onBatchNotifyInvoiceViaEmail(): Promise<void> {
     const invoiceNumbers = this.getCheckedInvoice();
     if (invoiceNumbers.length === 0) return;
 
@@ -242,7 +242,7 @@ export class InvoiceListing implements OnInit, OnDestroy {
 
     this.spinner.show();
     this.invoiceListingService
-      .notifyInvoiceByEmail(this.businessId, invoiceNumbers)
+      .notifyInvoiceViaEmail(this.businessId, invoiceNumbers)
       .pipe(finalize(() => this.spinner.hide()))
       .subscribe({
         next: async () => {
@@ -330,8 +330,8 @@ export class InvoiceListing implements OnInit, OnDestroy {
           });
         break;
       }
-      case 'notify-email':
-        this.onNotifyInvoiceByEmail(event.invoice);
+      case 'notify-invoice-via-email':
+        this.onNotifyInvoiceViaEmail(event.invoice);
         break;
       case 'check-single':
         this.checkUncheckSingle(event.invoice);
