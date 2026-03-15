@@ -118,4 +118,7 @@ async function bootstrap() {
   app.enableShutdownHooks();
   await app.listen(port);
 }
-bootstrap();
+bootstrap().catch(err => {
+  console.error('Fatal bootstrap error:', err);
+  process.exit(1);
+});

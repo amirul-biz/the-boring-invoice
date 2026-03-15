@@ -22,8 +22,8 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { CreateInvoiceInputDTO, DeactivateBatchDTO, InvoiceListQueryDTO, MarkPaidBatchDTO, NotifyInvoiceViaEmailBatchDTO, ProcessedInvoiceDto } from './invoice-dto';
+import { InvoiceService } from './invoice-service';
 import {
-  InvoiceService,
   CreateInvoiceMessage,
   DeactivateMessage,
   RetryDeactivateMessage,
@@ -34,7 +34,7 @@ import {
   MarkInvoicePaidMessage,
   RetryMarkPaidMessage,
   ToyyibPayCallbackData,
-} from './invoice-service';
+} from './invoice-messages';
 import { Ctx, EventPattern, Payload, RmqContext } from '@nestjs/microservices';
 import { generateInvoiceTemplate } from './invoice-template-generator';
 import { UserById } from '../decorator/user.decorator';

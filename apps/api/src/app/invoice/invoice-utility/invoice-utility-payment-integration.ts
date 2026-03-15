@@ -4,6 +4,29 @@ import { generateToyyibpayBill } from '../invoice-generator/invoice-generator-to
 import { PaymentIntegrationCredential } from '../../business-info/business-info-interface';
 
 /**
+ * Parse billPaymentDate from ToyyibPay getBillTransactions response.
+ * Handles both 24h ("DD-MM-YYYY HH:MM:SS") and 12h ("DD-MM-YYYY HH:MM:SS am/pm") formats in MYT (UTC+8).
+ * Returns UTC ISO string for DB storage.
+ */
+export function parseBillPaymentDate(billPaymentDate: string): string {
+  if (!billPaymentDate) return new Date().toISOString();
+
+  const [datePart, timePart, meridiem] = billPaymentDate.trim().split(' ');
+  const [day, month, year] = datePart.split('-');
+  const [, minutes, seconds] = timePart.split(':').map(Number);
+  let hours = Number(timePart.split(':')[0]);
+
+  if (meridiem) {
+    const isPm = meridiem.toLowerCase() === 'pm';
+    if (isPm && hours !== 12) hours += 12;
+    if (!isPm && hours === 12) hours = 0;
+  }
+
+  const time24 = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  return new Date(`${year}-${month}-${day}T${time24}+08:00`).toISOString();
+}
+
+/**
  * Process invoice data by integrating with ToyyibPay payment gateway
  * Creates payment bill and returns invoice with payment URL
  *
