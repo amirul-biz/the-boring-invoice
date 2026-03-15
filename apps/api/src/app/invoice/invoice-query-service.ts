@@ -90,7 +90,7 @@ export class InvoiceQueryService {
       totalTaxAmount: parseFloat(invoice.totalTaxAmount.toString()),
       totalDiscountAmount: parseFloat(invoice.totalDiscountAmount.toString()),
       totalPayableAmount: parseFloat(invoice.totalPayableAmount.toString()),
-      billUrl: invoice.billUrl ?? undefined,
+      billUrl: invoice.billUrl ?? null,
       invoiceVersion: invoice.invoiceVersion,
     };
   }

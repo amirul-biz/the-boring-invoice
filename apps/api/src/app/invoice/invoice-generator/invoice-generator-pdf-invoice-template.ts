@@ -49,7 +49,7 @@ export async function generatePdfInvoiceTemplate(
 ): Promise<Buffer> {
   // Generate QR code if billUrl exists
   const paymentProxyUrl = invoiceData.billUrl
-    ? `${process.env.API_BASE_URL}/invoice/pay/${invoiceData.invoiceNo}`
+    ? `${process.env.API_URL}/invoice/pay/${invoiceData.invoiceNo}`
     : null;
   let qrBuffer: Buffer | null = null;
   if (paymentProxyUrl) {
