@@ -162,6 +162,30 @@ export class InvoiceListing implements OnInit, OnDestroy {
       });
   }
 
+  onDownloadInvoiceOrReceipt(invoice: IInvoiceListItem): void {
+    const isPaid = invoice.status === 'PAID';
+    const request$ = isPaid
+      ? this.invoiceListingService.downloadReceiptPdf(this.businessId, invoice.invoiceNo)
+      : this.invoiceListingService.downloadInvoicePdf(this.businessId, invoice.invoiceNo);
+    const filename = isPaid ? `Receipt-${invoice.invoiceNo}.pdf` : `${invoice.invoiceNo}.pdf`;
+
+    this.spinner.show();
+    request$.pipe(finalize(() => this.spinner.hide())).subscribe({
+      next: (blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+      },
+      error: async (err) => {
+        const message = err?.error?.message || 'Failed to download PDF.';
+        await errorModal('Error', message);
+      },
+    });
+  }
+
   async onBatchDeactivate(): Promise<void> {
     const invoiceNumbers = this.getCheckedPendingInvoice();
     if (invoiceNumbers.length === 0) return;
@@ -346,7 +370,7 @@ export class InvoiceListing implements OnInit, OnDestroy {
         this.onDeactivateInvoice(event.invoice);
         break;
       case 'download':
-        alert(`Download: ${event.invoice.invoiceNo}`);
+        this.onDownloadInvoiceOrReceipt(event.invoice);
         break;
     }
   }

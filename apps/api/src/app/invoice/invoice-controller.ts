@@ -80,6 +80,51 @@ export class InvoiceController {
     return this.invoiceService.getInvoiceList(businessId, userId, query);
   }
 
+  @Get('download/invoice/:businessId/:invoiceNo')
+  @ApiOperation({ summary: 'Download invoice as PDF' })
+  @ApiParam({ name: 'businessId', type: String })
+  @ApiParam({ name: 'invoiceNo', type: String })
+  @ApiResponse({ status: 200, description: 'Invoice PDF file' })
+  @ApiResponse({ status: 403, description: 'Invoice does not belong to this business' })
+  @ApiResponse({ status: 404, description: 'Invoice not found' })
+  async downloadInvoicePdf(
+    @Param('businessId') businessId: string,
+    @Param('invoiceNo') invoiceNo: string,
+    @UserById() userId: string,
+    @Res() res: Response,
+  ): Promise<void> {
+    const buffer = await this.invoiceService.downloadInvoicePdf(businessId, invoiceNo, userId);
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="${invoiceNo}.pdf"`,
+      'Content-Length': buffer.length,
+    });
+    res.send(buffer);
+  }
+
+  @Get('download/receipt/:businessId/:invoiceNo')
+  @ApiOperation({ summary: 'Download receipt as PDF (PAID invoices only)' })
+  @ApiParam({ name: 'businessId', type: String })
+  @ApiParam({ name: 'invoiceNo', type: String })
+  @ApiResponse({ status: 200, description: 'Receipt PDF file' })
+  @ApiResponse({ status: 400, description: 'Invoice is not paid' })
+  @ApiResponse({ status: 403, description: 'Invoice does not belong to this business' })
+  @ApiResponse({ status: 404, description: 'Invoice not found' })
+  async downloadReceiptPdf(
+    @Param('businessId') businessId: string,
+    @Param('invoiceNo') invoiceNo: string,
+    @UserById() userId: string,
+    @Res() res: Response,
+  ): Promise<void> {
+    const buffer = await this.invoiceService.downloadReceiptPdf(businessId, invoiceNo, userId);
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="Receipt-${invoiceNo}.pdf"`,
+      'Content-Length': buffer.length,
+    });
+    res.send(buffer);
+  }
+
   @Get('detail/:businessId/:invoiceNo')
   @ApiOperation({ summary: 'Get full invoice detail with decrypted fields' })
   @ApiParam({ name: 'businessId', type: String })

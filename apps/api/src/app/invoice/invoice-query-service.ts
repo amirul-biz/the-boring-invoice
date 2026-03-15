@@ -4,10 +4,13 @@ import { PrismaService } from '@prismaService';
 import { BusinessInfoService } from '../business-info/business-info-service';
 import { CryptoService } from '../crypto/crypto.service';
 
+import { InvoiceStatus } from '@prisma/client';
 import { InvoiceItemDTO, ProcessedInvoiceDto, SupplierDTO, RecipientDTO } from './invoice-dto';
 import { decryptRecipient, decryptSupplier } from './invoice-utility/invoice-utility-crypto';
-import { getInvoiceByNumber } from './invoice-repository/invoice-repository-get';
+import { getInvoiceByNumber, getInvoiceAsReceipt } from './invoice-repository/invoice-repository-get';
 import { getInvoiceList, InvoiceListQuery, PaginatedInvoiceList } from './invoice-repository/invoice-repository-list';
+import { generatePdfInvoiceTemplate } from './invoice-generator/invoice-generator-pdf-invoice-template';
+import { generatePdfReceiptTemplate } from './invoice-generator/invoice-generator-pdf-receipt-template';
 
 @Injectable()
 export class InvoiceQueryService {
@@ -34,6 +37,32 @@ export class InvoiceQueryService {
       recipientPhone: item.recipientPhone ? this.cryptoService.decrypt(item.recipientPhone) : '',
     }));
     return result;
+  }
+
+  async downloadInvoicePdf(encodedBusinessId: string, invoiceNo: string, userId: string): Promise<Buffer> {
+    const invoiceDto = await this.getInvoiceDetail(encodedBusinessId, invoiceNo, userId);
+    return generatePdfInvoiceTemplate(invoiceDto);
+  }
+
+  async downloadReceiptPdf(encodedBusinessId: string, invoiceNo: string, userId: string): Promise<Buffer> {
+    await this.businessInfoService.verifyOwnership(encodedBusinessId, userId);
+    const rawBusinessId = this.cryptoService.decodeId(encodedBusinessId);
+
+    const invoice = await getInvoiceByNumber(this.prisma, invoiceNo, this.logger);
+    if (invoice.businessId !== rawBusinessId) {
+      throw new ForbiddenException('Invoice does not belong to this business');
+    }
+    if (invoice.status !== InvoiceStatus.PAID) {
+      throw new HttpException('Receipt is only available for paid invoices', HttpStatus.BAD_REQUEST);
+    }
+
+    const rawReceipt = await getInvoiceAsReceipt(this.prisma, invoiceNo, this.logger);
+    const receiptDto = {
+      ...rawReceipt,
+      recipient: decryptRecipient(rawReceipt.recipient as unknown as RecipientDTO, this.cryptoService),
+      supplier: decryptSupplier(rawReceipt.supplier as unknown as SupplierDTO, this.cryptoService),
+    };
+    return generatePdfReceiptTemplate(receiptDto);
   }
 
   async getInvoiceDetail(encodedBusinessId: string, invoiceNo: string, userId: string): Promise<ProcessedInvoiceDto> {

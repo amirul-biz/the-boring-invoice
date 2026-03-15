@@ -137,4 +137,12 @@ export class InvoiceService {
   getInvoiceDetail(encodedBusinessId: string, invoiceNo: string, userId: string): Promise<ProcessedInvoiceDto> {
     return this.queryService.getInvoiceDetail(encodedBusinessId, invoiceNo, userId);
   }
+
+  downloadInvoicePdf(encodedBusinessId: string, invoiceNo: string, userId: string): Promise<Buffer> {
+    return this.queryService.downloadInvoicePdf(encodedBusinessId, invoiceNo, userId);
+  }
+
+  downloadReceiptPdf(encodedBusinessId: string, invoiceNo: string, userId: string): Promise<Buffer> {
+    return this.queryService.downloadReceiptPdf(encodedBusinessId, invoiceNo, userId);
+  }
 }

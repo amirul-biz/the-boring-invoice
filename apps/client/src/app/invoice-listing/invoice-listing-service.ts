@@ -69,4 +69,18 @@ export class InvoiceListingService {
       `${this.apiUrl}/invoice/detail/${businessId}/${invoiceNo}`,
     );
   }
+
+  downloadInvoicePdf(businessId: string, invoiceNo: string): Observable<Blob> {
+    return this.http.get(
+      `${this.apiUrl}/invoice/download/invoice/${businessId}/${invoiceNo}`,
+      { responseType: 'blob' },
+    );
+  }
+
+  downloadReceiptPdf(businessId: string, invoiceNo: string): Observable<Blob> {
+    return this.http.get(
+      `${this.apiUrl}/invoice/download/receipt/${businessId}/${invoiceNo}`,
+      { responseType: 'blob' },
+    );
+  }
 }
