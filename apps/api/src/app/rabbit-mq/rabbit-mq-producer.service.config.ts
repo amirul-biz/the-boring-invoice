@@ -10,8 +10,8 @@ const PATTERN_TO_QUEUE: Record<string, string> = {
   [INVOICE_QUEUE_PATTERNS.FAILED_CREATE_INVOICE]:          'invoice_creation_queue',
 
   [INVOICE_QUEUE_PATTERNS.UPDATE_INVOICE_PAYMENT_STATUS]:  'payment_callback_queue',
-  [INVOICE_QUEUE_PATTERNS.RETRY_INVOICE_PAYMENT_CALLBACK]: 'payment_callback_queue',
-  [INVOICE_QUEUE_PATTERNS.FAILED_INVOICE_PAYMENT_CALLBACK]:'payment_callback_queue',
+  [INVOICE_QUEUE_PATTERNS.RETRY_INVOICE_PAYMENT_CALLBACK]:  'retry_payment_callback_queue',
+  [INVOICE_QUEUE_PATTERNS.FAILED_INVOICE_PAYMENT_CALLBACK]: 'failed_payment_callback_queue',
 
   [INVOICE_QUEUE_PATTERNS.NOTIFY_INVOICE_VIA_EMAIL]:       'notify_invoice_via_email_queue',
 

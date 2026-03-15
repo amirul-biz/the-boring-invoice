@@ -9,11 +9,9 @@ import { CryptoService } from '../crypto/crypto.service';
 import { ReceiptDTO } from './invoice-dto';
 import { RetryPaymentCallbackMessage, ToyyibPayCallbackData } from './invoice-messages';
 import { sendReceiptEmail } from './invoice-utility/invoice-utility-email-sender';
-import { parseBillPaymentDate } from './invoice-utility/invoice-utility-payment-integration';
 import { decryptRecipient, decryptSupplier } from './invoice-utility/invoice-utility-crypto';
-import { updateInvoiceStatus, UpdateInvoiceStatusData } from './invoice-repository/invoice-repository-update-status';
+import { updateInvoiceStatus } from './invoice-repository/invoice-repository-update-status';
 import { getInvoiceAsReceipt, getInvoiceByNumber } from './invoice-repository/invoice-repository-get';
-import { ToyyibPayUtil } from './invoice-generator/invoice-generator-toyyibpay-bill';
 import { INVOICE_QUEUE_CONFIG, INVOICE_QUEUE_PATTERNS } from './invoice.constants';
 
 @Injectable()
@@ -92,46 +90,42 @@ export class InvoicePaymentCallbackService {
     this.logger.log(`Processing payment callback for invoice: ${callbackData.order_id}`);
 
     const invoiceNo = callbackData.order_id;
-    this.logger.log(`[Callback] order_id=${invoiceNo} billcode=${callbackData.billcode}`);
+    this.logger.log(`[Callback] order_id=${invoiceNo} status_id=${callbackData.status_id}`);
 
     const invoice = await getInvoiceByNumber(this.prisma, invoiceNo, this.logger);
-    this.logger.log(`[Callback] Invoice found: ${invoice.invoiceNo}`);
+    this.logger.log(`[Callback] Invoice found: ${invoice.invoiceNo} — current status: ${invoice.status}`);
 
-    const transactions = await ToyyibPayUtil.fetchBillTransactions(callbackData.billcode);
-    this.logger.log(`[Callback] getBillTransactions returned ${transactions.length} record(s) for billCode=${callbackData.billcode}`);
-
-    const match = transactions.find(t => t.billExternalReferenceNo === invoiceNo);
-    if (!match) {
-      throw new Error(`No matching transaction for invoiceNo=${invoiceNo} in billCode=${callbackData.billcode}`);
+    // Trust the callback directly — ToyyibPay's transaction API may not have
+    // registered the payment yet when the callback fires (race condition with fetchBillTransactions)
+    const isPaid = callbackData.status_id === '1';
+    if (!isPaid) {
+      this.logger.log(`[Callback] status_id=${callbackData.status_id} — payment not confirmed, no update`);
+      return;
     }
 
-    this.logger.log(`[Callback] Matched transaction — billpaymentStatus: ${match.billpaymentStatus}`);
+    if (invoice.status === InvoiceStatus.PAID) {
+      this.logger.log(`[Callback] Invoice ${invoiceNo} already PAID — skipping`);
+      return;
+    }
 
-    const paymentStatus = match.billpaymentStatus === '1' ? InvoiceStatus.PAID : invoice.status;
-    const sanitizedTransactionTime = parseBillPaymentDate(match.billPaymentDate);
-
-    const updateData: UpdateInvoiceStatusData = {
+    await updateInvoiceStatus(this.prisma, {
       invoiceNo,
-      status: paymentStatus,
+      status: InvoiceStatus.PAID,
       transactionId: callbackData.transaction_id,
-      transactionTime: sanitizedTransactionTime,
+      transactionTime: new Date().toISOString(),
+    }, this.logger);
+    this.logger.log(`[Callback] Invoice ${invoiceNo} updated to PAID`);
+
+    const rawReceipt = await getInvoiceAsReceipt(this.prisma, invoiceNo, this.logger);
+    const receiptData: ReceiptDTO = {
+      ...rawReceipt,
+      recipient: decryptRecipient(rawReceipt.recipient, this.cryptoService),
+      supplier: decryptSupplier(rawReceipt.supplier, this.cryptoService),
     };
 
-    await updateInvoiceStatus(this.prisma, updateData, this.logger);
-    this.logger.log(`[Callback] Invoice ${invoiceNo} status updated to ${paymentStatus}`);
-
-    if (paymentStatus === InvoiceStatus.PAID) {
-      const rawReceipt = await getInvoiceAsReceipt(this.prisma, invoiceNo, this.logger);
-      const receiptData: ReceiptDTO = {
-        ...rawReceipt,
-        recipient: decryptRecipient(rawReceipt.recipient, this.cryptoService),
-        supplier: decryptSupplier(rawReceipt.supplier, this.cryptoService),
-      };
-
-      sendReceiptEmail(this.mailService, receiptData, this.logger).catch(() => {
-        this.logger.warn(`Receipt email failed but payment processed: ${invoiceNo}`);
-      });
-    }
+    sendReceiptEmail(this.mailService, receiptData, this.logger).catch(() => {
+      this.logger.warn(`Receipt email failed but payment processed: ${invoiceNo}`);
+    });
 
     this.logger.log(`Payment callback processed successfully: ${invoiceNo}`);
   }

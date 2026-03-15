@@ -11,6 +11,8 @@ import { rabbitMQFailedDeactivateBillConfig } from './app/rabbit-mq/rabbit-mq-fa
 import { rabbitMQMarkInvoicePaidConfig } from './app/rabbit-mq/rabbit-mq-mark-invoice-paid.config';
 import { rabbitMQRetryMarkInvoicePaidConfig } from './app/rabbit-mq/rabbit-mq-retry-mark-invoice-paid.config';
 import { rabbitMQFailedMarkInvoicePaidConfig } from './app/rabbit-mq/rabbit-mq-failed-mark-invoice-paid.config';
+import { rabbitMQRetryPaymentCallbackConfig } from './app/rabbit-mq/rabbit-mq-retry-payment-callback.config';
+import { rabbitMQFailedPaymentCallbackConfig } from './app/rabbit-mq/rabbit-mq-failed-payment-callback.config';
 import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
@@ -75,6 +77,8 @@ async function bootstrap() {
   try {
     app.connectMicroservice(rabbitMQInvoiceConfig());
     app.connectMicroservice(rabbitMQPaymentConfig());
+    app.connectMicroservice(rabbitMQRetryPaymentCallbackConfig());
+    app.connectMicroservice(rabbitMQFailedPaymentCallbackConfig());
     app.connectMicroservice(rabbitMQNotifyInvoiceViaEmailConfig());
     app.connectMicroservice(rabbitMQDeactivateBillConfig());
     app.connectMicroservice(rabbitMQRetryDeactivateBillConfig());
