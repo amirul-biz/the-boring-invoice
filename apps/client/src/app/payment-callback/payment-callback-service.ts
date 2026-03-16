@@ -7,7 +7,7 @@ export class PaymentCallbackService {
 
   getBillStatus(billCode: string): Observable<boolean> {
     return from(
-      fetch(`${this.apiUrl}/invoice/bill-status/${billCode}`)
+      fetch(`${this.apiUrl}/invoice/bill-status/${billCode}`, { cache: 'no-store' })
         .then((res) => res.json() as Promise<boolean>)
     );
   }
