@@ -22,7 +22,8 @@ export class App implements OnInit {
     this.router.events.pipe(
       filter((event) => event instanceof NavigationEnd),
     ).subscribe((event) => {
-      this.isLoginPage = (event as NavigationEnd).urlAfterRedirects === '/';
+      const url = (event as NavigationEnd).urlAfterRedirects;
+      this.isLoginPage = url === '/' || url.startsWith('/payment-callback');
     });
   }
 
