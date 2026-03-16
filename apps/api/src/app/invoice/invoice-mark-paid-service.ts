@@ -117,14 +117,17 @@ export class InvoiceMarkPaidService {
 
     if (invoice.billCode) {
       this.logger.log(`[MarkPaid:Single:2] Checking ToyyibPay for ${invoiceNo} (billCode=${invoice.billCode})`);
-      const transactions = await ToyyibPayUtil.fetchBillTransactions(invoice.billCode, '1');
-      this.logger.log(`[MarkPaid:Single:2] getBillTransactions returned ${transactions.length} confirmed payment(s) for billCode=${invoice.billCode}`);
+      const transactions = await ToyyibPayUtil.fetchBillTransactions(invoice.billCode);
+      this.logger.log(`[MarkPaid:Single:2] getBillTransactions returned ${transactions.length} transaction(s) for billCode=${invoice.billCode}`);
       transactions.forEach((t, i) => {
         this.logger.log(`[MarkPaid:Single:2] tx[${i}] billpaymentStatus=${t.billpaymentStatus} billpaymentInvoiceNo=${t.billpaymentInvoiceNo}`);
       });
 
-      if (!transactions.length) {
-        this.logger.warn(`[MarkPaid:Single:X] ToyyibPay has no confirmed payment for billCode=${invoice.billCode} — skipping`);
+      const confirmedTx = transactions.filter(t => t.billpaymentStatus === '1');
+      this.logger.log(`[MarkPaid:Single:2] confirmed (billpaymentStatus=1): ${confirmedTx.length} for billCode=${invoice.billCode}`);
+
+      if (!confirmedTx.length) {
+        this.logger.warn(`[MarkPaid:Single:X] ToyyibPay has no confirmed payment (billpaymentStatus=1) for billCode=${invoice.billCode} — skipping`);
         return;
       }
 
@@ -132,8 +135,8 @@ export class InvoiceMarkPaidService {
       await updateInvoiceStatus(this.prisma, {
         invoiceNo,
         status: InvoiceStatus.PAID,
-        transactionId: transactions[0].billpaymentInvoiceNo,
-        transactionTime: parseBillPaymentDate(transactions[0].billPaymentDate),
+        transactionId: confirmedTx[0].billpaymentInvoiceNo,
+        transactionTime: parseBillPaymentDate(confirmedTx[0].billPaymentDate),
       }, this.logger);
     } else {
       this.logger.log(`[MarkPaid:Single:2] No billCode — manual mark as PAID for ${invoiceNo} (triggered by user ${userId})`);

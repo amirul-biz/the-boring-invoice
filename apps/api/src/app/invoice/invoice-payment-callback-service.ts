@@ -97,15 +97,18 @@ export class InvoicePaymentCallbackService {
     const invoice = await getInvoiceByNumber(this.prisma, invoiceNo, this.logger);
     this.logger.log(`[Callback] Invoice found: ${invoice.invoiceNo} — current status: ${invoice.status}`);
 
-    // Fetch only confirmed (status=1) transactions from ToyyibPay — source of truth
-    const transactions = await ToyyibPayUtil.fetchBillTransactions(callbackData.billcode, '1');
-    this.logger.log(`[Callback] getBillTransactions returned ${transactions.length} confirmed payment(s) for billCode=${callbackData.billcode}`);
+    // Fetch transactions from ToyyibPay — billpaymentStatus is the source of truth
+    const transactions = await ToyyibPayUtil.fetchBillTransactions(callbackData.billcode);
+    this.logger.log(`[Callback] getBillTransactions returned ${transactions.length} transaction(s) for billCode=${callbackData.billcode}`);
     transactions.forEach((t, i) => {
       this.logger.log(`[Callback] tx[${i}] billpaymentStatus=${t.billpaymentStatus} billpaymentInvoiceNo=${t.billpaymentInvoiceNo}`);
     });
 
-    if (!transactions.length) {
-      throw new Error(`No confirmed payment for billCode=${callbackData.billcode} — will retry`);
+    const confirmedTx = transactions.filter(t => t.billpaymentStatus === '1');
+    this.logger.log(`[Callback] confirmed (billpaymentStatus=1): ${confirmedTx.length} for billCode=${callbackData.billcode}`);
+
+    if (!confirmedTx.length) {
+      throw new Error(`No confirmed payment (billpaymentStatus=1) for billCode=${callbackData.billcode} — will retry`);
     }
 
     if (invoice.status === InvoiceStatus.PAID) {
@@ -117,7 +120,7 @@ export class InvoicePaymentCallbackService {
       invoiceNo,
       status: InvoiceStatus.PAID,
       transactionId: callbackData.transaction_id,
-      transactionTime: parseBillPaymentDate(transactions[0].billPaymentDate),
+      transactionTime: parseBillPaymentDate(confirmedTx[0].billPaymentDate),
     };
 
     await updateInvoiceStatus(this.prisma, updateData, this.logger);
