@@ -67,7 +67,6 @@ export class AppModule implements NestModule {
       .apply(AuthMiddleware)
       .exclude(
         { path: 'invoice/callback', method: RequestMethod.POST },
-        { path: 'business-info/:id/public', method: RequestMethod.GET },
       )
       .forRoutes('invoice', 'business-info');
   }

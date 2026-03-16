@@ -9,9 +9,11 @@ import { CryptoService } from '../crypto/crypto.service';
 import { ReceiptDTO } from './invoice-dto';
 import { RetryPaymentCallbackMessage, ToyyibPayCallbackData } from './invoice-messages';
 import { sendReceiptEmail } from './invoice-utility/invoice-utility-email-sender';
+import { parseBillPaymentDate } from './invoice-utility/invoice-utility-payment-integration';
 import { decryptRecipient, decryptSupplier } from './invoice-utility/invoice-utility-crypto';
-import { updateInvoiceStatus } from './invoice-repository/invoice-repository-update-status';
+import { updateInvoiceStatus, UpdateInvoiceStatusData } from './invoice-repository/invoice-repository-update-status';
 import { getInvoiceAsReceipt, getInvoiceByNumber } from './invoice-repository/invoice-repository-get';
+import { ToyyibPayUtil } from './invoice-generator/invoice-generator-toyyibpay-bill';
 import { INVOICE_QUEUE_CONFIG, INVOICE_QUEUE_PATTERNS } from './invoice.constants';
 
 @Injectable()
@@ -90,17 +92,22 @@ export class InvoicePaymentCallbackService {
     this.logger.log(`Processing payment callback for invoice: ${callbackData.order_id}`);
 
     const invoiceNo = callbackData.order_id;
-    this.logger.log(`[Callback] order_id=${invoiceNo} status_id=${callbackData.status_id}`);
+    this.logger.log(`[Callback] order_id=${invoiceNo} billcode=${callbackData.billcode}`);
 
     const invoice = await getInvoiceByNumber(this.prisma, invoiceNo, this.logger);
     this.logger.log(`[Callback] Invoice found: ${invoice.invoiceNo} — current status: ${invoice.status}`);
 
-    // Trust the callback directly — ToyyibPay's transaction API may not have
-    // registered the payment yet when the callback fires (race condition with fetchBillTransactions)
-    const isPaid = callbackData.status_id === '1';
-    if (!isPaid) {
-      this.logger.log(`[Callback] status_id=${callbackData.status_id} — payment not confirmed, no update`);
-      return;
+    // Fetch only confirmed (status=1) transactions from ToyyibPay — source of truth
+    const transactions = await ToyyibPayUtil.fetchBillTransactions(callbackData.billcode, '1');
+    this.logger.log(`[Callback] getBillTransactions returned ${transactions.length} confirmed payment(s) for billCode=${callbackData.billcode}`);
+    transactions.forEach((t, i) => {
+      this.logger.log(`[Callback] tx[${i}] billExternalReferenceNo=${t.billExternalReferenceNo} billpaymentStatus=${t.billpaymentStatus} billpaymentInvoiceNo=${t.billpaymentInvoiceNo}`);
+    });
+
+    const match = transactions.find(t => t.billExternalReferenceNo === invoiceNo);
+    this.logger.log(`[Callback] match for invoiceNo=${invoiceNo}: ${match ? 'FOUND' : 'NOT FOUND'}`);
+    if (!match) {
+      throw new Error(`No confirmed payment for invoiceNo=${invoiceNo} in billCode=${callbackData.billcode} — will retry`);
     }
 
     if (invoice.status === InvoiceStatus.PAID) {
@@ -108,12 +115,14 @@ export class InvoicePaymentCallbackService {
       return;
     }
 
-    await updateInvoiceStatus(this.prisma, {
+    const updateData: UpdateInvoiceStatusData = {
       invoiceNo,
       status: InvoiceStatus.PAID,
       transactionId: callbackData.transaction_id,
-      transactionTime: new Date().toISOString(),
-    }, this.logger);
+      transactionTime: parseBillPaymentDate(match.billPaymentDate),
+    };
+
+    await updateInvoiceStatus(this.prisma, updateData, this.logger);
     this.logger.log(`[Callback] Invoice ${invoiceNo} updated to PAID`);
 
     const rawReceipt = await getInvoiceAsReceipt(this.prisma, invoiceNo, this.logger);

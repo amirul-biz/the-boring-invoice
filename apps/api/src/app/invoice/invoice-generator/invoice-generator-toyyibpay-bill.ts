@@ -269,11 +269,15 @@ export class ToyyibPayUtil {
    */
   static async fetchBillTransactions(
     billCode: string,
+    billpaymentStatus?: string,
     baseUrl = process.env.PAYMENT_API_BASE_URL || 'https://toyyibpay.com',
   ): Promise<ToyyibPayTransaction[]> {
     const url = `${baseUrl}/index.php/api/getBillTransactions`;
     const formData = new URLSearchParams();
     formData.append('billCode', billCode);
+    if (billpaymentStatus) {
+      formData.append('billpaymentStatus', billpaymentStatus);
+    }
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10_000);

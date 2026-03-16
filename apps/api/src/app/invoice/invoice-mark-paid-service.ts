@@ -117,8 +117,14 @@ export class InvoiceMarkPaidService {
 
     if (invoice.billCode) {
       this.logger.log(`[MarkPaid:Single:2] Checking ToyyibPay for ${invoiceNo} (billCode=${invoice.billCode})`);
-      const transactions = await ToyyibPayUtil.fetchBillTransactions(invoice.billCode);
-      const paidTx = transactions.find(t => t.billExternalReferenceNo === invoiceNo && t.billpaymentStatus === '1');
+      const transactions = await ToyyibPayUtil.fetchBillTransactions(invoice.billCode, '1');
+      this.logger.log(`[MarkPaid:Single:2] getBillTransactions returned ${transactions.length} confirmed payment(s) for billCode=${invoice.billCode}`);
+      transactions.forEach((t, i) => {
+        this.logger.log(`[MarkPaid:Single:2] tx[${i}] billExternalReferenceNo=${t.billExternalReferenceNo} billpaymentStatus=${t.billpaymentStatus} billpaymentInvoiceNo=${t.billpaymentInvoiceNo}`);
+      });
+
+      const paidTx = transactions.find(t => t.billExternalReferenceNo === invoiceNo);
+      this.logger.log(`[MarkPaid:Single:2] match for invoiceNo=${invoiceNo}: ${paidTx ? 'FOUND' : 'NOT FOUND'}`);
 
       if (!paidTx) {
         this.logger.warn(`[MarkPaid:Single:X] ToyyibPay has no confirmed payment for ${invoiceNo} — skipping`);
