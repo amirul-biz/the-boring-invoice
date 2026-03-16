@@ -101,13 +101,11 @@ export class InvoicePaymentCallbackService {
     const transactions = await ToyyibPayUtil.fetchBillTransactions(callbackData.billcode, '1');
     this.logger.log(`[Callback] getBillTransactions returned ${transactions.length} confirmed payment(s) for billCode=${callbackData.billcode}`);
     transactions.forEach((t, i) => {
-      this.logger.log(`[Callback] tx[${i}] billExternalReferenceNo=${t.billExternalReferenceNo} billpaymentStatus=${t.billpaymentStatus} billpaymentInvoiceNo=${t.billpaymentInvoiceNo}`);
+      this.logger.log(`[Callback] tx[${i}] billpaymentStatus=${t.billpaymentStatus} billpaymentInvoiceNo=${t.billpaymentInvoiceNo}`);
     });
 
-    const match = transactions.find(t => t.billExternalReferenceNo === invoiceNo);
-    this.logger.log(`[Callback] match for invoiceNo=${invoiceNo}: ${match ? 'FOUND' : 'NOT FOUND'}`);
-    if (!match) {
-      throw new Error(`No confirmed payment for invoiceNo=${invoiceNo} in billCode=${callbackData.billcode} — will retry`);
+    if (!transactions.length) {
+      throw new Error(`No confirmed payment for billCode=${callbackData.billcode} — will retry`);
     }
 
     if (invoice.status === InvoiceStatus.PAID) {
@@ -119,7 +117,7 @@ export class InvoicePaymentCallbackService {
       invoiceNo,
       status: InvoiceStatus.PAID,
       transactionId: callbackData.transaction_id,
-      transactionTime: parseBillPaymentDate(match.billPaymentDate),
+      transactionTime: parseBillPaymentDate(transactions[0].billPaymentDate),
     };
 
     await updateInvoiceStatus(this.prisma, updateData, this.logger);

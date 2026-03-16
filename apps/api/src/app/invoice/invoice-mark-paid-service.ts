@@ -120,14 +120,11 @@ export class InvoiceMarkPaidService {
       const transactions = await ToyyibPayUtil.fetchBillTransactions(invoice.billCode, '1');
       this.logger.log(`[MarkPaid:Single:2] getBillTransactions returned ${transactions.length} confirmed payment(s) for billCode=${invoice.billCode}`);
       transactions.forEach((t, i) => {
-        this.logger.log(`[MarkPaid:Single:2] tx[${i}] billExternalReferenceNo=${t.billExternalReferenceNo} billpaymentStatus=${t.billpaymentStatus} billpaymentInvoiceNo=${t.billpaymentInvoiceNo}`);
+        this.logger.log(`[MarkPaid:Single:2] tx[${i}] billpaymentStatus=${t.billpaymentStatus} billpaymentInvoiceNo=${t.billpaymentInvoiceNo}`);
       });
 
-      const paidTx = transactions.find(t => t.billExternalReferenceNo === invoiceNo);
-      this.logger.log(`[MarkPaid:Single:2] match for invoiceNo=${invoiceNo}: ${paidTx ? 'FOUND' : 'NOT FOUND'}`);
-
-      if (!paidTx) {
-        this.logger.warn(`[MarkPaid:Single:X] ToyyibPay has no confirmed payment for ${invoiceNo} — skipping`);
+      if (!transactions.length) {
+        this.logger.warn(`[MarkPaid:Single:X] ToyyibPay has no confirmed payment for billCode=${invoice.billCode} — skipping`);
         return;
       }
 
@@ -135,8 +132,8 @@ export class InvoiceMarkPaidService {
       await updateInvoiceStatus(this.prisma, {
         invoiceNo,
         status: InvoiceStatus.PAID,
-        transactionId: paidTx.billpaymentInvoiceNo,
-        transactionTime: parseBillPaymentDate(paidTx.billPaymentDate),
+        transactionId: transactions[0].billpaymentInvoiceNo,
+        transactionTime: parseBillPaymentDate(transactions[0].billPaymentDate),
       }, this.logger);
     } else {
       this.logger.log(`[MarkPaid:Single:2] No billCode — manual mark as PAID for ${invoiceNo} (triggered by user ${userId})`);
