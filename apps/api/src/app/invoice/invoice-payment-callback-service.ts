@@ -97,17 +97,12 @@ export class InvoicePaymentCallbackService {
     const invoice = await getInvoiceByNumber(this.prisma, invoiceNo, this.logger);
     this.logger.log(`[Callback] Invoice found: ${invoice.invoiceNo} — current status: ${invoice.status}`);
 
-    // Fetch transactions from ToyyibPay — billpaymentStatus is the source of truth
     const transactions = await ToyyibPayUtil.fetchBillTransactions(callbackData.billcode);
-    this.logger.log(`[Callback] getBillTransactions returned ${transactions.length} transaction(s) for billCode=${callbackData.billcode}`);
-    transactions.forEach((t, i) => {
-      this.logger.log(`[Callback] tx[${i}] billpaymentStatus=${t.billpaymentStatus} billpaymentInvoiceNo=${t.billpaymentInvoiceNo}`);
-    });
+    this.logger.log(`[Callback] raw transactions for billCode=${callbackData.billcode}: ${JSON.stringify(transactions)}`);
+    const isBillPaid = transactions[0]?.billpaymentStatus === '1';
+    this.logger.log(`[Callback] billpaymentStatus=${transactions[0]?.billpaymentStatus} isBillPaid=${isBillPaid}`);
 
-    const confirmedTx = transactions.filter(t => t.billpaymentStatus === '1');
-    this.logger.log(`[Callback] confirmed (billpaymentStatus=1): ${confirmedTx.length} for billCode=${callbackData.billcode}`);
-
-    if (!confirmedTx.length) {
+    if (!isBillPaid) {
       throw new Error(`No confirmed payment (billpaymentStatus=1) for billCode=${callbackData.billcode} — will retry`);
     }
 
@@ -120,7 +115,7 @@ export class InvoicePaymentCallbackService {
       invoiceNo,
       status: InvoiceStatus.PAID,
       transactionId: callbackData.transaction_id,
-      transactionTime: parseBillPaymentDate(confirmedTx[0].billPaymentDate),
+      transactionTime: parseBillPaymentDate(transactions[0].billPaymentDate),
     };
 
     await updateInvoiceStatus(this.prisma, updateData, this.logger);
