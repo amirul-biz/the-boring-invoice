@@ -25,7 +25,7 @@ export class InvoiceQueryService {
 
   async getBillStatus(billCode: string): Promise<{ paid: boolean }> {
     const transactions = await ToyyibPayUtil.fetchBillTransactions(billCode);
-    return { paid: transactions[0]?.billpaymentStatus === '1' };
+    return { paid: String(transactions[0]?.billpaymentStatus) === '1' };
   }
 
   async getPaymentRedirectUrl(invoiceNo: string): Promise<string> {
