@@ -3,6 +3,7 @@ import { Injectable, Logger, ForbiddenException, HttpException, HttpStatus } fro
 import { PrismaService } from '@prismaService';
 import { BusinessInfoService } from '../business-info/business-info-service';
 import { CryptoService } from '../crypto/crypto.service';
+import { ToyyibPayUtil } from './invoice-generator/invoice-generator-toyyibpay-bill';
 
 import { InvoiceStatus } from '@prisma/client';
 import { InvoiceItemDTO, ProcessedInvoiceDto, SupplierDTO, RecipientDTO } from './invoice-dto';
@@ -21,6 +22,11 @@ export class InvoiceQueryService {
     private readonly businessInfoService: BusinessInfoService,
     private readonly cryptoService: CryptoService,
   ) {}
+
+  async getBillStatus(billCode: string): Promise<{ paid: boolean }> {
+    const transactions = await ToyyibPayUtil.fetchBillTransactions(billCode, '1');
+    return { paid: transactions.length > 0 };
+  }
 
   async getPaymentRedirectUrl(invoiceNo: string): Promise<string> {
     const invoice = await getInvoiceByNumber(this.prisma, invoiceNo, this.logger);

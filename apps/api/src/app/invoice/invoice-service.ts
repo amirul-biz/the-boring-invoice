@@ -126,6 +126,10 @@ export class InvoiceService {
 
   // ─── Queries ──────────────────────────────────────────────────────────────────
 
+  getBillStatus(billCode: string) {
+    return this.queryService.getBillStatus(billCode);
+  }
+
   getPaymentRedirectUrl(invoiceNo: string) {
     return this.queryService.getPaymentRedirectUrl(invoiceNo);
   }

@@ -58,6 +58,14 @@ export class InvoiceController {
     res.send(buffer);
   }
 
+  @Get('bill-status/:billCode')
+  @ApiOperation({ summary: 'Check ToyyibPay bill payment status (public)' })
+  @ApiParam({ name: 'billCode', type: String })
+  @ApiResponse({ status: 200, description: 'Bill payment status' })
+  async getBillStatus(@Param('billCode') billCode: string): Promise<{ paid: boolean }> {
+    return this.invoiceService.getBillStatus(billCode);
+  }
+
   @Get('pay/:invoiceNo')
   @ApiOperation({ summary: 'Redirect to ToyyibPay payment page' })
   @ApiParam({ name: 'invoiceNo', type: String })

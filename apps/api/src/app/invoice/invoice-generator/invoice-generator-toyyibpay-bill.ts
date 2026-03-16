@@ -85,7 +85,7 @@ export class ToyyibPayUtil {
       secretKey: config?.secretKey || '',
       categoryCode: config?.categoryCode || '',
       baseUrl: config?.baseUrl || process.env.PAYMENT_API_BASE_URL || 'https://toyyibpay.com',
-      returnUrl: config?.returnUrl || process.env.PAYMENT_RETURN_URL || '',
+      returnUrl: config?.returnUrl || `${process.env.NG_APP_CLIENT_URL || ''}/payment-callback`,
       callbackUrl: config?.callbackUrl || '',
     };
 
