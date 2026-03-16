@@ -301,10 +301,11 @@ export class ToyyibPayUtil {
       const text = await response.text();
       logger.log(`[ToyyibPay] getBillTransactions raw response for billCode=${billCode}: ${text}`);
 
-      if (!text.startsWith('[') && !text.startsWith('{')) {
+      const trimmed = text.trim();
+      if (!trimmed.startsWith('[') && !trimmed.startsWith('{')) {
         return [];
       }
-      return JSON.parse(text) as ToyyibPayTransaction[];
+      return JSON.parse(trimmed) as ToyyibPayTransaction[];
     } catch (error) {
       if (error.name === 'AbortError') {
         throw new HttpException('ToyyibPay getBillTransactions timed out after 10s', HttpStatus.GATEWAY_TIMEOUT);
