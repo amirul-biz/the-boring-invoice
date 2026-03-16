@@ -27,7 +27,6 @@ import { ThrottlerModule } from '@nestjs/throttler';
           'SMTP_MAILER_SERVER_PASSWORD',
           'SMTP_MAILER_HOST',
           'SMTP_MAILER_FROM',
-          'PAYMENT_RETURN_URL',
           'API_URL',
         ];
         const missing = required.filter((key) => !config[key]);

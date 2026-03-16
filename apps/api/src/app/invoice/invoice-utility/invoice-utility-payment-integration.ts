@@ -46,10 +46,10 @@ export async function processPaymentIntegration(
     );
 
     // Get environment URLs
-    const returnUrl = process.env.PAYMENT_RETURN_URL;
+    const returnUrl = `${process.env.NG_APP_CLIENT_URL || ''}/payment-callback`;
     const callbackUrl = `${process.env.API_URL}/invoice/callback`;
 
-    if (!returnUrl || !process.env.API_URL) {
+    if (!process.env.NG_APP_CLIENT_URL || !process.env.API_URL) {
       throw new HttpException(
         'Payment gateway configuration missing',
         HttpStatus.INTERNAL_SERVER_ERROR,
