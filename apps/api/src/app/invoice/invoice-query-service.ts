@@ -23,13 +23,13 @@ export class InvoiceQueryService {
     private readonly cryptoService: CryptoService,
   ) {}
 
-  async getBillStatus(billCode: string): Promise<{ paid: boolean }> {
+  async getBillStatus(billCode: string): Promise<boolean> {
     const transactions = await ToyyibPayUtil.fetchBillTransactions(billCode);
     const status = transactions[0]?.billpaymentStatus;
     this.logger.log(`[getBillStatus] billCode=${billCode} billpaymentStatus=${status} (type=${typeof status})`);
     const paid = String(status) === '1';
     this.logger.log(`[getBillStatus] result paid=${paid}`);
-    return { paid };
+    return paid;
   }
 
   async getPaymentRedirectUrl(invoiceNo: string): Promise<string> {

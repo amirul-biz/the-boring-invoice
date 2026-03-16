@@ -62,7 +62,7 @@ export class InvoiceController {
   @ApiOperation({ summary: 'Check ToyyibPay bill payment status (public)' })
   @ApiParam({ name: 'billCode', type: String })
   @ApiResponse({ status: 200, description: 'Bill payment status' })
-  async getBillStatus(@Param('billCode') billCode: string): Promise<{ paid: boolean }> {
+  async getBillStatus(@Param('billCode') billCode: string): Promise<boolean> {
     return this.invoiceService.getBillStatus(billCode);
   }
 

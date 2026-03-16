@@ -33,8 +33,8 @@ export class PaymentCallback implements OnInit {
 
     if (billCode) {
       this.paymentCallbackService.getBillStatus(billCode).subscribe({
-        next: (res) => {
-          this.state = res.paid ? 'success' : 'failed';
+        next: (paid) => {
+          this.state = paid ? 'success' : 'failed';
           this.spinner.hide();
         },
         error: () => {
