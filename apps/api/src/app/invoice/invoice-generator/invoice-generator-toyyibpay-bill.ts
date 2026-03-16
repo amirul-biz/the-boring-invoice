@@ -272,6 +272,7 @@ export class ToyyibPayUtil {
     billpaymentStatus?: string,
     baseUrl = process.env.PAYMENT_API_BASE_URL || 'https://toyyibpay.com',
   ): Promise<ToyyibPayTransaction[]> {
+    const logger = new Logger(ToyyibPayUtil.name);
     const url = `${baseUrl}/index.php/api/getBillTransactions`;
     const formData = new URLSearchParams();
     formData.append('billCode', billCode);
@@ -298,6 +299,8 @@ export class ToyyibPayUtil {
       }
 
       const text = await response.text();
+      logger.log(`[ToyyibPay] getBillTransactions raw response for billCode=${billCode}: ${text}`);
+
       if (!text.startsWith('[') && !text.startsWith('{')) {
         return [];
       }
