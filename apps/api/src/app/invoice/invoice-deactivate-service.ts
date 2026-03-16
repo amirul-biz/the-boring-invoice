@@ -118,15 +118,17 @@ export class InvoiceDeactivateService {
     if (invoice.billCode) {
       this.logger.log(`[Deactivate:Single:2] Checking ToyyibPay for ${invoiceNo} (billCode=${invoice.billCode})`);
       const transactions = await ToyyibPayUtil.fetchBillTransactions(invoice.billCode);
-      const paidTx = transactions.find(t => t.billExternalReferenceNo === invoiceNo && t.billpaymentStatus === '1');
+      this.logger.log(`[Deactivate:Single:2] raw transactions for billCode=${invoice.billCode}: ${JSON.stringify(transactions)}`);
+      const isBillPaid = transactions[0]?.billpaymentStatus === '1';
+      this.logger.log(`[Deactivate:Single:2] billpaymentStatus=${transactions[0]?.billpaymentStatus} isBillPaid=${isBillPaid}`);
 
-      if (paidTx) {
+      if (isBillPaid) {
         this.logger.warn(`[Deactivate:Single:X] ToyyibPay confirms payment received for ${invoiceNo} — updating to PAID and sending receipt`);
         await updateInvoiceStatus(this.prisma, {
           invoiceNo,
           status: InvoiceStatus.PAID,
-          transactionId: paidTx.billpaymentInvoiceNo,
-          transactionTime: parseBillPaymentDate(paidTx.billPaymentDate),
+          transactionId: transactions[0].billpaymentInvoiceNo,
+          transactionTime: parseBillPaymentDate(transactions[0].billPaymentDate),
         }, this.logger);
 
         const rawReceipt = await getInvoiceAsReceipt(this.prisma, invoiceNo, this.logger);
