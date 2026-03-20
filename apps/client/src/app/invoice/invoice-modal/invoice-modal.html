@@ -151,8 +151,14 @@
       <div class="im-totals">
         <div class="im-total-row">
           <span class="im-total-label">Subtotal</span>
-          <span class="im-total-value">{{ currency }} {{ getSubtotal() | number:'1.2-2' }}</span>
+          <span class="im-total-value">{{ currency }} {{ getGrossSubtotal() | number:'1.2-2' }}</span>
         </div>
+        @if (getDiscountTotal() > 0) {
+          <div class="im-total-row im-total-row--discount">
+            <span class="im-total-label">Total Discount</span>
+            <span class="im-total-value im-total-value--discount">-{{ currency }} {{ getDiscountTotal() | number:'1.2-2' }}</span>
+          </div>
+        }
         <div class="im-total-row">
           <span class="im-total-label">Tax</span>
           <span class="im-total-value">{{ currency }} {{ getTaxTotal() | number:'1.2-2' }}</span>
