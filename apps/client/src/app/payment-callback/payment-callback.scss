@@ -55,14 +55,15 @@ $radius-card:          16px;
   width: 100%;
   max-width: 420px;
   text-align: center;
-  opacity: 0;
-  pointer-events: none;
+  animation: fadeInUp 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
 
-  &--visible {
-    animation: fadeInUp 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
-    opacity: 1;
-    pointer-events: auto;
-  }
+// ─── Verifying ────────────────────────────────────────────────────────────────
+
+.pc-verifying {
+  font-size: 0.9375rem;
+  color: $color-text-secondary;
+  margin: 0;
 }
 
 // ─── Icon ────────────────────────────────────────────────────────────────────

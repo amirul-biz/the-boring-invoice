@@ -7,10 +7,14 @@
     [fullScreen]="true">
   </ngx-spinner>
 
-  <div class="pc-card" [class.pc-card--visible]="state !== 'loading'">
+  @if(state === 'loading') {
+    <div class="pc-card">
+      <p class="pc-verifying">Verifying your payment...</p>
+    </div>
+  }
 
-    <!-- Success State -->
-    <ng-container *ngIf="state === 'success'">
+  @if(state === 'success') {
+    <div class="pc-card">
       <div class="pc-icon pc-icon--success">
         <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
           <circle cx="20" cy="20" r="20" fill="#DCFCE7"/>
@@ -19,15 +23,18 @@
       </div>
       <h1 class="pc-title pc-title--success">Payment Successful</h1>
       <p class="pc-subtitle">Your payment has been confirmed.</p>
-      <div *ngIf="orderId" class="pc-ref">
-        <span class="pc-ref__label">Order Reference</span>
-        <span class="pc-ref__value">{{ orderId }}</span>
-      </div>
+      @if(orderId) {
+        <div class="pc-ref">
+          <span class="pc-ref__label">Order Reference</span>
+          <span class="pc-ref__value">{{ orderId }}</span>
+        </div>
+      }
       <p class="pc-note">You may close this window.</p>
-    </ng-container>
+    </div>
+  }
 
-    <!-- Failed State -->
-    <ng-container *ngIf="state === 'failed'">
+  @if(state === 'failed') {
+    <div class="pc-card">
       <div class="pc-icon pc-icon--failed">
         <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
           <circle cx="20" cy="20" r="20" fill="#FEE2E2"/>
@@ -36,11 +43,12 @@
       </div>
       <h1 class="pc-title pc-title--failed">Payment Not Confirmed</h1>
       <p class="pc-subtitle">We couldn't verify your payment. Please contact support if you believe this is an error.</p>
-      <div *ngIf="orderId" class="pc-ref">
-        <span class="pc-ref__label">Order Reference</span>
-        <span class="pc-ref__value">{{ orderId }}</span>
-      </div>
-    </ng-container>
-
-  </div>
+      @if(orderId) {
+        <div class="pc-ref">
+          <span class="pc-ref__label">Order Reference</span>
+          <span class="pc-ref__value">{{ orderId }}</span>
+        </div>
+      }
+    </div>
+  }
 </div>
