@@ -6,8 +6,9 @@
     type="ball-clip-rotate"
     [fullScreen]="true">
   </ngx-spinner>
-
-  @if(state === 'loading') {
+  
+@if(state){
+ @if(state === 'loading') {
     <div class="pc-card">
       <p class="pc-verifying">Verifying your payment...</p>
     </div>
@@ -50,5 +51,7 @@
         </div>
       }
     </div>
-  }
+  } 
+}
+  
 </div>

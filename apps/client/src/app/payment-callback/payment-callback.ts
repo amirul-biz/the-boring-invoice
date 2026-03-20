@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { NgxSpinnerModule, NgxSpinnerService } from 'ngx-spinner';
@@ -15,6 +15,7 @@ type PageState = 'loading' | 'success' | 'failed';
 })
 export class PaymentCallback implements OnInit {
   private readonly route = inject(ActivatedRoute);
+  private readonly cdr = inject(ChangeDetectorRef);
   private readonly spinner = inject(NgxSpinnerService);
   private readonly paymentCallbackService = inject(PaymentCallbackService);
 
@@ -36,16 +37,17 @@ export class PaymentCallback implements OnInit {
         next: (paid) => {
           this.state = paid ? 'success' : 'failed';
           this.spinner.hide();
+          this.cdr.detectChanges();
         },
         error: () => {
           this.state = 'failed';
           this.spinner.hide();
+          this.cdr.detectChanges();
         },
       });
     } else {
       // Fallback: trust status_id from URL if no billcode
       this.state = statusId === '1' ? 'success' : 'failed';
-      this.spinner.hide();
     }
   }
 }
