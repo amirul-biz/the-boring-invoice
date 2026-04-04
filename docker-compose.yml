@@ -18,7 +18,7 @@ services:
       - SMTP_MAILER_HOST=${SMTP_MAILER_HOST}
       - RBBIT_MQ_QUE_URL=${RBBIT_MQ_QUE_URL}
       - API_URL=${API_URL}
-      - PAYMENT_RETURN_URL=${PAYMENT_RETURN_URL}
+      - NG_APP_CLIENT_URL=${NG_APP_CLIENT_URL}
     depends_on:
       - rabbitmq
     networks:

@@ -4,7 +4,15 @@ import { AppModule } from './app/app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { rabbitMQInvoiceConfig } from './app/rabbit-mq/rabbit-mq-invoice.config';
 import { rabbitMQPaymentConfig } from './app/rabbit-mq/rabbit-mq-payment.config';
-import { rabbitMQNotifyEmailConfig } from './app/rabbit-mq/rabbit-mq-notify-email.config';
+import { rabbitMQNotifyInvoiceViaEmailConfig } from './app/rabbit-mq/rabbit-mq-notify-invoice-via-email.config';
+import { rabbitMQDeactivateBillConfig } from './app/rabbit-mq/rabbit-mq-deactivate-bill.config';
+import { rabbitMQRetryDeactivateBillConfig } from './app/rabbit-mq/rabbit-mq-retry-deactivate-bill.config';
+import { rabbitMQFailedDeactivateBillConfig } from './app/rabbit-mq/rabbit-mq-failed-deactivate-bill.config';
+import { rabbitMQMarkInvoicePaidConfig } from './app/rabbit-mq/rabbit-mq-mark-invoice-paid.config';
+import { rabbitMQRetryMarkInvoicePaidConfig } from './app/rabbit-mq/rabbit-mq-retry-mark-invoice-paid.config';
+import { rabbitMQFailedMarkInvoicePaidConfig } from './app/rabbit-mq/rabbit-mq-failed-mark-invoice-paid.config';
+import { rabbitMQRetryPaymentCallbackConfig } from './app/rabbit-mq/rabbit-mq-retry-payment-callback.config';
+import { rabbitMQFailedPaymentCallbackConfig } from './app/rabbit-mq/rabbit-mq-failed-payment-callback.config';
 import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
@@ -69,7 +77,15 @@ async function bootstrap() {
   try {
     app.connectMicroservice(rabbitMQInvoiceConfig());
     app.connectMicroservice(rabbitMQPaymentConfig());
-    app.connectMicroservice(rabbitMQNotifyEmailConfig());
+    app.connectMicroservice(rabbitMQRetryPaymentCallbackConfig());
+    app.connectMicroservice(rabbitMQFailedPaymentCallbackConfig());
+    app.connectMicroservice(rabbitMQNotifyInvoiceViaEmailConfig());
+    app.connectMicroservice(rabbitMQDeactivateBillConfig());
+    app.connectMicroservice(rabbitMQRetryDeactivateBillConfig());
+    app.connectMicroservice(rabbitMQFailedDeactivateBillConfig());
+    app.connectMicroservice(rabbitMQMarkInvoicePaidConfig());
+    app.connectMicroservice(rabbitMQRetryMarkInvoicePaidConfig());
+    app.connectMicroservice(rabbitMQFailedMarkInvoicePaidConfig());
   } catch (err) {
     console.error('Failed to connect microservice:', err.message);
   }
@@ -106,4 +122,7 @@ async function bootstrap() {
   app.enableShutdownHooks();
   await app.listen(port);
 }
-bootstrap();
+bootstrap().catch(err => {
+  console.error('Fatal bootstrap error:', err);
+  process.exit(1);
+});

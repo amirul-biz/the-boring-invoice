@@ -43,23 +43,44 @@ export class InvoiceListingService {
     );
   }
 
-  notifyInvoiceByEmail(businessId: string, invoiceNumbers: string[]): Observable<void> {
+  notifyInvoiceViaEmail(businessId: string, invoiceNumbers: string[]): Observable<void> {
     return this.http.post<void>(
-      `${this.apiUrl}/invoice/notify-email/${businessId}`,
+      `${this.apiUrl}/invoice/notify-invoice-via-email/${businessId}`,
       { invoiceNumbers },
     );
   }
 
-  deactivateInvoice(businessId: string, invoiceNo: string): Observable<void> {
+  deactivateInvoice(businessId: string, invoiceNumbers: string[]): Observable<void> {
     return this.http.post<void>(
-      `${this.apiUrl}/invoice/deactivate/${businessId}/${invoiceNo}`,
-      {},
+      `${this.apiUrl}/invoice/deactivate/${businessId}`,
+      { invoiceNumbers },
+    );
+  }
+
+  markInvoiceAsPaid(businessId: string, invoiceNumbers: string[]): Observable<void> {
+    return this.http.post<void>(
+      `${this.apiUrl}/invoice/mark-paid/${businessId}`,
+      { invoiceNumbers },
     );
   }
 
   getInvoiceDetail(businessId: string, invoiceNo: string): Observable<IInvoiceDetail> {
     return this.http.get<IInvoiceDetail>(
       `${this.apiUrl}/invoice/detail/${businessId}/${invoiceNo}`,
+    );
+  }
+
+  downloadInvoicePdf(businessId: string, invoiceNo: string): Observable<Blob> {
+    return this.http.get(
+      `${this.apiUrl}/invoice/download/invoice/${businessId}/${invoiceNo}`,
+      { responseType: 'blob' },
+    );
+  }
+
+  downloadReceiptPdf(businessId: string, invoiceNo: string): Observable<Blob> {
+    return this.http.get(
+      `${this.apiUrl}/invoice/download/receipt/${businessId}/${invoiceNo}`,
+      { responseType: 'blob' },
     );
   }
 }

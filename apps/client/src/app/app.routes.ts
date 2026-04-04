@@ -24,5 +24,9 @@ export const appRoutes: Route[] = [
     {
         path: 'business-info/edit/:id',
         loadComponent: () => import('./business-info/business-info').then(m => m.BusinessInfo)
+    },
+    {
+        path: 'payment-callback',
+        loadComponent: () => import('./payment-callback/payment-callback').then(m => m.PaymentCallback)
     }
 ];

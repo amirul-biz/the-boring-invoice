@@ -85,7 +85,7 @@ export class ToyyibPayUtil {
       secretKey: config?.secretKey || '',
       categoryCode: config?.categoryCode || '',
       baseUrl: config?.baseUrl || process.env.PAYMENT_API_BASE_URL || 'https://toyyibpay.com',
-      returnUrl: config?.returnUrl || process.env.PAYMENT_RETURN_URL || '',
+      returnUrl: config?.returnUrl || `${process.env.NG_APP_CLIENT_URL || ''}/payment-callback`,
       callbackUrl: config?.callbackUrl || '',
     };
 
@@ -269,11 +269,16 @@ export class ToyyibPayUtil {
    */
   static async fetchBillTransactions(
     billCode: string,
+    billpaymentStatus?: string,
     baseUrl = process.env.PAYMENT_API_BASE_URL || 'https://toyyibpay.com',
   ): Promise<ToyyibPayTransaction[]> {
+    const logger = new Logger(ToyyibPayUtil.name);
     const url = `${baseUrl}/index.php/api/getBillTransactions`;
     const formData = new URLSearchParams();
     formData.append('billCode', billCode);
+    if (billpaymentStatus) {
+      formData.append('billpaymentStatus', billpaymentStatus);
+    }
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10_000);
@@ -294,7 +299,13 @@ export class ToyyibPayUtil {
       }
 
       const text = await response.text();
-      return JSON.parse(text) as ToyyibPayTransaction[];
+      logger.log(`[ToyyibPay] getBillTransactions raw response for billCode=${billCode}: ${text}`);
+
+      const trimmed = text.trim();
+      if (!trimmed.startsWith('[') && !trimmed.startsWith('{')) {
+        return [];
+      }
+      return JSON.parse(trimmed) as ToyyibPayTransaction[];
     } catch (error) {
       if (error.name === 'AbortError') {
         throw new HttpException('ToyyibPay getBillTransactions timed out after 10s', HttpStatus.GATEWAY_TIMEOUT);

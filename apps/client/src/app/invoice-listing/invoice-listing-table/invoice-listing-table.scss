@@ -219,6 +219,17 @@ $radius-btn:           7px;
       border-color: #B91C1C;
     }
   }
+
+  &--success {
+    color: #15803D;
+    border-color: rgba(21, 128, 61, 0.25);
+
+    &:hover {
+      background: #15803D;
+      color: #FFFFFF;
+      border-color: #15803D;
+    }
+  }
 }
 
 // ─── Checkbox ────────────────────────────────────────────────────────────────

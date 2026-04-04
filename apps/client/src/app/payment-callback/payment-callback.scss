@@ -1,0 +1,140 @@
+// ─── Variables ───────────────────────────────────────────────────────────────
+
+$font-family:          'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+
+$color-bg:             #F6F5F0;
+$color-card:           #FFFFFF;
+$color-border:         rgba(0, 0, 0, 0.07);
+
+$color-text-primary:   #0D0D0D;
+$color-text-secondary: #6B6B6B;
+$color-text-muted:     #ADADAD;
+
+$color-success:        #15803D;
+$color-failed:         #B91C1C;
+
+$radius-card:          16px;
+
+// ─── Keyframes ───────────────────────────────────────────────────────────────
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// ─── Wrapper ─────────────────────────────────────────────────────────────────
+
+.pc-wrapper {
+  font-family: $font-family;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1.5rem;
+  background-color: $color-bg;
+}
+
+// ─── Card ────────────────────────────────────────────────────────────────────
+
+.pc-card {
+  background: $color-card;
+  border: 1px solid $color-border;
+  border-radius: $radius-card;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.04),
+    0 6px 20px rgba(0, 0, 0, 0.05),
+    0 24px 56px rgba(0, 0, 0, 0.03);
+  padding: 3rem 2.75rem;
+  width: 100%;
+  max-width: 420px;
+  text-align: center;
+  animation: fadeInUp 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+// ─── Verifying ────────────────────────────────────────────────────────────────
+
+.pc-verifying {
+  font-size: 0.9375rem;
+  color: $color-text-secondary;
+  margin: 0;
+}
+
+// ─── Icon ────────────────────────────────────────────────────────────────────
+
+.pc-icon {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}
+
+// ─── Title ───────────────────────────────────────────────────────────────────
+
+.pc-title {
+  font-size: 1.375rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin: 0 0 0.625rem;
+
+  &--success { color: $color-success; }
+  &--failed  { color: $color-failed; }
+}
+
+// ─── Subtitle ────────────────────────────────────────────────────────────────
+
+.pc-subtitle {
+  font-size: 0.9375rem;
+  color: $color-text-secondary;
+  line-height: 1.6;
+  margin: 0 0 1.75rem;
+}
+
+// ─── Reference ───────────────────────────────────────────────────────────────
+
+.pc-ref {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  background: $color-bg;
+  border: 1px solid $color-border;
+  border-radius: 10px;
+  padding: 0.875rem 1.25rem;
+  margin-bottom: 1.5rem;
+
+  &__label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: $color-text-muted;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  &__value {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: $color-text-primary;
+    word-break: break-all;
+  }
+}
+
+// ─── Note ────────────────────────────────────────────────────────────────────
+
+.pc-note {
+  font-size: 0.8125rem;
+  color: $color-text-muted;
+  margin: 0;
+}
+
+// ─── Responsive ──────────────────────────────────────────────────────────────
+
+@media (max-width: 575px) {
+  .pc-card {
+    padding: 2rem 1.5rem;
+  }
+}

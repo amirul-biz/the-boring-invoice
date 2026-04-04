@@ -45,6 +45,16 @@ export class InvoiceModalComponent {
     return unitPrice * quantity * (1 - (discountRate ?? 0) / 100);
   }
 
+  getGrossSubtotal(): number {
+    if (!this.shared) return 0;
+    return this.shared.items.reduce((sum, item) =>
+      sum + (item.unitPrice * item.quantity), 0);
+  }
+
+  getDiscountTotal(): number {
+    return this.getGrossSubtotal() - this.getSubtotal();
+  }
+
   getSubtotal(): number {
     if (!this.shared) return 0;
     return this.shared.items.reduce((sum, item) =>

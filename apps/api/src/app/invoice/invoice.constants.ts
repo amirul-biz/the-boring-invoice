@@ -13,15 +13,25 @@ export const INVOICE_QUEUE_CONFIG = {
 
 export const INVOICE_QUEUE_PATTERNS = {
   // Invoice creation queue
-  CREATE:        'receiver-create-invoice',
-  RETRY:         'retry-invoice',
-  FAILED:        'failed-invoice',
+  CREATE_INVOICE:                  'create-invoice',
+  RETRY_CREATE_INVOICE:            'retry-create-invoice',
+  FAILED_CREATE_INVOICE:           'failed-create-invoice',
 
-  // Notify email queue
-  NOTIFY_EMAIL:  'notify-invoice-email',
+  // Notify invoice via email queue
+  NOTIFY_INVOICE_VIA_EMAIL:        'notify-invoice-via-email',
+
+  // Deactivate bill queue
+  DEACTIVATE_INVOICE_BILL:         'deactivate-invoice-bill',
+  RETRY_DEACTIVATE_INVOICE_BILL:   'retry-deactivate-invoice-bill',
+  FAILED_DEACTIVATE_INVOICE_BILL:  'failed-deactivate-invoice-bill',
+
+  // Mark invoice as paid queue
+  MARK_INVOICE_AS_PAID:            'mark-invoice-as-paid',
+  RETRY_MARK_INVOICE_AS_PAID:      'retry-mark-invoice-as-paid',
+  FAILED_MARK_INVOICE_AS_PAID:     'failed-mark-invoice-as-paid',
 
   // Payment callback queue
-  CALLBACK:      'receiver-update-invoice',
-  CALLBACK_RETRY: 'retry-payment-callback',
-  CALLBACK_FAILED: 'failed-payment-callback',
+  UPDATE_INVOICE_PAYMENT_STATUS:   'update-invoice-payment-status',
+  RETRY_INVOICE_PAYMENT_CALLBACK:  'retry-invoice-payment-callback',
+  FAILED_INVOICE_PAYMENT_CALLBACK: 'failed-invoice-payment-callback',
 } as const;

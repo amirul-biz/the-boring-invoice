@@ -27,7 +27,6 @@ import { ThrottlerModule } from '@nestjs/throttler';
           'SMTP_MAILER_SERVER_PASSWORD',
           'SMTP_MAILER_HOST',
           'SMTP_MAILER_FROM',
-          'PAYMENT_RETURN_URL',
           'API_URL',
         ];
         const missing = required.filter((key) => !config[key]);
@@ -42,11 +41,11 @@ import { ThrottlerModule } from '@nestjs/throttler';
     MailerModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-        // SMTP transport — Amazon SES
+        // SMTP transport — ZeptoMail
         transport: {
           host: config.get('SMTP_MAILER_HOST'),
-          port: 2465,
-          secure: true,
+          port: 587,
+          secure: false,
           auth: {
             user: config.get('SMTP_MAILER_EMAIL'),
             pass: config.get('SMTP_MAILER_SERVER_PASSWORD'),
@@ -67,7 +66,8 @@ export class AppModule implements NestModule {
       .apply(AuthMiddleware)
       .exclude(
         { path: 'invoice/callback', method: RequestMethod.POST },
-        { path: 'business-info/:id/public', method: RequestMethod.GET },
+        { path: 'invoice/bill-status/:billCode', method: RequestMethod.GET },
+        { path: 'invoice/pay/:invoiceNo', method: RequestMethod.GET },
       )
       .forRoutes('invoice', 'business-info');
   }

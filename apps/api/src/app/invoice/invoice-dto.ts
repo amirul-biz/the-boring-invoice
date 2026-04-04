@@ -240,15 +240,31 @@ export class ReceiptDTO extends ProcessedInvoiceDto {
   transactionTime: string
 }
 
-// 7. NOTIFY EMAIL BATCH DTO
-export class NotifyEmailBatchDTO {
+// 7. NOTIFY INVOICE VIA EMAIL BATCH DTO
+export class NotifyInvoiceViaEmailBatchDTO {
   @ApiProperty({ type: [String], example: ['INV-001', 'INV-002'] })
   @IsArray()
   @IsString({ each: true })
   invoiceNumbers: string[];
 }
 
-// 8. INVOICE LIST QUERY DTO
+// 8. DEACTIVATE BATCH DTO
+export class DeactivateBatchDTO {
+  @ApiProperty({ type: [String], example: ['INV-001', 'INV-002'] })
+  @IsArray()
+  @IsString({ each: true })
+  invoiceNumbers: string[];
+}
+
+// 9. MARK PAID BATCH DTO
+export class MarkPaidBatchDTO {
+  @ApiProperty({ type: [String], example: ['INV-001', 'INV-002'] })
+  @IsArray()
+  @IsString({ each: true })
+  invoiceNumbers: string[];
+}
+
+// 10. INVOICE LIST QUERY DTO
 export class InvoiceListQueryDTO {
   @ApiProperty({ example: 1 })
   @Type(() => Number)

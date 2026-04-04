@@ -49,7 +49,7 @@ export async function generatePdfInvoiceTemplate(
 ): Promise<Buffer> {
   // Generate QR code if billUrl exists
   const paymentProxyUrl = invoiceData.billUrl
-    ? `${process.env.API_BASE_URL}/invoice/pay/${invoiceData.invoiceNo}`
+    ? `${process.env.API_URL}/invoice/pay/${invoiceData.invoiceNo}`
     : null;
   let qrBuffer: Buffer | null = null;
   if (paymentProxyUrl) {
@@ -366,13 +366,14 @@ export async function generatePdfInvoiceTemplate(
 
         // Line subtotal (before discount, excl. tax)
         const subtotal = (item.quantity || 0) * (item.unitPrice || 0);
+        const discountRate = (item as any).discountRate ?? 0;
+        const discountAmount = (item as any).discountAmount ?? parseFloat((subtotal * discountRate / 100).toFixed(2));
+        const lineAmount = parseFloat((subtotal - discountAmount).toFixed(2));
         doc.font('Helvetica-Bold')
-          .text(formatCurrency(subtotal, currency), colAmount - 60, textY, { width: 60, align: 'right' });
+          .text(formatCurrency(lineAmount, currency), colAmount - 60, textY, { width: 60, align: 'right' });
 
         // Second line: discount info
         const discountY = rowY + 22;
-        const discountRate = (item as any).discountRate ?? 0;
-        const discountAmount = (item as any).discountAmount ?? parseFloat((subtotal * discountRate / 100).toFixed(2));
         const discountText = discountRate > 0
           ? `Discount: ${discountRate.toFixed(2)}%  -${formatCurrency(discountAmount, currency)}`
           : 'Discount: \u2014';
@@ -413,20 +414,29 @@ export async function generatePdfInvoiceTemplate(
       const totalsX = pageWidth - margin - 198;
       let totalsY = rowY + 23;
 
+      // Compute effective discount from items if DTO value missing
+      const effectiveDiscount = totalDiscountAmount > 0
+        ? totalDiscountAmount
+        : items.reduce((sum, item) => {
+            const s = (item.quantity || 0) * (item.unitPrice || 0);
+            const r = (item as any).discountRate ?? 0;
+            return sum + ((item as any).discountAmount ?? parseFloat((s * r / 100).toFixed(2)));
+          }, 0);
+
       // If discount exists: Subtotal → Total Discount → Net Amount → Tax
       // If no discount:    Net Amount → Tax
       doc.font('Helvetica')
         .fontSize(10)
         .fillColor(COLORS.textDark);
 
-      if (totalDiscountAmount > 0) {
-        const grossSubtotal = totalNetAmount + totalDiscountAmount;
+      if (effectiveDiscount > 0) {
+        const grossSubtotal = parseFloat((totalNetAmount + effectiveDiscount).toFixed(2));
         doc.text('Subtotal:', totalsX, totalsY)
           .text(formatCurrency(grossSubtotal, currency), totalsX + 80, totalsY, { width: 118, align: 'right' });
         totalsY += 17;
 
         doc.text('Total Discount:', totalsX, totalsY)
-          .text(`-${formatCurrency(totalDiscountAmount, currency)}`, totalsX + 80, totalsY, { width: 118, align: 'right' });
+          .text(`-${formatCurrency(effectiveDiscount, currency)}`, totalsX + 80, totalsY, { width: 118, align: 'right' });
         totalsY += 17;
       }
 
@@ -460,6 +470,11 @@ export async function generatePdfInvoiceTemplate(
 
       // ============ PAYMENT SECTION (QR Code + Pay Button) ============
       if (billUrl) {
+        // Force page 2 for 3+ items — not enough vertical space on page 1
+        if (items.length >= 3) {
+          doc.addPage();
+          totalsY = margin - 36; // reset so paymentSectionY lands at margin + 14
+        }
         const paymentSectionY = totalsY + 50;
         const paymentBoxWidth = pageWidth - 2 * margin;
         const paymentBoxHeight = 130;
@@ -584,7 +599,7 @@ export async function generatePdfInvoiceTemplate(
         .fontSize(7)
         .fillColor(COLORS.textMuted)
         .text(
-          `Generated on ${new Date().toISOString().replace('T', ' ').substring(0, 19)} | LHDN e-Invoice Compliant`,
+          `Generated on ${new Date().toISOString().replace('T', ' ').substring(0, 19)}`,
           0,
           footerY + 45,
           { width: pageWidth, align: 'center' }

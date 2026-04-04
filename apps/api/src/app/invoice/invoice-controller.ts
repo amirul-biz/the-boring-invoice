@@ -21,16 +21,20 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { CreateInvoiceInputDTO, InvoiceListQueryDTO, NotifyEmailBatchDTO, ProcessedInvoiceDto } from './invoice-dto';
+import { CreateInvoiceInputDTO, DeactivateBatchDTO, InvoiceListQueryDTO, MarkPaidBatchDTO, NotifyInvoiceViaEmailBatchDTO, ProcessedInvoiceDto } from './invoice-dto';
+import { InvoiceService } from './invoice-service';
 import {
-  InvoiceService,
   CreateInvoiceMessage,
+  DeactivateMessage,
+  RetryDeactivateMessage,
   RetryInvoiceMessage,
   RetryPaymentCallbackMessage,
   FailedInvoiceMessage,
-  NotifyEmailMessage,
+  NotifyInvoiceViaEmailMessage,
+  MarkInvoicePaidMessage,
+  RetryMarkPaidMessage,
   ToyyibPayCallbackData,
-} from './invoice-service';
+} from './invoice-messages';
 import { Ctx, EventPattern, Payload, RmqContext } from '@nestjs/microservices';
 import { generateInvoiceTemplate } from './invoice-template-generator';
 import { UserById } from '../decorator/user.decorator';
@@ -54,6 +58,14 @@ export class InvoiceController {
     res.send(buffer);
   }
 
+  @Get('bill-status/:billCode')
+  @ApiOperation({ summary: 'Check ToyyibPay bill payment status (public)' })
+  @ApiParam({ name: 'billCode', type: String })
+  @ApiResponse({ status: 200, description: 'Bill payment status' })
+  async getBillStatus(@Param('billCode') billCode: string): Promise<boolean> {
+    return this.invoiceService.getBillStatus(billCode);
+  }
+
   @Get('pay/:invoiceNo')
   @ApiOperation({ summary: 'Redirect to ToyyibPay payment page' })
   @ApiParam({ name: 'invoiceNo', type: String })
@@ -74,6 +86,51 @@ export class InvoiceController {
     @Query() query: InvoiceListQueryDTO,
   ) {
     return this.invoiceService.getInvoiceList(businessId, userId, query);
+  }
+
+  @Get('download/invoice/:businessId/:invoiceNo')
+  @ApiOperation({ summary: 'Download invoice as PDF' })
+  @ApiParam({ name: 'businessId', type: String })
+  @ApiParam({ name: 'invoiceNo', type: String })
+  @ApiResponse({ status: 200, description: 'Invoice PDF file' })
+  @ApiResponse({ status: 403, description: 'Invoice does not belong to this business' })
+  @ApiResponse({ status: 404, description: 'Invoice not found' })
+  async downloadInvoicePdf(
+    @Param('businessId') businessId: string,
+    @Param('invoiceNo') invoiceNo: string,
+    @UserById() userId: string,
+    @Res() res: Response,
+  ): Promise<void> {
+    const buffer = await this.invoiceService.downloadInvoicePdf(businessId, invoiceNo, userId);
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="${invoiceNo}.pdf"`,
+      'Content-Length': buffer.length,
+    });
+    res.send(buffer);
+  }
+
+  @Get('download/receipt/:businessId/:invoiceNo')
+  @ApiOperation({ summary: 'Download receipt as PDF (PAID invoices only)' })
+  @ApiParam({ name: 'businessId', type: String })
+  @ApiParam({ name: 'invoiceNo', type: String })
+  @ApiResponse({ status: 200, description: 'Receipt PDF file' })
+  @ApiResponse({ status: 400, description: 'Invoice is not paid' })
+  @ApiResponse({ status: 403, description: 'Invoice does not belong to this business' })
+  @ApiResponse({ status: 404, description: 'Invoice not found' })
+  async downloadReceiptPdf(
+    @Param('businessId') businessId: string,
+    @Param('invoiceNo') invoiceNo: string,
+    @UserById() userId: string,
+    @Res() res: Response,
+  ): Promise<void> {
+    const buffer = await this.invoiceService.downloadReceiptPdf(businessId, invoiceNo, userId);
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="Receipt-${invoiceNo}.pdf"`,
+      'Content-Length': buffer.length,
+    });
+    res.send(buffer);
   }
 
   @Get('detail/:businessId/:invoiceNo')
@@ -121,36 +178,56 @@ export class InvoiceController {
   /**
    * Queue a batch of invoice notification emails for async processing
    */
-  @Post('notify-email/:businessId')
+  @Post('notify-invoice-via-email/:businessId')
   @HttpCode(HttpStatus.ACCEPTED)
   @ApiOperation({ summary: 'Queue batch invoice notification emails' })
   @ApiParam({ name: 'businessId', type: String })
-  @ApiBody({ type: NotifyEmailBatchDTO })
+  @ApiBody({ type: NotifyInvoiceViaEmailBatchDTO })
   @ApiResponse({ status: 202, description: 'Notification batch queued' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async queueNotifyEmailBatch(
+  async queueNotifyInvoiceViaEmailBatch(
     @Param('businessId') businessId: string,
-    @Body() body: NotifyEmailBatchDTO,
+    @Body() body: NotifyInvoiceViaEmailBatchDTO,
     @UserById() userId: string,
   ): Promise<void> {
-    await this.invoiceService.queueNotifyEmailBatch(businessId, body.invoiceNumbers, userId);
+    await this.invoiceService.queueNotifyInvoiceViaEmailBatch(businessId, body.invoiceNumbers, userId);
   }
 
-  @Post('deactivate/:businessId/:invoiceNo')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Deactivate invoice and cancel ToyyibPay bill' })
+  /**
+   * Queue a batch of invoice deactivations for async processing
+   */
+  @Post('deactivate/:businessId')
+  @HttpCode(HttpStatus.ACCEPTED)
+  @ApiOperation({ summary: 'Queue batch invoice deactivation' })
   @ApiParam({ name: 'businessId', type: String })
-  @ApiParam({ name: 'invoiceNo', type: String })
-  @ApiResponse({ status: 200, description: 'Invoice deactivated successfully' })
-  @ApiResponse({ status: 400, description: 'Invoice is already paid' })
+  @ApiBody({ type: DeactivateBatchDTO })
+  @ApiResponse({ status: 202, description: 'Deactivation batch queued' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 404, description: 'Invoice not found' })
-  async deactivateInvoice(
+  async queueDeactivateBatch(
     @Param('businessId') businessId: string,
-    @Param('invoiceNo') invoiceNo: string,
+    @Body() body: DeactivateBatchDTO,
     @UserById() userId: string,
   ): Promise<void> {
-    await this.invoiceService.deactivateInvoice(businessId, invoiceNo, userId);
+    await this.invoiceService.queueDeactivateBatch(businessId, body.invoiceNumbers, userId);
+  }
+
+  /**
+   * Queue batch mark-as-paid — syncs each invoice against ToyyibPay
+   * Only PENDING invoices with confirmed ToyyibPay payment (or no billCode) will be updated
+   */
+  @Post('mark-paid/:businessId')
+  @HttpCode(HttpStatus.ACCEPTED)
+  @ApiOperation({ summary: 'Queue batch mark invoice as paid' })
+  @ApiParam({ name: 'businessId', type: String })
+  @ApiBody({ type: MarkPaidBatchDTO })
+  @ApiResponse({ status: 202, description: 'Mark-as-paid batch queued' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async queueMarkInvoicePaidBatch(
+    @Param('businessId') businessId: string,
+    @Body() body: MarkPaidBatchDTO,
+    @UserById() userId: string,
+  ): Promise<void> {
+    await this.invoiceService.queueMarkInvoicePaidBatch(businessId, body.invoiceNumbers, userId);
   }
 
   /**
@@ -186,7 +263,7 @@ export class InvoiceController {
    * Event consumer for queued invoice creation
    * Processes invoices from RabbitMQ queue
    */
-  @EventPattern(INVOICE_QUEUE_PATTERNS.CREATE)
+  @EventPattern(INVOICE_QUEUE_PATTERNS.CREATE_INVOICE)
   async receiverCreateInvoice(
     @Payload() data: CreateInvoiceMessage,
     @Ctx() context: RmqContext,
@@ -202,16 +279,33 @@ export class InvoiceController {
    * Event consumer for notify-email batch queue
    * Sends each email with a 1.5 s gap between sends
    */
-  @EventPattern(INVOICE_QUEUE_PATTERNS.NOTIFY_EMAIL)
-  async receiverNotifyEmail(
-    @Payload() data: NotifyEmailMessage,
+  @EventPattern(INVOICE_QUEUE_PATTERNS.NOTIFY_INVOICE_VIA_EMAIL)
+  async receiverNotifyInvoiceViaEmail(
+    @Payload() data: NotifyInvoiceViaEmailMessage,
     @Ctx() context: RmqContext,
   ): Promise<void> {
-    this.logger.log(`[Queue] Notify-email consumer triggered — ${data.invoiceNumbers.length} invoice(s): [${data.invoiceNumbers.join(', ')}]`);
+    this.logger.log(`[Queue] Notify-invoice-via-email consumer triggered — ${data.invoiceNumbers.length} invoice(s)`);
     const channel = context.getChannelRef();
     const originalMsg = context.getMessage();
-    await this.invoiceService.processNotifyEmailBatch(data);
-    this.logger.log(`[Queue] Notify-email batch complete — acking message`);
+    await this.invoiceService.processNotifyInvoiceViaEmailBatch(data);
+    this.logger.log(`[Queue] Notify-invoice-via-email complete — acking message`);
+    channel.ack(originalMsg);
+  }
+
+  /**
+   * Event consumer for deactivation batch queue
+   * Deactivates each invoice with a 1.5 s gap between items
+   */
+  @EventPattern(INVOICE_QUEUE_PATTERNS.DEACTIVATE_INVOICE_BILL)
+  async receiverDeactivate(
+    @Payload() data: DeactivateMessage,
+    @Ctx() context: RmqContext,
+  ): Promise<void> {
+    this.logger.log(`[Queue] Deactivate consumer triggered — ${data.invoiceNumbers.length} invoice(s)`);
+    const channel = context.getChannelRef();
+    const originalMsg = context.getMessage();
+    await this.invoiceService.processDeactivateSingle(data);
+    this.logger.log(`[Queue] Deactivate complete — acking message`);
     channel.ack(originalMsg);
   }
 
@@ -220,7 +314,7 @@ export class InvoiceController {
    * Waits 1 minute then retries idempotent invoice creation
    * Re-emits with incremented attemptNo or routes to failed-invoice after 5 attempts
    */
-  @EventPattern(INVOICE_QUEUE_PATTERNS.RETRY)
+  @EventPattern(INVOICE_QUEUE_PATTERNS.RETRY_CREATE_INVOICE)
   async receiverRetryInvoice(
     @Payload() data: RetryInvoiceMessage,
     @Ctx() context: RmqContext,
@@ -237,7 +331,7 @@ export class InvoiceController {
    * Processes payment callbacks from RabbitMQ queue
    * This avoids timeout issues in serverless environments
    */
-  @EventPattern(INVOICE_QUEUE_PATTERNS.CALLBACK)
+  @EventPattern(INVOICE_QUEUE_PATTERNS.UPDATE_INVOICE_PAYMENT_STATUS)
   async receiverUpdateInvoice(
     @Payload() callbackData: ToyyibPayCallbackData,
     @Ctx() context: RmqContext,
@@ -254,7 +348,7 @@ export class InvoiceController {
    * Waits 1 minute then retries payment callback processing
    * Re-emits with incremented attemptNo or routes to failed-payment-callback after 5 attempts
    */
-  @EventPattern(INVOICE_QUEUE_PATTERNS.CALLBACK_RETRY)
+  @EventPattern(INVOICE_QUEUE_PATTERNS.RETRY_INVOICE_PAYMENT_CALLBACK)
   async receiverRetryPaymentCallback(
     @Payload() data: RetryPaymentCallbackMessage,
     @Ctx() context: RmqContext,
@@ -270,7 +364,7 @@ export class InvoiceController {
    * Event consumer for permanently failed invoices
    * Cancels invoice status and deactivates ToyyibPay bill
    */
-  @EventPattern(INVOICE_QUEUE_PATTERNS.FAILED)
+  @EventPattern(INVOICE_QUEUE_PATTERNS.FAILED_CREATE_INVOICE)
   async receiverFailedInvoice(
     @Payload() data: FailedInvoiceMessage,
     @Ctx() context: RmqContext,
@@ -286,12 +380,87 @@ export class InvoiceController {
    * Event consumer for permanently failed payment callbacks
    * Acks to clear the queue — revisit handling later
    */
-  @EventPattern(INVOICE_QUEUE_PATTERNS.CALLBACK_FAILED)
+  @EventPattern(INVOICE_QUEUE_PATTERNS.FAILED_INVOICE_PAYMENT_CALLBACK)
   async receiverFailedPaymentCallback(
     @Payload() _data: unknown,
     @Ctx() context: RmqContext,
   ): Promise<void> {
     this.logger.warn('Payment callback permanently failed — acking to clear queue');
+    context.getChannelRef().ack(context.getMessage());
+  }
+
+  /**
+   * Event consumer for mark-as-paid batch queue
+   * Syncs each invoice against ToyyibPay and updates DB to PAID + sends receipt
+   */
+  @EventPattern(INVOICE_QUEUE_PATTERNS.MARK_INVOICE_AS_PAID)
+  async receiverMarkInvoicePaid(
+    @Payload() data: MarkInvoicePaidMessage,
+    @Ctx() context: RmqContext,
+  ): Promise<void> {
+    this.logger.log(`[Queue] Mark-as-paid consumer triggered — ${data.invoiceNumbers.length} invoice(s)`);
+    const channel = context.getChannelRef();
+    const originalMsg = context.getMessage();
+    await this.invoiceService.processMarkInvoicePaidBatch(data);
+    this.logger.log(`[Queue] Mark-as-paid complete — acking message`);
+    channel.ack(originalMsg);
+  }
+
+  /**
+   * Event consumer for retry-deactivate queue
+   * Waits 1 minute then retries — re-emits with incremented attemptNo or routes to failed
+   */
+  @EventPattern(INVOICE_QUEUE_PATTERNS.RETRY_DEACTIVATE_INVOICE_BILL)
+  async receiverRetryDeactivate(
+    @Payload() data: RetryDeactivateMessage,
+    @Ctx() context: RmqContext,
+  ): Promise<void> {
+    this.logger.log(`[Queue] Deactivate retry received — attempt ${data.attemptNo} for ${data.invoiceNo}`);
+    const channel = context.getChannelRef();
+    const originalMsg = context.getMessage();
+    await this.invoiceService.processDeactivateRetry(data);
+    channel.ack(originalMsg);
+  }
+
+  /**
+   * Event consumer for permanently failed deactivations
+   * Logs and acks to clear the queue
+   */
+  @EventPattern(INVOICE_QUEUE_PATTERNS.FAILED_DEACTIVATE_INVOICE_BILL)
+  async receiverFailedDeactivate(
+    @Payload() data: RetryDeactivateMessage & { error: string; failedAt: string },
+    @Ctx() context: RmqContext,
+  ): Promise<void> {
+    await this.invoiceService.processDeactivateFailed(data);
+    context.getChannelRef().ack(context.getMessage());
+  }
+
+  /**
+   * Event consumer for retry-mark-paid queue
+   * Waits 1 minute then retries — re-emits with incremented attemptNo or routes to failed
+   */
+  @EventPattern(INVOICE_QUEUE_PATTERNS.RETRY_MARK_INVOICE_AS_PAID)
+  async receiverRetryMarkPaid(
+    @Payload() data: RetryMarkPaidMessage,
+    @Ctx() context: RmqContext,
+  ): Promise<void> {
+    this.logger.log(`[Queue] Mark-as-paid retry received — attempt ${data.attemptNo} for ${data.invoiceNo}`);
+    const channel = context.getChannelRef();
+    const originalMsg = context.getMessage();
+    await this.invoiceService.processMarkPaidRetry(data);
+    channel.ack(originalMsg);
+  }
+
+  /**
+   * Event consumer for permanently failed mark-as-paid
+   * Logs and acks to clear the queue
+   */
+  @EventPattern(INVOICE_QUEUE_PATTERNS.FAILED_MARK_INVOICE_AS_PAID)
+  async receiverFailedMarkPaid(
+    @Payload() data: RetryMarkPaidMessage & { error: string; failedAt: string },
+    @Ctx() context: RmqContext,
+  ): Promise<void> {
+    await this.invoiceService.processMarkPaidFailed(data);
     context.getChannelRef().ack(context.getMessage());
   }
 }
